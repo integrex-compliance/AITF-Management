@@ -6,7 +6,9 @@
  * and open the template in the editor.
  */
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include_once './dbConnect.php';
 
 if (isset($_POST["finalId"]) && !empty($_POST["finalId"])) {
@@ -23,31 +25,56 @@ if (isset($_POST["finalId"]) && !empty($_POST["finalId"])) {
 
     // this section is for mapping 
     header("location:invoicePage.php");
-} elseif (isset($_GET['id']) && !empty($_GET['id']) && isset($_GET['columnName']) && !empty($_GET['columnName']) && isset($_GET['columnValue']) && !empty($_GET['columnValue'])) {
-    try {
-        if ($_GET['columnName'] == 'comment') {
-            $column = 'comment';
-            $dataVal = $_GET['columnValue'];
-        } 
-        if ($_GET['columnName'] == 'certification_stage_date') {
-            $column = 'certification_stage_date';
-            if (isset($_GET['columnValue']) && !empty($_GET['columnValue'])) {
-                $dataVal = date("Y-m-d", strtotime($_GET['columnValue']));
+} else {
+    $req = array_merge($_GET, $_POST);
+    if (isset($req['id']) && !empty($req['id']) && isset($req['columnName']) && !empty($req['columnName']) && isset($req['columnValue'])) {
+        try {
+            $allowedColumns = [
+                'comment' => 'comment',
+                'certification_stage_date' => 'certification_stage_date',
+                'add_to' => 'add_to',
+                'credit_date_booking' => 'credit_date_booking',
+                'tan_of_deductor' => 'tan_of_deductor',
+                'tds_received' => 'tds_received'
+            ];
+
+            $colKey = trim($req['columnName']);
+            if (isset($allowedColumns[$colKey])) {
+                $column = $allowedColumns[$colKey];
+                $dataVal = trim((string)$req['columnValue']);
+
+                if ($column === 'certification_stage_date') {
+                    if (!empty($dataVal)) {
+                        $dataVal = date("Y-m-d", strtotime($dataVal));
+                    } else {
+                        $dataVal = NULL;
+                    }
+                } elseif ($column === 'tds_received') {
+                    if ($dataVal === '') {
+                        $dataVal = NULL;
+                    } else {
+                        $cleanVal = max(0.0, (float)str_replace(',', '', $dataVal));
+                        $dataVal = number_format($cleanVal, 2, '.', '');
+                    }
+                }
+
+                $isStatement = !empty($req['is_statement']) && $req['is_statement'] !== '0' && $req['is_statement'] !== 'false';
+                if ($isStatement) {
+                    $updateSql = "UPDATE statement_payments SET " . $column . " = :updateDeta WHERE id = :customer";
+                } else {
+                    $updateSql = "UPDATE payment_system SET " . $column . " = :updateDeta WHERE payment_id = :customer";
+                }
+
+                $statement = $db->prepare($updateSql);
+                $statement->bindParam(':updateDeta', $dataVal);
+                $statement->bindParam(':customer', $req['id']);
+                $statement->execute();
+                echo 'success';
             } else {
-                $dataVal = NULL;
+                echo 'Invalid column';
             }
+        } catch (Exception $ex) {
+            echo $ex->getMessage();
         }
-        if ($_GET['columnName'] == 'add_to') {
-            $column = 'add_to';
-            $dataVal = $_GET['columnValue'];
-        }
-        $updateCustomer = "UPDATE payment_system SET " . $column . " = :updateDeta WHERE payment_id = :customer ";
-        $statement = $db->prepare($updateCustomer);
-        $statement->bindParam(':updateDeta', $dataVal);
-        $statement->bindParam(':customer', $_GET['id']);
-        $statement->execute();
-        echo 'success';
-    } catch (Exception $ex) {
-        echo $ex;
     }
 } 

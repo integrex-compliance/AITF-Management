@@ -876,6 +876,25 @@ if (!function_exists('aitf_format_payment_date_display')) {
             text-decoration: underline;
         }
 
+        .rcv-client-link {
+            text-decoration: none !important;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .rcv-client-link:hover strong {
+            color: #2563eb !important;
+            text-decoration: underline;
+        }
+
+        html.theme-dark .rcv-client-link strong {
+            color: #f1f5f9 !important;
+        }
+
+        html.theme-dark .rcv-client-link:hover strong {
+            color: #60a5fa !important;
+        }
+
         /* Action Buttons */
         .btn-reconcile-toggle {
             height: 26px;
@@ -1190,14 +1209,13 @@ if (!function_exists('aitf_format_payment_date_display')) {
                                     <table class="table table-hover table-striped" id="table_received_payments">
                                         <thead>
                                             <tr>
-                                                <th class="col-rcv-id text-left" style="min-width: 110px; width: 110px; white-space: nowrap;">Unique ID</th>
                                                 <th class="col-rcv-client text-left" style="min-width: 220px;">Client Name</th>
                                                 <th class="col-rcv-service text-center" style="min-width: 80px; width: 80px; text-align: center; white-space: nowrap;">Service</th>
                                                 <th class="col-rcv-amount text-right" style="min-width: 130px; width: 130px; text-align: right; white-space: nowrap;">Received Amount</th>
                                                 <th class="col-rcv-date text-center" style="min-width: 120px; width: 120px; text-align: center; white-space: nowrap;">Received Date</th>
-                                                <th class="col-rcv-instrument text-center" style="min-width: 130px; width: 130px; text-align: center; white-space: nowrap;">Instrument / NEFT</th>
-                                                <th class="col-rcv-comment text-left" style="min-width: 170px; white-space: nowrap;">Comment</th>
+                                                 <th class="col-rcv-instrument text-center" style="min-width: 130px; width: 130px; text-align: center; white-space: nowrap;">Instrument / NEFT</th>
                                                 <th class="col-rcv-reconcile text-center" style="min-width: 140px; width: 140px; text-align: center; white-space: nowrap;">Statement Reconciliation</th>
+                                                <th class="col-rcv-comment text-left" style="min-width: 170px; white-space: nowrap;">Comment</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1225,13 +1243,10 @@ if (!function_exists('aitf_format_payment_date_display')) {
                                                 }
                                             ?>
                                                 <tr id="pay_row_<?php echo $pay['payment_id']; ?>" data-customer-id="<?php echo $pay['customer_id']; ?>">
-                                                    <td class="col-rcv-id text-left" style="vertical-align: middle;">
-                                                        <a href="customerAccount.php?customerid=<?php echo $pay['customer_id']; ?>" class="unique-id-link" title="Open Customer Account: <?php echo $uniqueId ?: ('#' . $pay['customer_id']); ?>">
-                                                            <?php echo $uniqueId ?: ('#' . $pay['customer_id']); ?>
+                                                    <td class="col-rcv-client text-left" style="vertical-align: middle;" data-search="<?php echo $clientName . ' ' . $uniqueId . ' ' . htmlspecialchars($pay['contact_person'] ?? ''); ?>">
+                                                        <a href="customerAccount.php?customerid=<?php echo $pay['customer_id']; ?>" class="rcv-client-link" title="Open Customer Account: <?php echo $clientName; ?><?php echo $uniqueId ? ' (' . $uniqueId . ')' : ''; ?>">
+                                                            <strong style="color: #0f172a; font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo $clientName; ?>"><?php echo $clientName; ?></strong>
                                                         </a>
-                                                    </td>
-                                                    <td class="col-rcv-client text-left" style="vertical-align: middle;">
-                                                        <strong style="color: #0f172a; font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo $clientName; ?>"><?php echo $clientName; ?></strong>
                                                         <?php if (!empty($pay['contact_person'])) { ?>
                                                             <div style="font-size: 10.5px; color: #64748b; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><i class="fa fa-user" style="font-size: 9.5px;"></i> <?php echo htmlspecialchars($pay['contact_person']); ?></div>
                                                         <?php } ?>
@@ -1260,15 +1275,6 @@ if (!function_exists('aitf_format_payment_date_display')) {
                                                             <?php echo $chequeDetails; ?>
                                                         </span>
                                                     </td>
-                                                    <td class="col-rcv-comment text-left" style="vertical-align: middle;">
-                                                        <div class="rcv-comment-wrap">
-                                                            <textarea class="rcv-comment-input" 
-                                                                      data-pay-id="<?php echo htmlspecialchars($pay['payment_id'] ?? ''); ?>" 
-                                                                      data-statement="<?php echo !empty($pay['is_statement']) ? '1' : '0'; ?>" 
-                                                                      rows="2"
-                                                                      placeholder=""><?php echo htmlspecialchars($pay['comment'] ?? ''); ?></textarea>
-                                                        </div>
-                                                    </td>
                                                     <td class="col-rcv-reconcile text-center" style="vertical-align: middle; text-align: center;">
                                                         <button type="button" 
                                                                 class="btn btn-xs btn-reconcile-toggle <?php echo $isReconciled ? 'reconcile-verified' : 'reconcile-pending'; ?>"
@@ -1284,6 +1290,15 @@ if (!function_exists('aitf_format_payment_date_display')) {
                                                             <i class="fa <?php echo $isReconciled ? 'fa-check-circle' : 'fa-clock-o'; ?>"></i>
                                                             <span><?php echo $statusText; ?></span>
                                                         </button>
+                                                    </td>
+                                                    <td class="col-rcv-comment text-left" style="vertical-align: middle;">
+                                                        <div class="rcv-comment-wrap">
+                                                            <textarea class="rcv-comment-input" 
+                                                                      data-pay-id="<?php echo htmlspecialchars($pay['payment_id'] ?? ''); ?>" 
+                                                                      data-statement="<?php echo !empty($pay['is_statement']) ? '1' : '0'; ?>" 
+                                                                      rows="2"
+                                                                      placeholder=""><?php echo htmlspecialchars($pay['comment'] ?? ''); ?></textarea>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php } ?>
@@ -1325,14 +1340,13 @@ if (!function_exists('aitf_format_payment_date_display')) {
             "lengthChange": false,
             "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
             "columnDefs": [
-                { "targets": 0, "className": "col-rcv-id text-left text-nowrap", "width": "110px" },
-                { "targets": 1, "className": "col-rcv-client text-left", "width": "220px" },
-                { "targets": 2, "className": "col-rcv-service text-center text-nowrap", "width": "80px" },
-                { "targets": 3, "className": "col-rcv-amount text-right text-nowrap", "width": "130px" },
-                { "targets": 4, "className": "col-rcv-date text-center text-nowrap", "width": "120px" },
-                { "targets": 5, "className": "col-rcv-instrument text-center text-nowrap", "width": "130px" },
-                { "targets": 6, "className": "col-rcv-comment text-left", "width": "170px" },
-                { "targets": 7, "className": "col-rcv-reconcile text-center text-nowrap", "width": "140px" }
+                { "targets": 0, "className": "col-rcv-client text-left", "width": "240px" },
+                { "targets": 1, "className": "col-rcv-service text-center text-nowrap", "width": "80px" },
+                { "targets": 2, "className": "col-rcv-amount text-right text-nowrap", "width": "130px" },
+                { "targets": 3, "className": "col-rcv-date text-center text-nowrap", "width": "120px" },
+                { "targets": 4, "className": "col-rcv-instrument text-center text-nowrap", "width": "130px" },
+                { "targets": 5, "className": "col-rcv-reconcile text-center text-nowrap", "width": "140px" },
+                { "targets": 6, "className": "col-rcv-comment text-left", "width": "170px" }
             ],
             "language": {
                 "emptyTable": "No received payment entries found",

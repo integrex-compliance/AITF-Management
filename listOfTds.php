@@ -54,8 +54,8 @@ $listOfTds = [];
 
 $allTds = "SELECT ci.id, customer_name, ci.unique_id, ps.customer_id, ps.service_type as tds, 
            COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) as amount_decided,
-           COALESCE(NULLIF(ps.tds_amount, 0), ps.payment_received, ps.amount_decided) as payment_received,
-           ps.payment_date, ps.comment, ps.payment_id, ps.tds_verified, svc.service_id, svc.service_type, 0 as is_statement
+           ps.tds_received,
+           ps.payment_date, ps.credit_date_booking, ps.tan_of_deductor, ps.comment, ps.payment_id, ps.tds_verified, svc.service_id, svc.service_type, 0 as is_statement
            FROM customer_info ci
            left join payment_system ps ON ci.id=ps.customer_id
            left join service svc on ps.customer_id = svc.customer_id
@@ -64,9 +64,9 @@ $allTds = "SELECT ci.id, customer_name, ci.unique_id, ps.customer_id, ps.service
 
 $params = [];
 if ($status == 'received') {
-    $allTds .= " AND (ps.payment_received > 0 OR ps.tds_amount > 0)";
+    $allTds .= " AND (ps.tds_received IS NOT NULL AND ps.tds_received > 0)";
 } elseif ($status == 'not_received') {
-    $allTds .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0') AND (ps.tds_amount IS NULL OR ps.tds_amount = 0)";
+    $allTds .= " AND (ps.tds_received IS NULL OR ps.tds_received = 0 OR ps.tds_received = '' OR ps.tds_received = '0.00' OR ps.tds_received = '0')";
 }
 
 if ($sortOrder == 'high') {
@@ -99,7 +99,7 @@ try {
     } catch (PDOException $e2) {
         // Fallback without ps.tds_verified or ps.tds_amount
         $fallbackTds = "SELECT ci.id, customer_name, ci.unique_id, ps.customer_id, ps.service_type as tds, 
-                       ps.amount_decided, ps.payment_received, ps.payment_date, ps.comment, ps.payment_id,
+                       ps.amount_decided, ps.tds_received, ps.payment_date, ps.credit_date_booking, ps.tan_of_deductor, ps.comment, ps.payment_id,
                        'unverified' as tds_verified, svc.service_id, svc.service_type, 0 as is_statement
                        FROM customer_info ci
                        left join payment_system ps ON ci.id=ps.customer_id
@@ -107,9 +107,9 @@ try {
                        WHERE (svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) OR svc.service_id IS NULL)
                        and ps.service_type LIKE '%tds%'";
         if ($status == 'received') {
-            $fallbackTds .= " AND (ps.payment_received > 0)";
+            $fallbackTds .= " AND (ps.tds_received > 0)";
         } elseif ($status == 'not_received') {
-            $fallbackTds .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0')";
+            $fallbackTds .= " AND (ps.tds_received IS NULL OR ps.tds_received = 0 OR ps.tds_received = '' OR ps.tds_received = '0.00' OR ps.tds_received = '0')";
         }
         $fallbackTds .= " ORDER BY ci.id DESC";
         try {
@@ -126,8 +126,8 @@ try {
 // Also fetch TDS from new Statement system (statement_payments where tds_decided > 0)
 $newTdsQuery = "SELECT ci.id, ci.customer_name, ci.unique_id, sp.customer_id, 
                 CONCAT('TDS (Statement #', sp.id, ')') as tds, 
-                sp.tds_decided as amount_decided, sp.tds_received as payment_received,
-                sp.payment_date, sp.comment, sp.id as payment_id, sp.tds_verified,
+                sp.tds_decided as amount_decided, sp.tds_received,
+                sp.payment_date, sp.credit_date_booking, sp.tan_of_deductor, sp.comment, sp.id as payment_id, sp.tds_verified,
                 0 as service_id, sp.service_type, 1 as is_statement
                 FROM customer_info ci
                 INNER JOIN statement_payments sp ON ci.id = sp.customer_id
@@ -332,26 +332,63 @@ try {
             border: 1px solid #e2e8f0;
             border-radius: 12px;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-            overflow: hidden;
+            overflow: visible !important;
         }
 
-        #table_finance_details thead th {
+        #table_finance_details,
+        .dataTables_scrollHeadInner table {
+            width: 100% !important;
+            min-width: 1240px !important;
+            table-layout: fixed !important;
+            border-collapse: separate !important;
+        }
+
+        .dataTables_scroll {
+            width: 100% !important;
+            position: relative;
+        }
+
+        .dataTables_scrollHead {
+            width: 100% !important;
+            overflow: hidden !important;
+            border: 0 !important;
+        }
+
+        .dataTables_scrollHeadInner {
+            box-sizing: content-box !important;
+            padding-right: 0 !important;
+            width: 100% !important;
+        }
+
+        .dataTables_scrollBody {
+            width: 100% !important;
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+            position: relative !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #table_finance_details thead th,
+        .dataTables_scrollHead thead th {
             background: #0f2744 !important;
             color: #ffffff !important;
-            padding: 12px 14px !important;
+            padding: 12px 10px !important;
             border: none !important;
-            font-size: 12px !important;
+            font-size: 11.5px !important;
             font-weight: 700 !important;
             text-transform: uppercase !important;
             letter-spacing: 0.5px !important;
             vertical-align: middle !important;
+            white-space: nowrap !important;
         }
 
         #table_finance_details thead th small,
-        #table_finance_details thead th a {
+        #table_finance_details thead th a,
+        .dataTables_scrollHead thead th small,
+        .dataTables_scrollHead thead th a {
             color: #ffffff !important;
             font-weight: 700 !important;
-            font-size: 12px !important;
+            font-size: 11.5px !important;
             text-decoration: none !important;
         }
 
@@ -373,18 +410,8 @@ try {
             background-color: #fcfdfe;
         }
 
-        /* Unique ID column */
-        #table_finance_details tbody td:first-child small a {
-            font-weight: 700;
-            color: #475569;
-            font-family: monospace;
-            font-size: 12px;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
         /* Client Name click style */
-        #table_finance_details tbody td:nth-child(2) small {
+        #table_finance_details tbody td:nth-child(1) small {
             font-weight: 700;
             color: #0d4d8b;
             cursor: pointer;
@@ -392,13 +419,13 @@ try {
             font-size: 12.5px;
         }
 
-        #table_finance_details tbody td:nth-child(2):hover small {
+        #table_finance_details tbody td:nth-child(1):hover small {
             color: #0284c7;
             text-decoration: underline;
         }
 
-        /* Service Type column badge */
-        #table_finance_details tbody td:nth-child(3) small {
+        /* Invoice Header column badge */
+        #table_finance_details tbody td:nth-child(2) small {
             background: #e0f2fe;
             color: #0369a1;
             font-weight: 700;
@@ -409,21 +436,21 @@ try {
         }
 
         /* TDS Deducted Amount */
-        #table_finance_details tbody td:nth-child(4) small {
+        #table_finance_details tbody td:nth-child(3) small {
             color: #d97706;
             font-weight: 800;
             font-size: 13px;
         }
 
         /* Payment Received Amount */
-        #table_finance_details tbody td:nth-child(5) small {
+        #table_finance_details tbody td:nth-child(4) small {
             color: #059669;
             font-weight: 800;
             font-size: 13px;
         }
 
-        /* Date column */
-        #table_finance_details tbody td:nth-child(6) small {
+        /* Deduction Date column */
+        #table_finance_details tbody td:nth-child(5) small {
             background: #f1f5f9;
             color: #475569;
             font-weight: 600;
@@ -431,6 +458,27 @@ try {
             border-radius: 4px;
             font-size: 11.5px;
             display: inline-block;
+        }
+
+        /* Editable Input Fields (Credit Date / Booking, TAN of Deductor / Ref) */
+        #table_finance_details input.saveChanges {
+            width: 100% !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 5px 8px !important;
+            font-size: 12px !important;
+            color: #1e293b !important;
+            background: #f8fafc !important;
+            height: 32px !important;
+            transition: all 0.2s ease;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        #table_finance_details input.saveChanges:focus {
+            background: #ffffff !important;
+            border-color: #0d4d8b !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
         }
 
         /* Comments Textarea */
@@ -516,12 +564,15 @@ try {
             border-radius: 12px;
             box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
         }
-        html.theme-dark #table_finance_details thead th {
+        html.theme-dark #table_finance_details thead th,
+        html.theme-dark .dataTables_scrollHead thead th {
             background: #090e17 !important;
             border-color: var(--tds-border-2) !important;
         }
         html.theme-dark #table_finance_details thead th small,
-        html.theme-dark #table_finance_details thead th a { color: #f1f5f9 !important; }
+        html.theme-dark #table_finance_details thead th a,
+        html.theme-dark .dataTables_scrollHead thead th small,
+        html.theme-dark .dataTables_scrollHead thead th a { color: #f1f5f9 !important; }
         html.theme-dark #table_finance_details small { color: var(--tds-text) !important; }
         html.theme-dark #table_finance_details tbody td {
             border-color: var(--tds-border) !important;
@@ -530,12 +581,11 @@ try {
         }
         html.theme-dark #table_finance_details tbody tr:hover td { background-color: var(--tds-surface-2) !important; }
         html.theme-dark .table-striped tbody tr:nth-of-type(odd) td { background-color: rgba(255, 255, 255, 0.02) !important; }
-        html.theme-dark #table_finance_details tbody td:first-child small a { color: #94a3b8 !important; }
-        html.theme-dark #table_finance_details tbody td:nth-child(2) small { color: #38bdf8 !important; }
-        html.theme-dark #table_finance_details tbody td:nth-child(3) small { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
-        html.theme-dark #table_finance_details tbody td:nth-child(4) small { color: #fbbf24 !important; }
-        html.theme-dark #table_finance_details tbody td:nth-child(5) small { color: #34d399 !important; }
-        html.theme-dark #table_finance_details tbody td:nth-child(6) small { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
+        html.theme-dark #table_finance_details tbody td:nth-child(1) small { color: #38bdf8 !important; }
+        html.theme-dark #table_finance_details tbody td:nth-child(2) small { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+        html.theme-dark #table_finance_details tbody td:nth-child(3) small { color: #fbbf24 !important; }
+        html.theme-dark #table_finance_details tbody td:nth-child(4) small { color: #34d399 !important; }
+        html.theme-dark #table_finance_details tbody td:nth-child(5) small { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
 
         /* Comment textarea */
         html.theme-dark #table_finance_details textarea,
@@ -621,28 +671,31 @@ try {
                                         <table class="table table-bordered table-striped table-hover table-sortable" id="table_finance_details">
                                             <thead>
                                                 <tr>
-                                                    <th class=""  >
-                                                        <small><a>Unique ID</a></small>
-                                                    </th>
-                                                    <th class="">
+                                                    <th>
                                                         <small><a>Client Name</a></small>
                                                     </th>
-                                                    <th class="">
-                                                        <small><a>Service Type</a></small>
+                                                    <th>
+                                                        <small><a>Invoice Header</a></small>
                                                     </th>
-                                                    <th class="">
-                                                        <small><a>TDS amount deducted</a></small>
+                                                    <th>
+                                                        <small><a>Amount Deducted</a></small>
                                                     </th>
-                                                    <th class="" >
-                                                        <small><a>Payment received</a></small>
+                                                    <th>
+                                                        <small><a>TDS Received</a></small>
                                                     </th>
-                                                    <th class="" >
-                                                        <small><a>Date</a></small>
+                                                    <th>
+                                                        <small><a>Deduction Date</a></small>
                                                     </th>
-                                                    <th class="" width="10" >
+                                                    <th>
+                                                        <small><a>Credit Date/Booking</a></small>
+                                                    </th>
+                                                    <th>
+                                                        <small><a>TAN of Deductor/Ref</a></small>
+                                                    </th>
+                                                    <th>
                                                         <small><a>TDS certificate details</a></small>
                                                     </th>
-                                                    <th class="" style="text-align: center; width: 105px;">
+                                                    <th style="text-align: center;">
                                                         <small><a>TDS Verify</a></small>
                                                     </th>
                                                 </tr>
@@ -651,12 +704,16 @@ try {
                                                 <?php foreach ($listOfTds as $tds) { 
                                                     $isTdsVerified = (isset($tds['tds_verified']) && in_array(strtolower(trim($tds['tds_verified'])), ['verified', 'yes', '1']));
                                                     $tdsStatusText = $isTdsVerified ? 'Verified' : 'Verify';
+                                                    $isStatementRow = !empty($tds['is_statement']) ? '1' : '0';
+                                                    $tdsRecVal = '';
+                                                    if (isset($tds['tds_received']) && $tds['tds_received'] !== '' && $tds['tds_received'] !== null && floatval($tds['tds_received']) > 0) {
+                                                        $tdsRecVal = number_format(floatval($tds['tds_received']), 2, '.', '');
+                                                    }
+                                                    $decidedRaw = !empty($tds['amount_decided']) ? floatval(str_replace(',', '', $tds['amount_decided'])) : 0.0;
+                                                    $decidedVal = number_format($decidedRaw, 2, '.', '');
+                                                    $isLower = ($tdsRecVal !== '' && floatval($tdsRecVal) < $decidedRaw && $decidedRaw > 0);
                                                 ?>
-                                                    <tr id='addr0' data-id="<?php echo $tds['customer_id'] ?>">
-                                                        <td data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                             <small><a data-id="<?php echo $tds['customer_id'] ?>" class="customerAccount"><?php echo $tds['unique_id'] ?></a></small>
-                                                        </td>
-
+                                                    <tr id='addr0' data-id="<?php echo $tds['customer_id'] ?>" data-unique-id="<?php echo htmlspecialchars($tds['unique_id'] ?? ''); ?>" data-decided="<?php echo $decidedVal; ?>">
                                                         <td  class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                                             <small><?php echo $tds['customer_name'] ?></small>
                                                         </td>
@@ -664,19 +721,54 @@ try {
                                                             <small><?php echo $tds['tds'] ?></small>
                                                         </td>
                                                         <td  class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                            <small><?php echo $tds['amount_decided'] ?></small>
+                                                            <small><?php echo $decidedVal; ?></small>
                                                         </td>
-                                                        <td  class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
-                                                            <small><?php echo $tds['payment_received'] ?></small>
+                                                        <td style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
+                                                            <div class="table-edit-control">
+                                                                <input type="text" class="form-control input-sm saveChanges tds-received-input" 
+                                                                       data-row="<?php echo $tds['payment_id'] ?>" 
+                                                                       data-statement="<?php echo $isStatementRow; ?>" 
+                                                                       data-column="tds_received" 
+                                                                       data-decided="<?php echo $decidedVal; ?>"
+                                                                       name="tds_received" 
+                                                                       value="<?php echo htmlspecialchars($tdsRecVal); ?>" 
+                                                                       placeholder="0.00" 
+                                                                       style="height: 32px; font-size: 12.5px; font-weight: 700; color: <?php echo $isLower ? '#dc2626' : '#059669'; ?>; border: 1.5px solid <?php echo $isLower ? '#dc2626' : '#d1d5db'; ?>; background-color: <?php echo $isLower ? '#fef2f2' : '#ffffff'; ?>; border-radius: 6px; padding: 4px 8px; width: 100%; text-align: right;"
+                                                                       title="<?php echo $isLower ? 'Warning: TDS received amount (₹' . $tdsRecVal . ') is lower than the TDS decided amount (₹' . $decidedVal . ')' : ''; ?>">
+                                                            </div>
                                                         </td>
                                                         <td   class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
                                                             <small><?php if (isset($tds['payment_date']) && !empty($tds['payment_date'])) {
-                                                     echo date("d.m.Y", strtotime($tds['payment_date']));
-                                                 } ?></small>
+                                                      echo date("d.m.Y", strtotime($tds['payment_date']));
+                                                  } ?></small>
+                                                        </td>
+                                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                                            <div class="table-edit-control">
+                                                                <input type="text" class="form-control input-sm saveChanges datepicker-booking" 
+                                                                       data-row="<?php echo $tds['payment_id'] ?>" 
+                                                                       data-statement="<?php echo $isStatementRow; ?>" 
+                                                                       data-column="credit_date_booking" 
+                                                                       name="credit_date_booking" 
+                                                                       value="<?php echo htmlspecialchars($tds['credit_date_booking'] ?? ''); ?>" 
+                                                                       placeholder="DD.MM.YYYY / Booking" 
+                                                                       style="height: 32px; font-size: 12px; border-radius: 6px; padding: 4px 8px; width: 100%;">
+                                                            </div>
+                                                        </td>
+                                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                                            <div class="table-edit-control">
+                                                                <input type="text" class="form-control input-sm saveChanges" 
+                                                                       data-row="<?php echo $tds['payment_id'] ?>" 
+                                                                       data-statement="<?php echo $isStatementRow; ?>" 
+                                                                       data-column="tan_of_deductor" 
+                                                                       name="tan_of_deductor" 
+                                                                       value="<?php echo htmlspecialchars($tds['tan_of_deductor'] ?? ''); ?>" 
+                                                                       placeholder="TAN / Ref #" 
+                                                                       style="height: 32px; font-size: 12px; border-radius: 6px; padding: 4px 8px; width: 100%;">
+                                                            </div>
                                                         </td>
                                                         <td data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
                                                             <div class="table-edit-control">
-                                                                <textarea rows="3" class="saveChanges" data-row="<?php echo $tds['payment_id'] ?>" data-column="comment" name="payComments" value="" placeholder="" ><?php if (isset($tds['comment'])) echo $tds['comment'] ?></textarea>
+                                                                <textarea rows="3" class="saveChanges" data-row="<?php echo $tds['payment_id'] ?>" data-statement="<?php echo $isStatementRow; ?>" data-column="comment" name="payComments" value="" placeholder="" ><?php if (isset($tds['comment'])) echo $tds['comment'] ?></textarea>
                                                             </div>
                                                         </td>
                                                         <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; text-align: center; vertical-align: middle;">
@@ -685,6 +777,7 @@ try {
                                                                         data-status="<?php echo $tdsStatusText; ?>" 
                                                                         data-pay-id="<?php echo htmlspecialchars($tds['payment_id'] ?? ''); ?>" 
                                                                         data-statement="<?php echo !empty($tds['is_statement']) ? '1' : '0'; ?>"
+                                                                        data-decided="<?php echo $decidedVal; ?>"
                                                                         style="min-width: 84px; height: 26px; font-size: 11.5px; font-weight: 700; border-radius: 4px; padding: 2px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: all 0.2s ease; <?php echo $isTdsVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>"
                                                                         title="Click to toggle: <?php echo $isTdsVerified ? 'Mark as Unverified' : 'Verify TDS against Bank Statement'; ?>">
                                                                     <i class="fa <?php echo $isTdsVerified ? 'fa-check' : 'fa-times'; ?>"></i>
@@ -827,10 +920,11 @@ try {
             var fromDate = ($("#startDate").val() || "").trim();
             var toDate = ($("#endDate").val() || "").trim();
 
-            var rowUniqueId = normalizeSearchText(data[0] || "");
-            var rowClient = normalizeSearchText(data[1] || "");
-            var rowServiceType = normalizeSearchText(data[2] || "");
-            var dateValue = (data[5] || "").replace(/<[^>]*>/g, "").trim();
+            var trElement = settings.aoData[dataIndex] ? settings.aoData[dataIndex].nTr : null;
+            var rowUniqueId = normalizeSearchText($(trElement).attr('data-unique-id') || "");
+            var rowClient = normalizeSearchText(data[0] || "");
+            var rowServiceType = normalizeSearchText(data[1] || "");
+            var dateValue = (data[4] || "").replace(/<[^>]*>/g, "").trim();
 
             var searchVal = normalizeSearchText(clientSearch);
             var isCurrentOrRecent = true;
@@ -1084,26 +1178,38 @@ try {
                         table.draw();
                     }
                 });
+                $('.datepicker-booking').datepicker({
+                    changeYear: true,
+                    changeMonth: true,
+                    yearRange: "-20:+100",
+                    dateFormat: 'dd.mm.yy',
+                    onSelect: function() {
+                        saveData($(this));
+                    }
+                });
             }
         }, 100);
 
         var table = $('#table_finance_details').DataTable({
             "scrollY": '70vh',
             "scrollCollapse": true,
+            "scrollX": true,
+            "autoWidth": false,
             "paging": true,
             "pageLength": 50,
             "ordering": false,
             "lengthChange": false,
             "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
             "columnDefs": [
-                { "width": "10%", "targets": 0 },
-                { "width": "18%", "targets": 1 },
-                { "width": "12%", "targets": 2 },
-                { "width": "12%", "targets": 3 },
-                { "width": "12%", "targets": 4 },
-                { "width": "10%", "targets": 5 },
-                { "width": "16%", "targets": 6 },
-                { "width": "10%", "targets": 7 }
+                { "width": "200px", "targets": 0 },
+                { "width": "130px", "targets": 1 },
+                { "width": "120px", "targets": 2 },
+                { "width": "120px", "targets": 3 },
+                { "width": "110px", "targets": 4 },
+                { "width": "150px", "targets": 5 },
+                { "width": "150px", "targets": 6 },
+                { "width": "160px", "targets": 7 },
+                { "width": "100px", "targets": 8 }
             ],
             "language": {
                 "emptyTable": "No TDS records available in table",
@@ -1124,10 +1230,45 @@ try {
             e.preventDefault();
             $("#wrapper").toggleClass("active");
             $(".container").toggleClass("active");
-            table.draw();
+            setTimeout(function () {
+                table.columns.adjust();
+            }, 250);
         });
 
-        // Toggle TDS Verification Status with Acknowledgment Confirmation
+        function applyTdsInputValidation($input) {
+            var decided = parseFloat($input.attr('data-decided') || $input.closest('tr').attr('data-decided') || 0);
+            var raw = $.trim($input.val() || '');
+            var val = parseFloat(raw.replace(/,/g, ''));
+
+            if (raw === '' || isNaN(val) || val <= 0) {
+                $input.css({
+                    'color': '#059669',
+                    'border': '1.5px solid #d1d5db',
+                    'background-color': '#ffffff'
+                }).removeAttr('title');
+                return;
+            }
+
+            if (decided > 0 && val < decided) {
+                $input.css({
+                    'color': '#dc2626',
+                    'border': '1.5px solid #dc2626',
+                    'background-color': '#fef2f2'
+                }).attr('title', 'Warning: TDS received amount (₹' + val.toFixed(2) + ') is lower than the TDS decided amount (₹' + decided.toFixed(2) + ')');
+            } else {
+                $input.css({
+                    'color': '#059669',
+                    'border': '1.5px solid #16a34a',
+                    'background-color': '#f0fdf4'
+                }).attr('title', 'TDS received: ₹' + val.toFixed(2) + ' (Decided: ₹' + decided.toFixed(2) + ')');
+            }
+        }
+
+        $(document).on('input keyup', 'input[name="tds_received"]', function () {
+            applyTdsInputValidation($(this));
+        });
+
+        // Toggle TDS Verification Status with Acknowledgment Confirmation & Validation
         $(document).on('click', '.toggleTdsVerifyBtn', function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -1136,15 +1277,71 @@ try {
             var isCurrentlyVerified = (currentStatus === 'Verified');
             var payId = $btn.attr('data-pay-id');
             var isStatement = $btn.attr('data-statement');
+            var $tr = $btn.closest('tr');
+            var decided = parseFloat($btn.attr('data-decided') || $tr.attr('data-decided') || 0);
+            var $recInput = $tr.find('input[name="tds_received"]');
+            var recRaw = $.trim($recInput.val() || '');
+            var received = parseFloat(recRaw.replace(/,/g, ''));
 
             if (!isCurrentlyVerified) {
-                // User wants to mark as Verified -> Require bank statement cross-check acknowledgement
+                // Validation 1: Blank or zero TDS check
+                if (recRaw === '' || isNaN(received) || received <= 0) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '<span style="font-size: 18px; font-weight: 700; color: #dc2626;"><i class="fa fa-exclamation-circle"></i> Blank TDS Cannot Be Reconciled</span>',
+                            html: '<div style="font-size: 13.5px; color: #374151; margin: 10px 0 6px;">' +
+                                  'Please enter the <b>TDS Received</b> amount before reconciling / verifying this entry.' +
+                                  '</div>',
+                            confirmButtonColor: '#0d4d8b',
+                            confirmButtonText: '<i class="fa fa-check"></i> OK'
+                        }).then(function() {
+                            $recInput.focus();
+                            $recInput.css({ 'border-color': '#dc2626', 'background-color': '#fef2f2' });
+                        });
+                    } else {
+                        alert('Blank TDS cannot be reconciled! Please enter the TDS received amount before verifying.');
+                        $recInput.focus();
+                    }
+                    return false;
+                }
+
+                // Validation 2: TDS Received lower than Decided amount check
+                if (decided > 0 && received < decided) {
+                    var diff = (decided - received).toFixed(2);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '<span style="font-size: 18px; font-weight: 700; color: #dc2626;"><i class="fa fa-times-circle"></i> Cannot Reconcile / Verify</span>',
+                            html: '<div style="font-size: 13.5px; line-height: 1.6; color: #1f2937; text-align: left; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin: 10px 0 6px;">' +
+                                  '<b style="color: #991b1b; font-size: 14px;"><i class="fa fa-warning"></i> TDS received amount is lower than the TDS decided amount.</b><br>' +
+                                  '<div style="margin-top: 8px; font-size: 13px;">' +
+                                  '• <b>Amount Decided (Deducted):</b> ₹' + decided.toFixed(2) + '<br>' +
+                                  '• <b>TDS Received:</b> ₹' + received.toFixed(2) + '<br>' +
+                                  '• <b>Shortfall / Difference:</b> <span style="color: #dc2626; font-weight: 700;">-₹' + diff + '</span>' +
+                                  '</div></div>' +
+                                  '<div style="font-size: 11.5px; color: #64748b; text-align: left; margin-top: 4px;">' +
+                                  '<i class="fa fa-ban" style="color: #dc2626;"></i> Blank or lower TDS amount cannot be reconciled. Please rectify the amount to match or exceed the decided amount before verifying.</div>',
+                            confirmButtonColor: '#dc2626',
+                            confirmButtonText: '<i class="fa fa-check"></i> Understood'
+                        }).then(function() {
+                            $recInput.focus().select();
+                            $recInput.css({ 'border-color': '#dc2626', 'background-color': '#fef2f2' });
+                        });
+                    } else {
+                        alert('TDS received amount is lower than the TDS decided amount!\n\nDecided: ₹' + decided.toFixed(2) + '\nReceived: ₹' + received.toFixed(2) + '\nDifference: -₹' + diff + '\n\nBlank or lower TDS cannot be reconciled.');
+                        $recInput.focus();
+                    }
+                    return false;
+                }
+
+                // Validation passed -> Require bank statement cross-check acknowledgement
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         title: '<span style="font-size: 19px; font-weight: 700; color: #0d4d8b;"><i class="fa fa-shield" style="margin-right: 6px;"></i> TDS Bank Verification</span>',
                         html: '<div style="font-size: 13.5px; line-height: 1.5; color: #1e293b; text-align: left; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 14px 16px; margin: 10px 0 6px; display: flex; align-items: flex-start; gap: 8px;">' +
                               '<i class="fa fa-info-circle" style="color: #0d4d8b; font-size: 16px; margin-top: 2px; flex-shrink: 0;"></i>' +
-                              '<span style="font-weight: 600; font-size: 13px; color: #0f172a; line-height: 1.45;">I acknowledge that I have cross checked bank statement and this TDS entry is valid.</span>' +
+                              '<span style="font-weight: 600; font-size: 13px; color: #0f172a; line-height: 1.45;">I acknowledge that I have cross checked bank statement and this TDS entry is valid.<br><small style="color: #059669; font-weight: 700; font-size: 12px; display: block; margin-top: 4px;">• TDS Received: ₹' + received.toFixed(2) + ' (Decided: ₹' + decided.toFixed(2) + ')</small></span>' +
                               '</div>' +
                               '<div style="font-size: 11.5px; color: #64748b; text-align: left; margin-top: 4px;"><i class="fa fa-lock"></i> Once verified, this TDS entry will become locked and non-editable in the Payment System.</div>',
                         showCancelButton: true,
@@ -1155,12 +1352,12 @@ try {
                         focusConfirm: true
                     }).then(function (result) {
                         if (result.isConfirmed) {
-                            sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement);
+                            sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement, received);
                         }
                     });
                 } else {
-                    if (confirm('I acknowledge that I have cross checked bank statement and this TDS entry is valid.\n\nClick OK to verify and lock this TDS entry.')) {
-                        sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement);
+                    if (confirm('I acknowledge that I have cross checked bank statement and this TDS entry is valid.\n\nTDS Received: ₹' + received.toFixed(2) + '\n\nClick OK to verify and lock this TDS entry.')) {
+                        sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement, received);
                     }
                 }
             } else {
@@ -1188,89 +1385,142 @@ try {
             }
         });
 
-        function sendTdsVerifyUpdate($btn, newStatus, payId, isStatement) {
-            $btn.attr('data-status', newStatus);
-            if (newStatus === 'Verified') {
-                $btn.removeClass('tds-btn-unverified')
-                    .addClass('tds-btn-verified')
-                    .css({
-                        'background-color': '#16a34a',
-                        'border-color': '#15803d',
-                        'color': '#ffffff'
-                    })
-                    .attr('title', 'Click to toggle: Mark as Unverified')
-                    .html('<i class="fa fa-check"></i> <span>Verified</span>');
-            } else {
-                $btn.removeClass('tds-btn-verified')
-                    .addClass('tds-btn-unverified')
-                    .css({
-                        'background-color': '#ef4444',
-                        'border-color': '#dc2626',
-                        'color': '#ffffff'
-                    })
-                    .attr('title', 'Click to toggle: Verify TDS against Bank Statement')
-                    .html('<i class="fa fa-times"></i> <span>Verify</span>');
+        function sendTdsVerifyUpdate($btn, newStatus, payId, isStatement, receivedAmount) {
+            $btn.prop('disabled', true).css('opacity', '0.7');
+
+            var postData = {
+                action: 'updateTdsVerifyStatus',
+                payment_id: payId,
+                status: newStatus,
+                is_statement: isStatement
+            };
+            if (typeof receivedAmount !== 'undefined' && receivedAmount !== null) {
+                postData.tds_received = receivedAmount;
             }
 
-            if (payId) {
-                $btn.css('opacity', '0.7');
-                $.ajax({
-                    url: 'addPayment.php',
-                    type: 'POST',
-                    data: {
-                        action: 'updateTdsVerifyStatus',
-                        payment_id: payId,
-                        status: newStatus,
-                        is_statement: isStatement
-                    },
-                    dataType: 'json',
-                    success: function (res) {
-                        $btn.css('opacity', '1');
-                        if (res && res.success) {
-                            if (typeof Swal !== 'undefined') {
-                                const Toast = Swal.mixin({
-                                    toast: true,
-                                    position: 'top-end',
-                                    showConfirmButton: false,
-                                    timer: 2000,
-                                    timerProgressBar: true
-                                });
-                                Toast.fire({
-                                    icon: 'success',
-                                    title: newStatus === 'Verified' ? 'TDS Verified successfully' : 'TDS marked as Unverified'
-                                });
-                            }
+            $.ajax({
+                url: 'addPayment.php',
+                type: 'POST',
+                data: postData,
+                dataType: 'json',
+                success: function (res) {
+                    $btn.prop('disabled', false).css('opacity', '1');
+                    if (res && res.success) {
+                        $btn.attr('data-status', newStatus);
+                        if (newStatus === 'Verified') {
+                            $btn.removeClass('tds-btn-unverified')
+                                .addClass('tds-btn-verified')
+                                .css({
+                                    'background-color': '#16a34a',
+                                    'border-color': '#15803d',
+                                    'color': '#ffffff'
+                                })
+                                .attr('title', 'Click to toggle: Mark as Unverified')
+                                .html('<i class="fa fa-check"></i> <span>Verified</span>');
                         } else {
-                            console.warn('Could not update TDS verify status:', res);
-                            if (res && res.message && typeof Swal !== 'undefined') {
-                                Swal.fire({ icon: 'error', title: 'Error', text: res.message });
-                            }
+                            $btn.removeClass('tds-btn-verified')
+                                .addClass('tds-btn-unverified')
+                                .css({
+                                    'background-color': '#ef4444',
+                                    'border-color': '#dc2626',
+                                    'color': '#ffffff'
+                                })
+                                .attr('title', 'Click to toggle: Verify TDS against Bank Statement')
+                                .html('<i class="fa fa-times"></i> <span>Verify</span>');
                         }
-                    },
-                    error: function (xhr, status, err) {
-                        $btn.css('opacity', '1');
-                        console.error('Error updating TDS verify status:', err);
+                        if (typeof Swal !== 'undefined') {
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000,
+                                timerProgressBar: true
+                            });
+                            Toast.fire({
+                                icon: 'success',
+                                title: newStatus === 'Verified' ? 'TDS Verified successfully' : 'TDS marked as Unverified'
+                            });
+                        }
+                    } else {
+                        var errMsg = (res && res.message) ? res.message : 'Could not update TDS verify status';
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '<span style="color: #dc2626;">Verification Failed</span>',
+                                html: '<div style="font-size: 13.5px; color: #374151;">' + errMsg + '</div>'
+                            });
+                        } else {
+                            alert(errMsg);
+                        }
                     }
-                });
-            }
+                },
+                error: function (xhr, status, err) {
+                    $btn.prop('disabled', false).css('opacity', '1');
+                    var errMsg = 'Server error updating TDS verify status.';
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                        errMsg = xhr.responseJSON.message;
+                    }
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Error', text: errMsg });
+                    } else {
+                        alert(errMsg);
+                    }
+                }
+            });
         }
 
-        $('.saveChanges').change(function (e) {
+        $(document).on('change', '.saveChanges', function (e) {
             saveData($(this));
         });
 
         function saveData($selector) {
             var checkedValue = $selector.val();
+            var colName = $selector.attr('data-column');
+            var isTdsRec = (colName === 'tds_received');
+
+            if (isTdsRec) {
+                applyTdsInputValidation($selector);
+                var decided = parseFloat($selector.attr('data-decided') || $selector.closest('tr').attr('data-decided') || 0);
+                var raw = $.trim(checkedValue || '');
+                var val = parseFloat(raw.replace(/,/g, ''));
+                if (decided > 0 && !isNaN(val) && val > 0 && val < decided) {
+                    if (typeof Swal !== 'undefined') {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3500,
+                            timerProgressBar: true
+                        });
+                        Toast.fire({
+                            icon: 'warning',
+                            title: 'TDS received amount (₹' + val.toFixed(2) + ') is lower than TDS decided amount (₹' + decided.toFixed(2) + ')'
+                        });
+                    }
+                }
+            }
+
             $.ajax({
                 url: "deleteFinalInvoice.php",
-                type: "GET",
+                type: "POST",
                 data: {
                     id: $selector.attr('data-row'),
-                    columnName: $selector.attr('data-column'),
+                    columnName: colName,
                     columnValue: checkedValue,
+                    is_statement: $selector.attr('data-statement') || '0'
                 },
                 success: function (data) {
-                    // Success logic
+                    if (isTdsRec) {
+                        applyTdsInputValidation($selector);
+                    } else {
+                        $selector.css('border-color', '#16a34a');
+                        setTimeout(function() {
+                            $selector.css('border-color', '');
+                        }, 1500);
+                    }
+                },
+                error: function() {
+                    $selector.css('border-color', '#ef4444');
                 }
             });
             $selector.removeClass("glowing-border");
@@ -1299,6 +1549,21 @@ try {
 
 
 
-        table.columns.adjust().draw();
+        table.on('draw', function () {
+            $('input[name="tds_received"]').each(function() {
+                applyTdsInputValidation($(this));
+            });
+        });
+        $('input[name="tds_received"]').each(function() {
+            applyTdsInputValidation($(this));
+        });
+
+        setTimeout(function () {
+            table.columns.adjust();
+        }, 150);
+
+        $(window).on('resize', function () {
+            table.columns.adjust();
+        });
     });
 </script>

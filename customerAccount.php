@@ -23387,7 +23387,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 Swal.fire({
                     icon: 'warning',
                     title: '<span style="font-size: 18px; font-weight: 700; color: #b45309;"><i class="fa fa-lock" style="margin-right: 6px;"></i> Reconciled Entry</span>',
-                    html: '<div style="font-size: 13.5px; color: #334155;">Cannot edit reconciled payment entry.<br><small style="color: #64748b;">This payment entry has been verified/reconciled against bank records.</small></div>',
+                    html: '<div style="font-size: 13.5px; color: #334155;">Cannot edit reconciled payment.<br><small style="color: #64748b;">This payment entry has been reconciled against bank records contact finance person for more information.</small></div>',
                     confirmButtonColor: '#0d4d8b',
                     confirmButtonText: 'OK'
                 });

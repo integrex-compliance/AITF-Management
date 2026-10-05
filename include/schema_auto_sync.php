@@ -495,6 +495,11 @@ if (!function_exists('aitf_ensure_tds_columns')) {
                     $db->exec("ALTER TABLE `payment_system` ADD COLUMN `tds_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `payment_received`");
                 } catch (Throwable $e) {}
             }
+            if (!isset($payCols['tds_received'])) {
+                try {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `tds_received` DECIMAL(10,2) NULL DEFAULT NULL AFTER `tds_amount`");
+                } catch (Throwable $e) {}
+            }
             if (!isset($payCols['discount_amount'])) {
                 try {
                     $db->exec("ALTER TABLE `payment_system` ADD COLUMN `discount_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `tds_amount`");
@@ -503,6 +508,16 @@ if (!function_exists('aitf_ensure_tds_columns')) {
             if (!isset($payCols['reconciliation'])) {
                 try {
                     $db->exec("ALTER TABLE `payment_system` ADD COLUMN `reconciliation` VARCHAR(100) NULL AFTER `cheque_details`");
+                } catch (Throwable $e) {}
+            }
+            if (!isset($payCols['credit_date_booking'])) {
+                try {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `credit_date_booking` VARCHAR(100) NULL DEFAULT NULL AFTER `payment_date`");
+                } catch (Throwable $e) {}
+            }
+            if (!isset($payCols['tan_of_deductor'])) {
+                try {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `tan_of_deductor` VARCHAR(100) NULL DEFAULT NULL AFTER `credit_date_booking`");
                 } catch (Throwable $e) {}
             }
 
@@ -525,6 +540,12 @@ if (!function_exists('aitf_ensure_tds_columns')) {
                     }
                     if (!isset($spCols['tds_received'])) {
                         $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_received` DECIMAL(12,2) DEFAULT 0.00");
+                    }
+                    if (!isset($spCols['credit_date_booking'])) {
+                        $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `credit_date_booking` VARCHAR(100) NULL DEFAULT NULL AFTER `payment_date`");
+                    }
+                    if (!isset($spCols['tan_of_deductor'])) {
+                        $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tan_of_deductor` VARCHAR(100) NULL DEFAULT NULL AFTER `credit_date_booking`");
                     }
                 }
             } catch (Throwable $e) {}

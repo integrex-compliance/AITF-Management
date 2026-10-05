@@ -61,7 +61,7 @@ function fetchTdsReportData($db, $status, $startDateStr, $endDateStr, $clientSea
     $sql = "SELECT ci.id, ci.customer_name, ci.unique_id, ps.service_type AS tds, 
                    COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) as amount_decided,
                    COALESCE(NULLIF(ps.tds_amount, 0), ps.payment_received, ps.amount_decided) as payment_received,
-                   ps.payment_date, ps.comment
+                   ps.payment_date, ps.credit_date_booking, ps.tan_of_deductor, ps.comment
             FROM customer_info ci
             LEFT JOIN payment_system ps ON ci.id = ps.customer_id
             LEFT JOIN service svc ON ps.customer_id = svc.customer_id
@@ -121,7 +121,7 @@ function fetchTdsReportData($db, $status, $startDateStr, $endDateStr, $clientSea
         $spSql = "SELECT ci.id, ci.customer_name, ci.unique_id, 
                          CONCAT('TDS (Statement #', sp.id, ')') as tds, 
                          sp.tds_decided as amount_decided, sp.tds_received as payment_received,
-                         sp.payment_date, sp.comment
+                         sp.payment_date, sp.credit_date_booking, sp.tan_of_deductor, sp.comment
                   FROM customer_info ci
                   INNER JOIN statement_payments sp ON ci.id = sp.customer_id
                   WHERE sp.tds_decided > 0";

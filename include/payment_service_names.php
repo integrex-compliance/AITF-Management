@@ -35,7 +35,7 @@ if (!function_exists('normalizePaymentServiceType')) {
             preg_match('/\bsa\s*[-_]?\s*(0?1|i|0?3|0?5)\b/i', $clean) ||
             strpos($lower, 'sa-01') !== false ||
             strpos($lower, 'sa-1') !== false ||
-            strpos($lower, 'sa-i') !== false ||
+            preg_match('/\bsa-i\b/i', $raw) ||
             strpos($lower, 'sa 1') !== false ||
             strpos($lower, 'sa1') !== false ||
             strpos($lower, 'sa-03') !== false ||
@@ -113,4 +113,3 @@ if (!function_exists('normalizePaymentServiceType')) {
         return $raw;
     }
 }
-

@@ -194,6 +194,59 @@ if (isset($req['action']) && $req['action'] === 'updateTdsVerifyStatus') {
         $status = trim((string)($req['status'] ?? 'Verify'));
         $isStatement = !empty($req['is_statement']) && $req['is_statement'] !== '0' && $req['is_statement'] !== false;
         if ($payId > 0) {
+            if ($status === 'Verified') {
+                // If tds_received was submitted with verify request, persist it first
+                if (isset($req['tds_received']) && $req['tds_received'] !== '') {
+                    $cleanedRec = number_format(max(0.0, floatval(str_replace(',', '', $req['tds_received']))), 2, '.', '');
+                    if ($isStatement) {
+                        $upStmt = $db->prepare("UPDATE statement_payments SET tds_received = ? WHERE id = ?");
+                        $upStmt->execute([$cleanedRec, $payId]);
+                    } else {
+                        $upStmt = $db->prepare("UPDATE payment_system SET tds_received = ? WHERE payment_id = ?");
+                        $upStmt->execute([$cleanedRec, $payId]);
+                    }
+                }
+
+                // Check TDS received vs decided
+                if ($isStatement) {
+                    $chkStmt = $db->prepare("SELECT tds_decided, tds_received FROM statement_payments WHERE id = ?");
+                    $chkStmt->execute([$payId]);
+                    $row = $chkStmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$row) {
+                        echo json_encode(['success' => false, 'message' => 'Statement payment record not found.']);
+                        exit;
+                    }
+                    $tdsDec = (float)($row['tds_decided'] ?? 0);
+                    $tdsRec = isset($row['tds_received']) && $row['tds_received'] !== null && $row['tds_received'] !== '' ? (float)$row['tds_received'] : 0.0;
+                } else {
+                    $chkStmt = $db->prepare("SELECT COALESCE(NULLIF(tds_amount, 0), amount_decided, payment_received) as amount_decided, tds_received FROM payment_system WHERE payment_id = ?");
+                    $chkStmt->execute([$payId]);
+                    $row = $chkStmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$row) {
+                        echo json_encode(['success' => false, 'message' => 'Payment record not found.']);
+                        exit;
+                    }
+                    $tdsDec = (float)($row['amount_decided'] ?? 0);
+                    $tdsRec = isset($row['tds_received']) && $row['tds_received'] !== null && $row['tds_received'] !== '' ? (float)$row['tds_received'] : 0.0;
+                }
+
+                if ($tdsRec <= 0) {
+                    echo json_encode([
+                        'success' => false, 
+                        'message' => 'Blank TDS cannot be reconciled. Please enter the TDS received amount before verifying.'
+                    ]);
+                    exit;
+                }
+
+                if ($tdsDec > 0 && $tdsRec < $tdsDec) {
+                    echo json_encode([
+                        'success' => false, 
+                        'message' => 'TDS received amount (₹' . number_format($tdsRec, 2) . ') is lower than the TDS decided amount (₹' . number_format($tdsDec, 2) . '). Blank or lower TDS cannot be reconciled.'
+                    ]);
+                    exit;
+                }
+            }
+
             if ($isStatement) {
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('Use POST for verification.');
                 aitf_payment_json(aitf_payment_verify($db, $payId, $status, 'tds_verified', true));
@@ -202,11 +255,6 @@ if (isset($req['action']) && $req['action'] === 'updateTdsVerifyStatus') {
                 aitf_payment_schema($db);
                 aitf_payment_json(aitf_payment_verify($db, $payId, $status, 'tds_verified'));
             }
-            $stmt->bindParam(':status', $status);
-            $stmt->bindParam(':id', $payId, PDO::PARAM_INT);
-            $stmt->execute();
-            echo json_encode(['success' => true, 'status' => $status, 'payment_id' => $payId]);
-            exit;
         } else {
             echo json_encode(['success' => false, 'message' => 'Invalid payment ID']);
             exit;

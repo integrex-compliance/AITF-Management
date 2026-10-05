@@ -9,6 +9,11 @@
     require_once __DIR__ . '/include/payment_due_helper.php';
 
     $allPaymentInfo = aitf_get_due_payments($db);
+    $stmtFirm = $db->query("SELECT firm_bank, bank_ac_no, bank_ifsc_code FROM consulting_firm LIMIT 1");
+    $firmInfo = $stmtFirm ? $stmtFirm->fetch(PDO::FETCH_ASSOC) : [];
+    $firmBank = $firmInfo['firm_bank'] ?? 'Bank';
+    $firmAc = $firmInfo['bank_ac_no'] ?? '';
+    $firmIfsc = $firmInfo['bank_ifsc_code'] ?? '';
     ?>
     <style>
         /* Base typography & resets */
@@ -21,6 +26,14 @@
         }
 
         /* Section Title Badge */
+        .payment-page-heading {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
         .invoice-section-title {
             display: inline-flex;
             align-items: center;
@@ -102,44 +115,7 @@
             box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12);
         }
 
-        .btn-report-export {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            height: 40px;
-            margin: 0;
-            padding: 0 20px;
-            box-sizing: border-box;
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            text-transform: none;
-            border: 1px solid transparent;
-            white-space: nowrap;
-        }
 
-        .btn-solid-primary {
-            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%);
-            color: #ffffff;
-            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
-        }
-
-        .btn-solid-primary:hover {
-            background: linear-gradient(135deg, #11599e 0%, #0a467e 100%);
-            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.35);
-            transform: translateY(-1px);
-            color: #ffffff;
-        }
-
-        .btn-solid-primary:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(13, 77, 139, 0.2);
-        }
 
         #tab_customer_list_filter {
             display: none;
@@ -206,8 +182,21 @@
             text-decoration: underline;
         }
 
+        #tab_customer_list tbody td:first-child small .client-contact-person,
+        .client-contact-person {
+            display: inline !important;
+            font-weight: 500 !important;
+            color: #475569 !important;
+            margin-left: 5px !important;
+            font-size: 11.5px;
+        }
+
+        #tab_customer_list tbody td:first-child:hover small .client-contact-person {
+            color: #0369a1 !important;
+        }
+
         /* Service Type column badge */
-        #tab_customer_list tbody td:nth-child(4) small {
+        #tab_customer_list tbody td:nth-child(2) small {
             background: #e0f2fe;
             color: #0369a1;
             font-weight: 700;
@@ -217,11 +206,45 @@
             display: inline-block;
         }
 
+        /* Invoices Issued */
+        #tab_customer_list tbody td:nth-child(3) small {
+            color: #1e293b;
+            font-weight: 700;
+            font-size: 12.5px;
+        }
+
+        /* Amount Received */
+        #tab_customer_list tbody td:nth-child(4) small {
+            color: #16a34a;
+            font-weight: 700;
+            font-size: 12.5px;
+        }
+
         /* Payment Pending Amount */
         #tab_customer_list tbody td:nth-child(5) small {
             color: #dc2626;
             font-weight: 800;
             font-size: 13px;
+        }
+
+        /* Mail Count Badge */
+        .reminder-count-container {
+            margin-top: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            text-align: center;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .reminder-count-container .reminder-count-val {
+            font-weight: 800;
+            color: #0d4d8b;
+            background: #f1f5f9;
+            padding: 1px 6px;
+            border-radius: 10px;
+            display: inline-block;
         }
 
         /* Action Mail Button */
@@ -343,8 +366,18 @@
         html.theme-dark #tab_customer_list tbody tr:hover td { background-color: var(--pp-surface-2) !important; }
         html.theme-dark .table-striped tbody tr:nth-of-type(odd) td { background-color: rgba(255, 255, 255, 0.02) !important; }
         html.theme-dark #tab_customer_list tbody td:first-child small { color: #38bdf8 !important; }
-        html.theme-dark #tab_customer_list tbody td:nth-child(4) small { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+        html.theme-dark #tab_customer_list tbody td:first-child small .client-contact-person,
+        html.theme-dark .client-contact-person { color: #94a3b8 !important; }
+        html.theme-dark #tab_customer_list tbody td:first-child:hover small .client-contact-person { color: #7dd3fc !important; }
+        html.theme-dark #tab_customer_list tbody td:nth-child(2) small { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+        html.theme-dark #tab_customer_list tbody td:nth-child(3) small { color: #e2e8f0 !important; }
+        html.theme-dark #tab_customer_list tbody td:nth-child(4) small { color: #4ade80 !important; }
         html.theme-dark #tab_customer_list tbody td:nth-child(5) small { color: #f87171 !important; }
+        html.theme-dark .reminder-count-container { color: #94a3b8; }
+        html.theme-dark .reminder-count-container .reminder-count-val {
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.15);
+        }
 
         /* Comment textarea */
         html.theme-dark #tab_customer_list textarea,
@@ -359,49 +392,728 @@
         }
         html.theme-dark .saveChanges::placeholder { color: var(--pp-text-faint); }
 
-        /* Report Modal Dark Mode */
-        html.theme-dark #report-format-chooser > div {
+
+
+        /* =====================================================================
+           ULTRA-MODERN DUE PAYMENT REMINDER MODAL
+           ===================================================================== */
+        #duePaymentReminderModal {
+            overflow-y: auto !important;
+            padding-right: 0 !important;
+        }
+
+        #duePaymentReminderModal .modal-dialog {
+            max-width: 740px !important;
+            width: 95% !important;
+            margin: 25px auto !important;
+        }
+
+        #duePaymentReminderModal .modal-content {
+            border-radius: 20px !important;
+            overflow: hidden !important;
+            border: none !important;
+            box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08) !important;
+            background: #ffffff !important;
+        }
+
+        /* Modern Clean Header (No heavy dark blue banner) */
+        .modern-reminder-header {
+            background: #ffffff !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            padding: 18px 24px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+        }
+
+        .modern-header-left {
+            display: flex !important;
+            align-items: center !important;
+            gap: 14px !important;
+        }
+
+        .modern-header-icon {
+            width: 44px !important;
+            height: 44px !important;
+            border-radius: 12px !important;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            color: #2563eb !important;
+            font-size: 19px !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12) !important;
+            flex-shrink: 0 !important;
+        }
+
+        .modern-header-title {
+            font-size: 17px !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+            margin: 0 !important;
+            letter-spacing: -0.3px !important;
+            line-height: 1.25 !important;
+        }
+
+        .modern-header-subtitle {
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            color: #64748b !important;
+            margin: 3px 0 0 0 !important;
+            line-height: 1.2 !important;
+        }
+
+        .modern-header-close {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            background: #f1f5f9 !important;
+            border: none !important;
+            color: #64748b !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 20px !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            outline: none !important;
+            padding: 0 !important;
+            line-height: 1 !important;
+        }
+
+        .modern-header-close:hover {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+            transform: scale(1.06) !important;
+        }
+
+        /* Modal Body */
+        .modern-reminder-body {
+            padding: 20px 24px 16px !important;
+            background: #f8fafc !important;
+        }
+
+        /* Executive Summary Card */
+        .modern-summary-card {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 14px !important;
+            overflow: hidden !important;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04) !important;
+            margin-bottom: 18px !important;
+        }
+
+        .summary-client-section {
+            padding: 16px 18px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+        }
+
+        .summary-label {
+            font-size: 10.5px !important;
+            font-weight: 700 !important;
+            color: #94a3b8 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            margin-bottom: 4px !important;
+            display: block !important;
+        }
+
+        .summary-client-name {
+            font-size: 16px !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+            margin: 0 0 8px 0 !important;
+            line-height: 1.3 !important;
+            word-break: break-word !important;
+        }
+
+        .summary-meta-row {
+            display: flex !important;
+            align-items: center !important;
+            flex-wrap: wrap !important;
+            gap: 8px 12px !important;
+            font-size: 12.5px !important;
+            color: #475569 !important;
+            font-weight: 500 !important;
+        }
+
+        .summary-meta-item {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+        }
+
+        .summary-meta-item i {
+            color: #0d4d8b !important;
+            font-size: 12px !important;
+        }
+
+        .summary-meta-sep {
+            color: #cbd5e1 !important;
+        }
+
+        .overdue-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            background: #fef2f2 !important;
+            color: #dc2626 !important;
+            border: 1px solid #fecaca !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            padding: 4px 10px !important;
+            border-radius: 20px !important;
+            white-space: nowrap !important;
+        }
+
+        .overdue-pulse {
+            width: 6px !important;
+            height: 6px !important;
+            border-radius: 50% !important;
+            background: #dc2626 !important;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2) !important;
+        }
+
+        .summary-balance-section {
+            background: linear-gradient(135deg, #fff5f5 0%, #fee2e2 100%) !important;
+            border-top: 1px dashed #fca5a5 !important;
+            padding: 14px 18px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 12px !important;
+        }
+
+        .balance-title {
+            font-size: 11.5px !important;
+            font-weight: 700 !important;
+            color: #991b1b !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+        }
+
+        .balance-title i {
+            color: #dc2626 !important;
+            font-size: 13px !important;
+        }
+
+        .balance-subtitle {
+            font-size: 11px !important;
+            color: #b91c1c !important;
+            opacity: 0.85 !important;
+            margin-top: 2px !important;
+        }
+
+        .balance-amount-display {
+            font-size: 24px !important;
+            font-weight: 900 !important;
+            color: #dc2626 !important;
+            letter-spacing: -0.5px !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            white-space: nowrap !important;
+            display: inline-flex !important;
+            align-items: baseline !important;
+        }
+
+        .balance-currency {
+            font-size: 20px !important;
+            font-weight: 800 !important;
+            margin-right: 1px !important;
+        }
+
+        /* Modern Form Elements */
+        .modern-form-group {
+            margin-bottom: 16px !important;
+        }
+
+        .modern-form-label {
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+            color: #1e293b !important;
+            margin-bottom: 6px !important;
+            display: block !important;
+        }
+
+        .req-star {
+            color: #dc2626 !important;
+            font-weight: 700 !important;
+            margin-left: 2px !important;
+        }
+
+        .opt-tag {
+            color: #94a3b8 !important;
+            font-weight: 500 !important;
+            font-size: 11.5px !important;
+            margin-left: 4px !important;
+        }
+
+        .modern-input-box {
+            position: relative !important;
+            width: 100% !important;
+            display: block !important;
+        }
+
+        .modern-input-box .modern-input-icon {
+            position: absolute !important;
+            left: 14px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            color: #94a3b8 !important;
+            font-size: 14px !important;
+            pointer-events: none !important;
+            z-index: 5 !important;
+            line-height: 1 !important;
+            margin: 0 !important;
+        }
+
+        .modern-input-box input.modern-input-control {
+            width: 100% !important;
+            height: 42px !important;
+            line-height: 42px !important;
+            padding: 0 14px 0 42px !important;
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            font-size: 13.5px !important;
+            font-weight: 500 !important;
+            color: #0f172a !important;
+            outline: none !important;
+            box-sizing: border-box !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        }
+
+        .modern-input-box input.modern-input-control:focus {
+            border-color: #2563eb !important;
+            background: #ffffff !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        }
+
+        .modern-input-box input.modern-input-control::placeholder {
+            color: #94a3b8 !important;
+            opacity: 1 !important;
+        }
+
+        .modern-form-hint {
+            font-size: 11.5px !important;
+            color: #64748b !important;
+            margin-top: 5px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+            line-height: 1.4 !important;
+        }
+
+        .modern-form-hint i {
+            color: #2563eb !important;
+            font-size: 11px !important;
+        }
+
+        textarea.modern-textarea-control {
+            width: 100% !important;
+            padding: 10px 14px !important;
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            color: #0f172a !important;
+            outline: none !important;
+            box-sizing: border-box !important;
+            resize: vertical !important;
+            min-height: 64px !important;
+            max-height: 120px !important;
+            line-height: 1.45 !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        }
+
+        textarea.modern-textarea-control:focus {
+            border-color: #2563eb !important;
+            background: #ffffff !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        }
+
+        textarea.modern-textarea-control::placeholder {
+            color: #94a3b8 !important;
+            opacity: 1 !important;
+        }
+
+        /* Modern Alert Messages */
+        .modern-status-alert {
+            font-size: 12.5px !important;
+            font-weight: 600 !important;
+            border-radius: 10px !important;
+            padding: 10px 14px !important;
+            margin-bottom: 12px !important;
+            display: none;
+            align-items: center !important;
+            gap: 8px !important;
+            line-height: 1.4 !important;
+        }
+
+        .modern-status-alert.status-info {
+            background: #eff6ff !important;
+            border: 1px solid #bfdbfe !important;
+            color: #1d4ed8 !important;
+        }
+
+        .modern-status-alert.status-success {
+            background: #f0fdf4 !important;
+            border: 1px solid #bbf7d0 !important;
+            color: #15803d !important;
+        }
+
+        .modern-status-alert.status-error {
+            background: #fef2f2 !important;
+            border: 1px solid #fecaca !important;
+            color: #b91c1c !important;
+        }
+
+        /* Mail Body Editor & Preview Styles */
+        .mail-body-tab-pills {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 8px;
+        }
+
+        .btn-mail-tab {
+            padding: 4px 10px;
+            font-size: 11.5px;
+            font-weight: 600;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-mail-tab:hover {
+            color: #0f172a;
+        }
+
+        .btn-mail-tab.active {
+            background: #0d4d8b;
+            color: #ffffff !important;
+            font-weight: 700;
+            box-shadow: 0 1px 3px rgba(13, 77, 139, 0.2);
+        }
+
+        .btn-mail-reset {
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 6px;
+            border: 1px dashed #ef4444;
+            background: #fef2f2;
+            color: #dc2626;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-mail-reset:hover {
+            background: #fee2e2;
+        }
+
+        .mail-body-editor-wrapper {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            background: #ffffff;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            transition: border-color 0.2s ease;
+        }
+
+        .mail-body-editor-wrapper:focus-within {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .mail-preview-pane {
+            height: 200px;
+            overflow-y: auto;
+            padding: 14px 16px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #1e293b;
+            background: #ffffff;
+        }
+
+        .modern-body-editor {
+            width: 100% !important;
+            height: 200px !important;
+            box-sizing: border-box !important;
+            padding: 12px 14px !important;
+            font-size: 12.5px !important;
+            line-height: 1.55 !important;
+            border: none !important;
+            outline: none !important;
+            resize: vertical !important;
+            color: #0f172a !important;
+            background: #ffffff !important;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
+        }
+
+        .badge-auto-template {
+            font-size: 10.5px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #64748b;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-custom-template {
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: #fef3c7;
+            color: #b45309;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Modern Modal Footer */
+        .modern-reminder-footer {
+            background: #ffffff !important;
+            border-top: 1px solid #f1f5f9 !important;
+            padding: 14px 24px !important;
+            display: flex !important;
+            justify-content: flex-end !important;
+            align-items: center !important;
+            gap: 10px !important;
+        }
+
+        .modern-btn-cancel {
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            color: #475569 !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+            border-radius: 9px !important;
+            padding: 8px 18px !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .modern-btn-cancel:hover {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+            border-color: #94a3b8 !important;
+        }
+
+        .modern-btn-send {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            border: none !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            border-radius: 9px !important;
+            padding: 9px 22px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 14px rgba(13, 77, 139, 0.25) !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .modern-btn-send:hover {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
+        }
+
+        .modern-btn-send:active {
+            transform: translateY(0) !important;
+        }
+
+        .modern-btn-send:disabled {
+            opacity: 0.65 !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+        }
+
+        /* Dark Mode Overrides for Modern Due Reminder Modal */
+        html.theme-dark #duePaymentReminderModal .modal-content {
             background: var(--pp-surface) !important;
             border: 1px solid var(--pp-border) !important;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7) !important;
+        }
+
+        html.theme-dark .modern-reminder-header {
+            background: var(--pp-surface) !important;
+            border-bottom: 1px solid var(--pp-border) !important;
+        }
+
+        html.theme-dark .modern-header-icon {
+            background: rgba(56, 189, 248, 0.15) !important;
+            color: #38bdf8 !important;
+            box-shadow: none !important;
+        }
+
+        html.theme-dark .modern-header-title {
             color: var(--pp-text) !important;
         }
-        html.theme-dark #report-format-chooser p {
+
+        html.theme-dark .modern-header-subtitle {
+            color: var(--pp-text-dim) !important;
+        }
+
+        html.theme-dark .modern-header-close {
+            background: var(--pp-surface-2) !important;
+            color: var(--pp-text-dim) !important;
+        }
+
+        html.theme-dark .modern-header-close:hover {
+            background: var(--pp-border) !important;
             color: var(--pp-text) !important;
         }
-        html.theme-dark .report-email-box label {
+
+        html.theme-dark .modern-reminder-body {
+            background: var(--pp-bg) !important;
+        }
+
+        html.theme-dark .modern-summary-card {
+            background: var(--pp-surface) !important;
+            border-color: var(--pp-border) !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        html.theme-dark .summary-label {
+            color: var(--pp-text-dim) !important;
+        }
+
+        html.theme-dark .summary-client-name {
             color: var(--pp-text) !important;
         }
-        html.theme-dark .report-email-input {
+
+        html.theme-dark .summary-meta-row {
+            color: var(--pp-text-dim) !important;
+        }
+
+        html.theme-dark .summary-meta-item i {
+            color: #60a5fa !important;
+        }
+
+        html.theme-dark .summary-balance-section {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(185, 28, 28, 0.12) 100%) !important;
+            border-color: rgba(239, 68, 68, 0.35) !important;
+        }
+
+        html.theme-dark .balance-title {
+            color: #f87171 !important;
+        }
+
+        html.theme-dark .balance-subtitle {
+            color: #fca5a5 !important;
+        }
+
+        html.theme-dark .balance-amount-display {
+            color: #f87171 !important;
+        }
+
+        html.theme-dark .modern-form-label {
+            color: var(--pp-text) !important;
+        }
+
+        html.theme-dark .modern-input-box input.modern-input-control,
+        html.theme-dark textarea.modern-textarea-control {
             background-color: var(--pp-surface-2) !important;
             border-color: var(--pp-border-2) !important;
             color: var(--pp-text) !important;
         }
 
-        /* Due Reminder Modal Dark Mode */
-        html.theme-dark #duePaymentReminderModal .modal-content {
-            background: var(--pp-surface) !important;
-            border: 1px solid var(--pp-border) !important;
-            color: var(--pp-text) !important;
+        html.theme-dark .modern-input-box input.modern-input-control:focus,
+        html.theme-dark textarea.modern-textarea-control:focus {
+            border-color: var(--pp-accent) !important;
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2) !important;
         }
-        html.theme-dark #duePaymentReminderModal .modal-body {
-            background: var(--pp-bg) !important;
+
+        html.theme-dark .modern-input-box .modern-input-icon {
+            color: var(--pp-text-dim) !important;
         }
-        html.theme-dark #duePaymentReminderModal .modal-footer {
+
+        html.theme-dark .modern-form-hint {
+            color: var(--pp-text-dim) !important;
+        }
+
+        html.theme-dark .modern-reminder-footer {
             background: var(--pp-surface) !important;
             border-top: 1px solid var(--pp-border) !important;
         }
-        html.theme-dark #duePaymentReminderModal .form-control {
-            background-color: var(--pp-surface-2) !important;
+
+        html.theme-dark .modern-btn-cancel {
+            background: var(--pp-surface-2) !important;
             border-color: var(--pp-border-2) !important;
             color: var(--pp-text) !important;
         }
-        html.theme-dark #duePaymentReminderModal label,
-        html.theme-dark #duePaymentReminderModal h5 {
+
+        html.theme-dark .modern-btn-cancel:hover {
+            background: var(--pp-border) !important;
+            color: #ffffff !important;
+        }
+
+        html.theme-dark .modern-btn-send {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%) !important;
+        }
+
+        html.theme-dark .mail-body-tab-pills {
+            background: var(--pp-surface-2) !important;
+        }
+
+        html.theme-dark .btn-mail-tab {
+            color: var(--pp-text-dim) !important;
+        }
+
+        html.theme-dark .btn-mail-tab:hover {
+            color: #ffffff !important;
+        }
+
+        html.theme-dark .btn-mail-tab.active {
+            background: var(--pp-accent) !important;
+            color: #ffffff !important;
+        }
+
+        html.theme-dark .mail-body-editor-wrapper {
+            border-color: var(--pp-border-2) !important;
+            background: var(--pp-surface-2) !important;
+        }
+
+        html.theme-dark .mail-preview-pane {
+            background: var(--pp-surface-2) !important;
             color: var(--pp-text) !important;
         }
-        html.theme-dark #duePaymentReminderModal div[style*="background: #ffffff"] {
+
+        html.theme-dark .modern-body-editor {
+            background: var(--pp-surface-2) !important;
+            color: var(--pp-text) !important;
+        }
+
+        html.theme-dark .badge-auto-template {
             background: var(--pp-surface) !important;
-            border-color: var(--pp-border) !important;
+            color: var(--pp-text-dim) !important;
         }
     </style>
 
@@ -410,7 +1122,7 @@
         <div class="page-content inset">
             <div class="container">
                 <div class="row">
-                    <div class="col-sm-12">
+                    <div class="col-sm-12 payment-page-heading">
                         <h5 class="invoice-section-title"><i class="fa fa-money"></i> Due Payments & Follow-Up</h5>
                     </div>
                 </div>
@@ -420,18 +1132,6 @@
                             <div class="invoice-filter-item search-item">
                                 <i class="fa fa-search"></i>
                                 <input type="text" id="paymentClientSearch" placeholder="Search by Client Name...">
-                            </div>
-                            <div class="invoice-filter-item">
-                                <input type="number" id="minAmount" placeholder="Min Amount">
-                            </div>
-                            <div class="invoice-filter-item">
-                                <input type="number" id="maxAmount" placeholder="Max Amount">
-                            </div>
-                            <div class="invoice-filter-item" style="flex: 0 0 160px;">
-                                <button type="button" class="btn-report-export btn-solid-primary downloadPaymentReport"
-                                    style="width: 100%;">
-                                    <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -446,61 +1146,66 @@
                                         <small><a>Client Name</a></small>
                                     </th>
                                     <th class="">
-                                        <small><a>Contact Person</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Phone Number</a></small>
-                                    </th>
-                                    <th class="">
                                         <small><a>Invoice Header</a></small>
+                                    </th>
+                                    <th class="">
+                                        <small><a>Invoices Issued</a></small>
+                                    </th>
+                                    <th class="">
+                                        <small><a>Amount Received</a></small>
                                     </th>
                                     <th class="">
                                         <small><a>Amount Pending</a></small>
                                     </th>
-                                    <th class="">
-                                        <small><a>Comments</a></small>
+                                    <th class="text-center" style="width: 80px;">
+                                        <small><a>Mail</a></small>
                                     </th>
-                                    <th class="text-center" style="width: 70px;">
-                                        <small><a>Action</a></small>
+                                    <th class="">
+                                        <small><a>Comments (If any)</a></small>
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($allPaymentInfo as $paymentInfo) { ?>
-                                    <tr id='addr<?php echo $paymentInfo['id'] ?>'>
+                                    <tr id="addr<?php echo (int)$paymentInfo['id'] . '-' . md5($paymentInfo['header_key']); ?>" data-customer-id="<?php echo (int)$paymentInfo['id']; ?>" data-client-name="<?php echo htmlspecialchars($paymentInfo['customer_name'] . (!empty($paymentInfo['contact_person']) ? ' ' . $paymentInfo['contact_person'] : '') . (!empty($paymentInfo['contact']) ? ' ' . $paymentInfo['contact'] : ''), ENT_QUOTES, 'UTF-8'); ?>">
                                         <td class="customerAccount" data-id="<?php echo $paymentInfo['id'] ?>"
                                             data-name="name"
                                             style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                            <small><?php echo htmlspecialchars($paymentInfo['customer_name']) ?></small>
-                                        </td>
-                                        <td class="customerAccount" data-id="<?php echo $paymentInfo['id'] ?>"
-                                            data-name="name"
-                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                            <small><?php echo htmlspecialchars($paymentInfo['contact_person'] ?? '') ?></small>
-                                        </td>
-                                        <td class="customerAccount" data-id="<?php echo $paymentInfo['id'] ?>"
-                                            data-name="name"
-                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                            <small><?php echo htmlspecialchars($paymentInfo['contact'] ?? '') ?></small>
+                                            <small><?php
+                                                echo htmlspecialchars($paymentInfo['customer_name']);
+                                                $contactPerson = rtrim(trim((string)($paymentInfo['contact_person'] ?? '')), ",; -\t\n\r\0\x0B");
+                                                $contactPhone = rtrim(trim((string)($paymentInfo['contact'] ?? '')), ",; -\t\n\r\0\x0B");
+                                                $contactParts = [];
+                                                if ($contactPerson !== '') {
+                                                    $contactParts[] = htmlspecialchars($contactPerson);
+                                                }
+                                                if ($contactPhone !== '') {
+                                                    $contactParts[] = htmlspecialchars($contactPhone);
+                                                }
+                                                if (!empty($contactParts)) {
+                                                    echo ' <span class="client-contact-person" style="display: inline !important; font-weight: 500; color: #475569; margin-left: 5px;">(' . implode(' - ', $contactParts) . ')</span>';
+                                                }
+                                            ?></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $paymentInfo['id'] ?>"
                                             data-name="name"
                                             style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                             <small><?php echo htmlspecialchars($paymentInfo['service_type'] ?? '') ?></small>
                                         </td>
+                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                            <?php foreach ($paymentInfo['invoices'] as $invoice) { ?>
+                                                <small style="display:block;"><a class="payment-invoice-preview" href="finalInvoicePDF.php?invoiceid=<?php echo (int)$invoice['id']; ?>&amp;invoiceCustomerId=<?php echo (int)$paymentInfo['id']; ?>" data-number="<?php echo htmlspecialchars($invoice['number'], ENT_QUOTES, 'UTF-8'); ?>" title="Open invoice"><?php echo htmlspecialchars($invoice['number'], ENT_QUOTES, 'UTF-8'); ?></a></small>
+                                            <?php } ?>
+                                        </td>
+                                        <td class="customerAccount" data-id="<?php echo $paymentInfo['id'] ?>"
+                                            data-name="name"
+                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                            <small><?php echo number_format((float)($paymentInfo['total_paid'] ?? 0), 2, '.', '') ?></small>
+                                        </td>
                                         <td class="customerAccount" data-id="<?php echo $paymentInfo['id'] ?>"
                                             data-name="name"
                                             style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                             <small><?php echo number_format((float)$paymentInfo['balance'], 2, '.', '') ?></small>
-                                        </td>
-                                        <td data-name="sel"
-                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <div class="table-edit-control">
-                                                <textarea rows="2" class="saveChanges"
-                                                    data-customer-id="<?php echo $paymentInfo['id'] ?>"
-                                                    data-service-type="<?php echo htmlspecialchars($paymentInfo['service_type'] ?? '') ?>"
-                                                    name="payComments" placeholder="Add follow-up notes..."><?php if (!empty($paymentInfo['comment'])) echo htmlspecialchars($paymentInfo['comment']); ?></textarea>
-                                            </div>
                                         </td>
                                         <td class="text-center" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; vertical-align: middle;">
                                             <button type="button" class="btn btn-reminder-mail btnSendReminderMail"
@@ -510,10 +1215,26 @@
                                                 data-phone="<?php echo htmlspecialchars($paymentInfo['contact'] ?? '', ENT_QUOTES); ?>"
                                                 data-email="<?php echo htmlspecialchars($paymentInfo['email_id'] ?? '', ENT_QUOTES); ?>"
                                                 data-service="<?php echo htmlspecialchars($paymentInfo['service_type'] ?? '', ENT_QUOTES); ?>"
+                                                data-header-key="<?php echo htmlspecialchars($paymentInfo['header_key'], ENT_QUOTES, 'UTF-8'); ?>"
                                                 data-balance="<?php echo number_format((float)$paymentInfo['balance'], 2, '.', ''); ?>"
+                                                data-total-inv="<?php echo number_format((float)($paymentInfo['total_inv'] ?? 0), 2, '.', ''); ?>"
+                                                data-total-paid="<?php echo number_format((float)($paymentInfo['total_paid'] ?? 0), 2, '.', ''); ?>"
+                                                data-total-tds="<?php echo number_format((float)($paymentInfo['total_tds'] ?? 0), 2, '.', ''); ?>"
                                                 title="Send Payment Reminder Email">
                                                 <i class="fa fa-envelope"></i>
                                             </button>
+                                            <div class="reminder-count-container" title="Reminder emails sent">
+                                                Count: <span class="reminder-count-val"><?php echo (int)($paymentInfo['reminder_count'] ?? 0); ?></span>
+                                            </div>
+                                        </td>
+                                        <td data-name="sel"
+                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <div class="table-edit-control">
+                                                <textarea rows="2" class="saveChanges"
+                                                    data-customer-id="<?php echo $paymentInfo['id'] ?>"
+                                                    data-service-type="<?php echo htmlspecialchars($paymentInfo['header_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                    name="payComments" placeholder="Add follow-up notes..."><?php if (!empty($paymentInfo['comment'])) echo htmlspecialchars($paymentInfo['comment']); ?></textarea>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php } ?>
@@ -526,74 +1247,137 @@
     </div>
 </div>
 
+<div id="paymentInvoicePreviewModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="paymentInvoicePreviewTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg" style="width:95%;max-width:1100px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
+                <h4 class="modal-title" id="paymentInvoicePreviewTitle">Invoice</h4>
+            </div>
+            <div class="modal-body" style="padding:0;">
+                <iframe id="paymentInvoicePreviewFrame" title="Invoice PDF" style="width:100%;height:75vh;border:0;"></iframe>
+            </div>
+            <div class="modal-footer">
+                <a id="paymentInvoicePreviewLink" class="btn btn-default" target="_blank" rel="noopener">Open PDF in new tab</a>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Outstanding Due Payment Reminder Modal -->
 <div id="duePaymentReminderModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" style="z-index: 10500;">
-    <div class="modal-dialog modal-md" style="max-width: 580px; margin-top: 60px;">
-        <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 12px 40px rgba(0,0,0,0.25);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%); color: #ffffff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
-                <h4 class="modal-title" style="font-size: 16px; font-weight: 700; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
-                    <i class="fa fa-envelope-o" style="font-size: 18px;"></i> Send Outstanding Payment Reminder
-                </h4>
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color: #ffffff; opacity: 0.9; font-size: 24px; line-height: 1; margin: 0; background: none; border: none;">&times;</button>
+    <div class="modal-dialog modal-lg" style="max-width: 760px;">
+        <div class="modal-content">
+            <!-- Modern Clean Header -->
+            <div class="modal-header modern-reminder-header">
+                <div class="modern-header-left">
+                    <div class="modern-header-icon">
+                        <i class="fa fa-envelope-o"></i>
+                    </div>
+                    <div>
+                        <h4 class="modern-header-title">Send Payment Reminder</h4>
+                        <p class="modern-header-subtitle">Email client their balance statement &amp; bank details</p>
+                    </div>
+                </div>
+                <button type="button" class="modern-header-close" data-dismiss="modal" aria-label="Close">&times;</button>
             </div>
-            <div class="modal-body" style="padding: 20px 24px; background: #f8fafc;">
-                <!-- Client Summary Card -->
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 10px;">
+
+            <!-- Modern Modal Body -->
+            <div class="modal-body modern-reminder-body">
+                <!-- Executive Summary Card -->
+                <div class="modern-summary-card">
+                    <div class="summary-client-section">
                         <div>
-                            <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Client Details</span>
-                            <h5 id="modalReminderClientName" style="margin: 4px 0 2px 0; font-size: 15px; font-weight: 800; color: #0f172a;">Client Name</h5>
-                            <div style="font-size: 12.5px; color: #475569;">
-                                <span id="modalReminderContactPerson"><i class="fa fa-user" style="color: #0d4d8b; margin-right: 4px;"></i> </span> &bull; 
-                                <span id="modalReminderPhone"><i class="fa fa-phone" style="color: #0d4d8b; margin-right: 4px;"></i> </span>
+                            <span class="summary-label">Client Account</span>
+                            <h4 id="modalReminderClientName" class="summary-client-name">Client Name</h4>
+                            <div class="summary-meta-row">
+                                <span class="summary-meta-item">
+                                    <i class="fa fa-user-circle-o"></i>
+                                    <span id="modalReminderContactPerson">Accounts</span>
+                                </span>
+                                <span class="summary-meta-sep">•</span>
+                                <span class="summary-meta-item">
+                                    <i class="fa fa-phone"></i>
+                                    <span id="modalReminderPhone">-</span>
+                                </span>
                             </div>
                         </div>
-                        <span id="modalReminderService" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 11px; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">CA</span>
+                        <div class="overdue-badge">
+                            <span class="overdue-pulse"></span> Payment Due
+                        </div>
                     </div>
 
-                    <!-- Highlighted Outstanding Due Banner -->
-                    <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1.5px solid #fca5a5; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: 13px; font-weight: 700; color: #991b1b; display: inline-flex; align-items: center; gap: 6px;">
-                            <i class="fa fa-clock-o" style="font-size: 16px; color: #dc2626;"></i> Total Outstanding Due:
-                        </span>
-                        <strong style="font-size: 18px; font-weight: 900; color: #dc2626;">
-                            ₹<span id="modalReminderDueAmount">0.00</span>
-                        </strong>
+                    <!-- Highlighted Outstanding Balance Banner -->
+                    <div class="summary-balance-section">
+                        <div>
+                            <div class="balance-title">
+                                <i class="fa fa-clock-o"></i> Total Outstanding Due
+                            </div>
+                            <div class="balance-subtitle">Pending ledger balance as of today</div>
+                        </div>
+                        <div class="balance-amount-display">
+                            <span class="balance-currency">₹</span><span id="modalReminderDueAmount">0.00</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Email Form -->
+                <!-- Form Controls -->
                 <form id="reminderMailForm" onsubmit="return false;">
                     <input type="hidden" id="modalReminderCustomerId" value="">
+                    <input type="hidden" id="modalReminderIsCustom" value="0">
                     
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 5px; display: block;">
-                            Recipient Email Address <span style="color: #dc2626;">*</span>
+                    <div class="modern-form-group" style="margin-bottom: 12px !important;">
+                        <label class="modern-form-label" for="modalReminderEmail">
+                            Recipient Email Address <span class="req-star">*</span>
                         </label>
-                        <div style="position: relative;">
-                            <i class="fa fa-envelope" style="position: absolute; left: 12px; top: 12px; color: #94a3b8; font-size: 14px;"></i>
-                            <input type="email" id="modalReminderEmail" class="form-control" placeholder="client@example.com" required
-                                style="padding-left: 36px; height: 38px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 500;">
+                        <div class="modern-input-box">
+                            <i class="fa fa-envelope-o modern-input-icon"></i>
+                            <input type="text" id="modalReminderEmail" class="modern-input-control" placeholder="client@example.com" required>
                         </div>
-                        <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
-                            <i class="fa fa-info-circle"></i> Auto-fetched from client profile. You can edit or add additional emails (comma separated).
-                        </small>
                     </div>
 
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 5px; display: block;">
-                            Optional Custom Note / Remarks
+                    <div class="modern-form-group" style="margin-bottom: 12px !important;">
+                        <label class="modern-form-label" for="modalReminderSubject">
+                            Email Subject <span class="req-star">*</span>
                         </label>
-                        <textarea id="modalReminderNote" class="form-control" rows="2" placeholder="e.g. Please clear payment before Friday to avoid account hold..."
-                            style="border-radius: 8px; border: 1px solid #cbd5e1; font-size: 12.5px; resize: vertical;"></textarea>
+                        <div class="modern-input-box">
+                            <i class="fa fa-pencil modern-input-icon"></i>
+                            <input type="text" id="modalReminderSubject" class="modern-input-control" placeholder="Outstanding Payment Reminder..." required>
+                        </div>
                     </div>
 
-                    <div id="modalReminderStatusMsg" style="font-size: 13px; font-weight: 600; min-height: 20px; margin-bottom: 10px; display: none;"></div>
+                    <div class="modern-form-group" style="margin-bottom: 14px !important;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label class="modern-form-label" style="margin-bottom: 0;">
+                                Email Body / Message <span class="req-star">*</span>
+                            </label>
+                            <div class="mail-body-tab-pills">
+                                <button type="button" class="btn-mail-tab active" id="tabBtnPreview"><i class="fa fa-eye"></i> Mail Preview</button>
+                                <button type="button" class="btn-mail-tab" id="tabBtnEdit"><i class="fa fa-pencil"></i> Edit Body</button>
+                                <button type="button" class="btn-mail-reset" id="btnResetMailBody" title="Reset to auto-generated template" style="display:none;"><i class="fa fa-undo"></i> Reset</button>
+                            </div>
+                        </div>
+
+                        <div class="mail-body-editor-wrapper">
+                            <!-- Live Formatted Preview Card -->
+                            <div id="modalReminderBodyPreview" class="mail-preview-pane"></div>
+
+                            <!-- Editable Textarea -->
+                            <div id="modalReminderBodyEditor" style="display: none;">
+                                <textarea id="modalReminderBody" class="modern-body-editor" rows="9" placeholder="Enter custom email message..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="modalReminderStatusMsg" class="modern-status-alert"></div>
                 </form>
             </div>
-            <div class="modal-footer" style="background: #ffffff; border-top: 1px solid #e2e8f0; padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" class="btn btn-default btn-sm" data-dismiss="modal" style="font-weight: 600; border-radius: 6px; padding: 6px 16px;">Cancel</button>
-                <button type="button" id="btnConfirmSendDueReminder" class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%); border: none; font-weight: 700; border-radius: 6px; padding: 6px 20px; display: inline-flex; align-items: center; gap: 6px;">
+
+            <!-- Modern Modal Footer -->
+            <div class="modal-footer modern-reminder-footer">
+                <button type="button" class="modern-btn-cancel" data-dismiss="modal">Cancel</button>
+                <button type="button" id="btnConfirmSendDueReminder" class="modern-btn-send">
                     <i class="fa fa-paper-plane"></i> Send Email
                 </button>
             </div>
@@ -601,60 +1385,6 @@
     </div>
 </div>
 
-<!-- Report chooser: Step 1 pick format (PDF/Excel), Step 2 pick action (download / email) -->
-<div id="report-format-chooser" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); z-index:99999;">
-    <div style="max-width:440px; margin:10% auto; background:#fff; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.3); overflow:hidden;">
-        <div style="background:#0d4d8b; color:#fff; padding:14px 18px; font-size:15px; font-weight:600;">
-            <i class="fa fa-cloud-download" style="margin-right:8px;"></i> Download Report
-        </div>
-
-        <!-- STEP 1: format -->
-        <div class="report-step report-step-format" style="padding:22px 18px; text-align:center;">
-            <p style="font-size:13px; color:#333; margin:0 0 18px;">Which format would you like?</p>
-            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-                <button type="button" class="btn btn-danger report-format-pdf" style="min-width:130px;">
-                    <i class="fa fa-file-pdf-o"></i> PDF
-                </button>
-                <button type="button" class="btn btn-success report-format-excel" style="min-width:130px;">
-                    <i class="fa fa-file-excel-o"></i> Excel
-                </button>
-            </div>
-            <div style="margin-top:18px;">
-                <button type="button" class="btn btn-default btn-sm report-format-cancel">Cancel</button>
-            </div>
-        </div>
-
-        <!-- STEP 2: action (download or email) -->
-        <div class="report-step report-step-action" style="display:none; padding:22px 18px; text-align:center;">
-            <p style="font-size:13px; color:#333; margin:0 0 4px;">Selected format: <strong class="report-format-label">Excel</strong></p>
-            <p style="font-size:12px; color:#777; margin:0 0 18px;">How would you like to receive it?</p>
-            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-                <button type="button" class="btn btn-primary report-action-download" style="min-width:150px;">
-                    <i class="fa fa-download"></i> Download Report
-                </button>
-                <button type="button" class="btn btn-warning report-action-email" style="min-width:150px;">
-                    <i class="fa fa-envelope"></i> Get Report on Email
-                </button>
-            </div>
-
-            <!-- Email sub-form -->
-            <div class="report-email-box" style="display:none; margin-top:18px; text-align:left;">
-                <label style="font-size:12px; font-weight:600; color:#333;">Enter email address</label>
-                <input type="email" class="report-email-input form-control" placeholder="name@example.com"
-                       style="margin-top:6px;" autocomplete="off">
-                <div class="report-email-msg" style="font-size:12px; margin-top:8px; min-height:16px;"></div>
-                <button type="button" class="btn btn-success report-email-send" style="width:100%; margin-top:6px;">
-                    <i class="fa fa-paper-plane"></i> Get Report
-                </button>
-            </div>
-
-            <div style="margin-top:18px;">
-                <button type="button" class="btn btn-default btn-sm report-step-back">Back</button>
-                <button type="button" class="btn btn-default btn-sm report-format-cancel">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script type="text/javascript">
     function debounce(callback, delay) {
@@ -671,188 +1401,35 @@
 
     $.fn.DataTable.ext.search.push(
         function (settings, data, dataIndex) {
-            var minVal = $('#minAmount').val();
-            var maxVal = $('#maxAmount').val();
-            var min = minVal !== '' ? parseFloat(minVal) : NaN;
-            var max = maxVal !== '' ? parseFloat(maxVal) : NaN;
-            var amountStr = data[4] || '';
-            var amount = parseFloat(amountStr.replace(/[^0-9.-]+/g, '')) || 0;
-
-            if ((isNaN(min) && isNaN(max)) ||
-                (isNaN(min) && amount <= max) ||
-                (min <= amount && isNaN(max)) ||
-                (min <= amount && amount <= max)) {
-                return true;
-            }
-            return false;
+            if (settings.nTable.id !== 'tab_customer_list') return true;
+            var clientQuery = $.trim($('#paymentClientSearch').val() || '').toLocaleLowerCase();
+            var clientName = $(settings.aoData[dataIndex].nTr).attr('data-client-name') || '';
+            if (clientQuery && clientName.toLocaleLowerCase().indexOf(clientQuery) === -1) return false;
+            return true;
         }
     );
 
     $(document).ready(function () {
 
+        $('#tab_customer_list').on('click', '.payment-invoice-preview', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#paymentInvoicePreviewTitle').text($(this).attr('data-number'));
+            $('#paymentInvoicePreviewFrame').attr('src', this.href);
+            $('#paymentInvoicePreviewLink').attr('href', this.href);
+            $('#paymentInvoicePreviewModal').modal('show');
+        });
+        $('#paymentInvoicePreviewModal').on('hidden.bs.modal', function () {
+            $('#paymentInvoicePreviewFrame').removeAttr('src');
+        });
+
         var debouncedSearch = debounce(function () {
-            table.search($('#paymentClientSearch').val()).draw();
+            table.draw();
         }, 200);
 
         $('#paymentClientSearch').on('input', debouncedSearch);
 
-        $('#minAmount, #maxAmount').on('keyup change', function () {
-            table.draw();
-        });
-
-        // Holds the report parameters chosen when a Download Report button is clicked.
-        var pendingReport = null;
-        // Format selected in step 1 ('pdf' | 'excel').
-        var pendingFormat = null;
-
-        function submitReportDownload() {
-            if (!pendingReport || !pendingFormat) {
-                return;
-            }
-            var url = (pendingFormat === 'excel') ? 'exportPaymentReportExcel.php' : 'exportPaymentReport.php';
-            var fields = {
-                minAmount: pendingReport.minAmount,
-                maxAmount: pendingReport.maxAmount,
-                clientName: pendingReport.clientName
-            };
-            var $form = $('<form>', {
-                method: 'post',
-                action: url
-            }).css('display', 'none');
-
-            $.each(fields, function (name, value) {
-                $('<input>', {
-                    type: 'hidden',
-                    name: name,
-                    value: value || ''
-                }).appendTo($form);
-            });
-
-            $('body').append($form);
-            $form[0].submit();
-            setTimeout(function () { $form.remove(); }, 1000);
-            closeFormatChooser();
-        }
-
-        function showReportStep(step) {
-            $('.report-step').hide();
-            if (step === 'action') {
-                $('.report-step-action').show();
-            } else {
-                $('.report-step-format').show();
-            }
-        }
-
-        function resetChooser() {
-            pendingFormat = null;
-            $('.report-email-box').hide();
-            $('.report-email-input').val('');
-            $('.report-email-msg').text('');
-            $('.report-email-send').prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
-            showReportStep('format');
-        }
-
-        function openFormatChooser(params) {
-            pendingReport = params;
-            resetChooser();
-            $('#report-format-chooser').css('display', 'block');
-        }
-
-        function closeFormatChooser() {
-            $('#report-format-chooser').hide();
-            pendingReport = null;
-            pendingFormat = null;
-        }
-
-        // --- Step 1: choose format ---
-        $('.report-format-pdf').click(function () {
-            pendingFormat = 'pdf';
-            $('.report-format-label').text('PDF');
-            $('.report-email-box').hide();
-            showReportStep('action');
-        });
-
-        $('.report-format-excel').click(function () {
-            pendingFormat = 'excel';
-            $('.report-format-label').text('Excel');
-            $('.report-email-box').hide();
-            showReportStep('action');
-        });
-
-        // --- Step 2: download (async; closes the chooser itself once the file is ready) ---
-        $('.report-action-download').click(function () {
-            submitReportDownload();
-        });
-
-        // --- Step 2: reveal the email sub-form ---
-        $('.report-action-email').click(function () {
-            $('.report-email-msg').text('');
-            $('.report-email-box').show();
-            $('.report-email-input').focus();
-        });
-
-        // --- Step 2 (email): send the report ---
-        $('.report-email-send').click(function () {
-            if (!pendingReport || !pendingFormat) {
-                return;
-            }
-            var email = $.trim($('.report-email-input').val());
-            var $msg = $('.report-email-msg');
-            var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailPattern.test(email)) {
-                $msg.css('color', '#cc0000').text('Please enter a valid email address.');
-                return;
-            }
-
-            var $btn = $(this);
-            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
-            $msg.css('color', '#0d4d8b').text('Sending report, please wait...');
-
-            $.post('emailPaymentReport.php', {
-                minAmount: pendingReport.minAmount,
-                maxAmount: pendingReport.maxAmount,
-                clientName: pendingReport.clientName,
-                format: pendingFormat,
-                email: email
-            }, null, 'json').done(function (res) {
-                if (res && res.success) {
-                    $msg.css('color', '#1a7f37').text(res.message || 'Report sent successfully.');
-                    setTimeout(closeFormatChooser, 2000);
-                } else {
-                    $msg.css('color', '#cc0000').text((res && res.message) ? res.message : 'Could not send the email.');
-                    $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
-                }
-            }).fail(function () {
-                $msg.css('color', '#cc0000').text('Server error. Please try again.');
-                $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
-            });
-        });
-
-        $('.report-step-back').click(function () {
-            resetChooser();
-        });
-
-        $('.report-format-cancel').click(function () {
-            closeFormatChooser();
-        });
-
-        $('#report-format-chooser').click(function (e) {
-            if (e.target === this) {
-                closeFormatChooser();
-            }
-        });
-
-        $('.downloadPaymentReport').click(function () {
-            var minAmount = $('#minAmount').val();
-            var maxAmount = $('#maxAmount').val();
-            var clientName = $('#paymentClientSearch').val();
-            
-            openFormatChooser({
-                minAmount: minAmount,
-                maxAmount: maxAmount,
-                clientName: clientName
-            });
-        });
+        
 
         $('.saveChanges').on('change blur', function (e) {
             saveData($(this));
@@ -874,6 +1451,8 @@
                     comment: checkedValue
                 },
                 success: function (data) {
+                    // Follow-up notes are stored per customer; keep repeated service rows in sync.
+                    $('#tab_customer_list .saveChanges[data-customer-id="' + customerId + '"]').val(checkedValue);
                     $selector.css('border-color', '#10b981');
                     setTimeout(function () {
                         $selector.css('border-color', '');
@@ -901,6 +1480,116 @@
             form.submit();
         });
 
+        // Firm bank details config for reminder mail preview and body
+        var firmBankConfig = {
+            bankName: <?php echo json_encode($firmBank ?: 'IDBI Bank Ltd'); ?>,
+            accountNo: <?php echo json_encode($firmAc ?: '0087102000027849'); ?>,
+            ifscCode: <?php echo json_encode($firmIfsc ?: 'IBKL0000087'); ?>,
+            beneficiary: 'AITF Management Certification Limited'
+        };
+        var activeReminderData = null;
+        var defaultGeneratedBody = '';
+        var defaultGeneratedSubject = '';
+
+        function escapeMailHtml(text) {
+            if (!text) return '';
+            return $('<div>').text(text).html();
+        }
+
+        function updateMailPreview() {
+            if (!activeReminderData) return;
+            var isCustom = $('#modalReminderIsCustom').val() === '1';
+            var textBody = $('#modalReminderBody').val();
+
+            if (isCustom) {
+                var safeCustom = escapeMailHtml(textBody).replace(/\n/g, '<br>');
+                var customHtml = '<div style="font-size: 13px; line-height: 1.65; color: #1e293b; white-space: pre-wrap;">'
+                    + safeCustom
+                    + '</div>';
+                $('#modalReminderBodyPreview').html(customHtml);
+            } else {
+                var clientName = escapeMailHtml(activeReminderData.name);
+                var contactPerson = escapeMailHtml(activeReminderData.contactPerson);
+                var salutation = contactPerson || clientName;
+                var serviceType = escapeMailHtml(activeReminderData.service);
+                var dueAmount = activeReminderData.fmtBalance;
+                var totalInv = activeReminderData.fmtInv;
+                var totalPaid = activeReminderData.fmtPaid;
+                var totalTds = activeReminderData.fmtTds;
+
+                var previewHtml = '<div style="font-size: 13px; line-height: 1.6; color: #1e293b;">'
+                    + '<div style="margin-bottom: 10px;">Dear <strong>' + salutation + '</strong> (' + clientName + '),</div>'
+                    + '<p style="margin: 0 0 8px;">Greetings from <strong>AITF MANAGEMENT CERTIFICATION LIMITED</strong>.</p>'
+                    + '<p style="margin: 0 0 12px;">We hope this email finds you well. This is a gentle reminder regarding the outstanding payment balance pending in your account.</p>'
+                    + '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #0d4d8b; border-radius: 6px; padding: 10px 14px; margin: 12px 0;">'
+                    + '<div style="font-size: 12px; font-weight: 700; color: #0d4d8b; margin-bottom: 6px; text-transform: uppercase;">Account &amp; Payment Statement:</div>'
+                    + '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">'
+                    + '<tr><td style="padding: 3px 0; color: #64748b; width: 45%;">Client Name:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">' + clientName + '</td></tr>'
+                    + '<tr><td style="padding: 3px 0; color: #64748b;">Invoice Header:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">' + serviceType + '</td></tr>'
+                    + '<tr><td style="padding: 3px 0; color: #64748b;">Total Invoiced:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">₹' + totalInv + '</td></tr>'
+                    + '<tr><td style="padding: 3px 0; color: #64748b;">Payment Received:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">₹' + totalPaid + '</td></tr>'
+                    + (activeReminderData.totalTds > 0 ? '<tr><td style="padding: 3px 0; color: #64748b;">TDS Deducted:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">₹' + totalTds + '</td></tr>' : '')
+                    + '<tr><td style="padding: 5px 0 2px 0; font-weight: 700; color: #dc2626;">Outstanding Due:</td><td style="padding: 5px 0 2px 0; font-weight: 800; font-size: 13.5px; color: #dc2626;">₹' + dueAmount + '/-</td></tr>'
+                    + '</table>'
+                    + '</div>'
+                    + '<p style="margin: 0 0 10px;">As per our accounting records, the total outstanding balance of <strong style="color: #dc2626;">₹' + dueAmount + '/-</strong> is currently overdue. Kindly clear the outstanding balance at your earliest convenience.</p>'
+                    + '<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px 14px; margin: 12px 0; font-size: 12px; color: #166534;">'
+                    + '<strong style="color: #14532d; display: block; margin-bottom: 4px;"><i class="fa fa-bank"></i> Company Bank Details:</strong>'
+                    + '<div>Bank: <b>' + escapeMailHtml(firmBankConfig.bankName) + '</b></div>'
+                    + '<div>Account No: <b>' + escapeMailHtml(firmBankConfig.accountNo) + '</b></div>'
+                    + '<div>IFSC Code: <b>' + escapeMailHtml(firmBankConfig.ifscCode) + '</b></div>'
+                    + '<div>Beneficiary: <b>' + escapeMailHtml(firmBankConfig.beneficiary) + '</b></div>'
+                    + '</div>'
+                    + '<p style="margin: 0 0 10px; font-size: 12px; color: #475569;">If payment has already been initiated, please share the transaction confirmation / UTR details to reconcile your ledger.</p>'
+                    + '<div style="margin-top: 14px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #475569;">'
+                    + '<strong>Best Regards,</strong><br>'
+                    + 'Accounts &amp; Finance Team<br>'
+                    + '<span style="color: #0d4d8b; font-weight: 700;">AITF MANAGEMENT CERTIFICATION LIMITED</span>'
+                    + '</div>'
+                    + '</div>';
+                $('#modalReminderBodyPreview').html(previewHtml);
+            }
+        }
+
+        // Switch to Preview Tab
+        $('#tabBtnPreview').click(function () {
+            $(this).addClass('active');
+            $('#tabBtnEdit').removeClass('active');
+            updateMailPreview();
+            $('#modalReminderBodyEditor').hide();
+            $('#modalReminderBodyPreview').show();
+        });
+
+        // Switch to Edit Body Tab
+        $('#tabBtnEdit').click(function () {
+            $(this).addClass('active');
+            $('#tabBtnPreview').removeClass('active');
+            $('#modalReminderBodyPreview').hide();
+            $('#modalReminderBodyEditor').show();
+            $('#modalReminderBody').focus();
+        });
+
+        // Detect edits in real-time
+        $('#modalReminderBody').on('input', function () {
+            var currentVal = $(this).val();
+            if (currentVal !== defaultGeneratedBody) {
+                $('#modalReminderIsCustom').val('1');
+                $('#btnResetMailBody').show();
+            } else {
+                $('#modalReminderIsCustom').val('0');
+                $('#btnResetMailBody').hide();
+            }
+        });
+
+        // Reset to default auto-generated body
+        $('#btnResetMailBody').click(function () {
+            $('#modalReminderBody').val(defaultGeneratedBody);
+            $('#modalReminderSubject').val(defaultGeneratedSubject);
+            $('#modalReminderIsCustom').val('0');
+            $(this).hide();
+            updateMailPreview();
+        });
+
         // Open Send Due Reminder Modal
         $('#tab_customer_list').on('click', '.btnSendReminderMail', function (e) {
             e.preventDefault();
@@ -908,22 +1597,89 @@
 
             var $btn = $(this);
             var id = $btn.data('id');
-            var name = $btn.data('name');
-            var contactPerson = $btn.data('contact-person') || 'Accounts';
+            var name = $btn.data('name') || '';
+            var contactPerson = $btn.data('contact-person') || '';
             var phone = $btn.data('phone') || '-';
             var email = $btn.data('email') || '';
-            var service = $btn.data('service') || 'Certification';
-            var balance = $btn.data('balance') || '0.00';
+            var service = $btn.data('service') || 'Certification Services';
+            var balanceNum = parseFloat($btn.data('balance') || '0');
+            var totalInvNum = parseFloat($btn.data('total-inv') || '0');
+            var totalPaidNum = parseFloat($btn.data('total-paid') || '0');
+            var totalTdsNum = parseFloat($btn.data('total-tds') || '0');
+
+            var fmtBalance = balanceNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var fmtInv = totalInvNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var fmtPaid = totalPaidNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var fmtTds = totalTdsNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            activeReminderData = {
+                id: id,
+                headerKey: $btn.attr('data-header-key'),
+                name: name,
+                contactPerson: contactPerson,
+                phone: phone,
+                email: email,
+                service: service,
+                balance: balanceNum,
+                totalInv: totalInvNum,
+                totalPaid: totalPaidNum,
+                totalTds: totalTdsNum,
+                fmtBalance: fmtBalance,
+                fmtInv: fmtInv,
+                fmtPaid: fmtPaid,
+                fmtTds: fmtTds
+            };
 
             $('#modalReminderCustomerId').val(id);
             $('#modalReminderClientName').text(name);
-            $('#modalReminderContactPerson').html('<i class="fa fa-user" style="color: #0d4d8b; margin-right: 4px;"></i> ' + contactPerson);
-            $('#modalReminderPhone').html('<i class="fa fa-phone" style="color: #0d4d8b; margin-right: 4px;"></i> ' + phone);
-            $('#modalReminderService').text(service);
-            $('#modalReminderDueAmount').text(parseFloat(balance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            $('#modalReminderContactPerson').text(contactPerson || 'Accounts');
+            $('#modalReminderPhone').text(phone);
+            $('#modalReminderDueAmount').text(fmtBalance);
             $('#modalReminderEmail').val(email);
-            $('#modalReminderNote').val('');
-            $('#modalReminderStatusMsg').hide().empty();
+
+            // Generate default subject and body
+            defaultGeneratedSubject = "Outstanding Payment Reminder - ₹" + fmtBalance + " - " + name;
+            $('#modalReminderSubject').val(defaultGeneratedSubject);
+
+            var salutation = contactPerson ? contactPerson : name;
+            defaultGeneratedBody = "Dear " + salutation + " (" + name + "),\n\n"
+                + "Greetings from AITF MANAGEMENT CERTIFICATION LIMITED.\n\n"
+                + "We hope this email finds you well. This is a gentle reminder regarding the outstanding payment balance pending in your account.\n\n"
+                + "--- Account & Payment Statement ---\n"
+                + "Client Name: " + name + "\n"
+                + "Invoice Header: " + service + "\n"
+                + "Total Invoiced Amount: ₹" + fmtInv + "\n"
+                + "Total Payment Received: ₹" + fmtPaid + "\n"
+                + (totalTdsNum > 0 ? "TDS Deducted: ₹" + fmtTds + "\n" : "")
+                + "Total Outstanding Due: ₹" + fmtBalance + "/-\n\n"
+                + "As per our accounting records, the total outstanding balance of ₹" + fmtBalance + "/- is currently overdue. We kindly request you to clear the outstanding balance at your earliest convenience.\n\n"
+                + "You may transfer the amount via NEFT / RTGS / IMPS to our company account details below:\n"
+                + "Bank: " + firmBankConfig.bankName + "\n"
+                + "Account No: " + firmBankConfig.accountNo + "\n"
+                + "IFSC Code: " + firmBankConfig.ifscCode + "\n"
+                + "Beneficiary Name: " + firmBankConfig.beneficiary + "\n\n"
+                + "If the payment has already been initiated or processed, please share the transaction confirmation / UTR details with us so that our accounts team can reconcile your ledger.\n\n"
+                + "Should you have any queries or require copies of the invoices, please feel free to contact us.\n\n"
+                + "Thank you for your prompt attention and cooperation.\n\n"
+                + "Best Regards,\n"
+                + "Accounts & Finance Team\n"
+                + "AITF MANAGEMENT CERTIFICATION LIMITED\n"
+                + "Phone: +91 9222 1836\n"
+                + "Email: aitfacct@gmail.com\n"
+                + "Website: www.aitf.co.in";
+
+            $('#modalReminderBody').val(defaultGeneratedBody);
+            $('#modalReminderIsCustom').val('0');
+
+            // Reset tabs to Preview mode
+            $('#tabBtnPreview').addClass('active');
+            $('#tabBtnEdit').removeClass('active');
+            $('#btnResetMailBody').hide();
+            $('#modalReminderBodyPreview').show();
+            $('#modalReminderBodyEditor').hide();
+            updateMailPreview();
+
+            $('#modalReminderStatusMsg').removeClass('status-info status-success status-error').hide().empty();
             $('#btnConfirmSendDueReminder').prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send Email');
 
             $('#duePaymentReminderModal').modal('show');
@@ -933,51 +1689,80 @@
         $('#btnConfirmSendDueReminder').click(function () {
             var customerId = $('#modalReminderCustomerId').val();
             var recipientEmail = $.trim($('#modalReminderEmail').val());
-            var customNote = $.trim($('#modalReminderNote').val());
+            var subject = $.trim($('#modalReminderSubject').val());
+            var body = $.trim($('#modalReminderBody').val());
+            var isCustom = $('#modalReminderIsCustom').val();
             var $msg = $('#modalReminderStatusMsg');
             var $btn = $(this);
 
             if (!recipientEmail) {
-                $msg.css('color', '#dc2626').text('Please enter a recipient email address.').show();
+                $msg.removeClass('status-info status-success').addClass('status-error')
+                    .html('<i class="fa fa-exclamation-circle"></i> Please enter a recipient email address.').show();
                 $('#modalReminderEmail').focus();
                 return;
             }
 
+            if (!subject) {
+                $msg.removeClass('status-info status-success').addClass('status-error')
+                    .html('<i class="fa fa-exclamation-circle"></i> Please enter an email subject.').show();
+                $('#modalReminderSubject').focus();
+                return;
+            }
+
+            if (!body) {
+                $msg.removeClass('status-info status-success').addClass('status-error')
+                    .html('<i class="fa fa-exclamation-circle"></i> Email body cannot be empty.').show();
+                $('#modalReminderBody').focus();
+                return;
+            }
+
             $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
-            $msg.css('color', '#0d4d8b').text('Sending payment reminder email, please wait...').show();
+            $msg.removeClass('status-success status-error').addClass('status-info')
+                .html('<i class="fa fa-spinner fa-spin"></i> Sending payment reminder email, please wait...').show();
 
             $.ajax({
                 url: 'sendPaymentDueReminder.php',
                 type: 'POST',
                 data: {
                     customerId: customerId,
+                    headerKey: activeReminderData.headerKey,
                     recipientEmail: recipientEmail,
-                    customNote: customNote
+                    subject: subject,
+                    body: body,
+                    is_custom: isCustom
                 },
                 dataType: 'json',
                 success: function (res) {
                     if (res && res.success) {
-                        $msg.css('color', '#16a34a').text(res.message || 'Email sent successfully!').show();
+                        $msg.removeClass('status-info status-error').addClass('status-success')
+                            .html('<i class="fa fa-check-circle"></i> ' + (res.message || 'Email sent successfully!')).show();
                         $btn.html('<i class="fa fa-check"></i> Sent');
 
                         // Update follow-up comment in the table row if logged
                         if (res.loggedNote) {
-                            var $rowTextarea = $('#addr' + customerId).find('.saveChanges');
+                            var $rowTextarea = $('#tab_customer_list .saveChanges[data-customer-id="' + customerId + '"]');
                             var currentVal = $rowTextarea.val();
                             var newVal = currentVal ? currentVal + '\n' + res.loggedNote : res.loggedNote;
                             $rowTextarea.val(newVal);
                         }
 
+                        // Update reminder email count under Mail button
+                        var $countSpan = $('#tab_customer_list tr[data-customer-id="' + customerId + '"]').find('.reminder-count-val');
+                        var currentCount = parseInt($countSpan.first().text(), 10) || 0;
+                        $countSpan.text(currentCount + 1);
+
                         setTimeout(function () {
                             $('#duePaymentReminderModal').modal('hide');
                         }, 1800);
                     } else {
-                        $msg.css('color', '#dc2626').text(res.message || 'Failed to send email.').show();
+                        $msg.removeClass('status-info status-success').addClass('status-error')
+                            .html('<i class="fa fa-exclamation-triangle"></i> ' + (res.message || 'Failed to send email.')).show();
                         $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send Email');
                     }
                 },
                 error: function (xhr, status, error) {
-                    $msg.css('color', '#dc2626').text('Server error while sending email. Please try again.').show();
+                    $msg.removeClass('status-info status-success').addClass('status-error')
+                        .html('<i class="fa fa-exclamation-triangle"></i> Server error while sending email. Please try again.').show();
                     $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send Email');
                 }
             });
@@ -1003,11 +1788,11 @@
         "paging": false,
         "columnDefs": [
             {
-                "width": "20%",
+                "width": "24%",
                 "targets": 0
             },
             {
-                "width": "14%",
+                "width": "13%",
                 "targets": 1
             },
             {
@@ -1015,7 +1800,7 @@
                 "targets": 2
             },
             {
-                "width": "14%",
+                "width": "12%",
                 "targets": 3
             },
             {
@@ -1023,14 +1808,14 @@
                 "targets": 4
             },
             {
-                "width": "22%",
-                "targets": 5
-            },
-            {
-                "width": "6%",
-                "targets": 6,
+                "width": "7%",
+                "targets": 5,
                 "orderable": false,
                 "searchable": false
+            },
+            {
+                "width": "20%",
+                "targets": 6
             }
         ]
     });
