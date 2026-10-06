@@ -31,7 +31,6 @@ $status = $_GET['status'] ?? 'all';
 $startDateStr = $_GET['startDate'] ?? '';
 $endDateStr = $_GET['endDate'] ?? '';
 $clientSearch = trim($_GET['clientSearch'] ?? '');
-$sortOrder = $_GET['sortOrder'] ?? '';
 
 $startDate = '';
 $endDate = '';
@@ -70,13 +69,7 @@ if ($status == 'received') {
     $allTds .= " AND (ps.tds_received IS NULL OR ps.tds_received = 0 OR ps.tds_received = '' OR ps.tds_received = '0.00' OR ps.tds_received = '0')";
 }
 
-if ($sortOrder == 'high') {
-    $allTds .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) DESC";
-} elseif ($sortOrder == 'low') {
-    $allTds .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) ASC";
-} else {
-    $allTds .= " ORDER BY ci.id DESC";
-}
+$allTds .= " ORDER BY ci.id DESC";
 
 try {
     $statement = $db->prepare($allTds);
@@ -339,7 +332,7 @@ try {
         #table_finance_details,
         .dataTables_scrollHeadInner table {
             width: 100% !important;
-            min-width: 1240px !important;
+            min-width: 0 !important;
             table-layout: fixed !important;
             border-collapse: separate !important;
         }
@@ -373,14 +366,16 @@ try {
         .dataTables_scrollHead thead th {
             background: #0f2744 !important;
             color: #ffffff !important;
-            padding: 12px 10px !important;
+            padding: 6px 4px !important;
             border: none !important;
             font-size: 11.5px !important;
             font-weight: 700 !important;
             text-transform: uppercase !important;
-            letter-spacing: 0.5px !important;
+            letter-spacing: 0 !important;
             vertical-align: middle !important;
-            white-space: nowrap !important;
+            white-space: normal !important;
+            line-height: 1.2 !important;
+            overflow-wrap: anywhere;
         }
 
         #table_finance_details thead th small,
@@ -396,11 +391,24 @@ try {
         #table_finance_details tbody td {
             border: none !important;
             border-bottom: 1px solid #f1f5f9 !important;
-            padding: 10px 14px !important;
+            padding: 3px 4px !important;
             font-size: 12.5px !important;
             color: #334155 !important;
             background-color: #ffffff;
             vertical-align: middle !important;
+            overflow-wrap: anywhere;
+        }
+
+        #table_finance_details .table-edit-control {
+            margin: 0;
+            min-width: 0;
+        }
+
+        #table_finance_details input.saveChanges {
+            min-width: 0 !important;
+            min-height: 0 !important;
+            line-height: normal !important;
+            margin: 0 !important;
         }
 
         #table_finance_details tbody tr:hover td {
@@ -411,98 +419,187 @@ try {
             background-color: #fcfdfe;
         }
 
+        /* Keep TDS values visible despite the shared .table-striped span rule. */
+        #table_finance_details .tds-header-badge,
+        #table_finance_details .tds-amount-decided {
+            display: inline-block;
+        }
+
+        #table_finance_details .toggleTdsVerifyBtn > span,
+        #table_finance_details .badge > span {
+            display: inline;
+        }
+
+        #table_finance_details .tds-badge-verified,
+        #table_finance_details .tds-badge-unverified {
+            display: inline-flex;
+        }
+
         /* Client Name click style */
+        .tds-client-name,
         #table_finance_details tbody td:nth-child(1) small {
             font-weight: 700;
             color: #0d4d8b;
             cursor: pointer;
             transition: color 0.15s ease;
             font-size: 12.5px;
+            display: inline-block;
+            line-height: 1.35;
         }
 
+        #table_finance_details tbody td:nth-child(1):hover .tds-client-name,
         #table_finance_details tbody td:nth-child(1):hover small {
             color: #0284c7;
             text-decoration: underline;
         }
 
         /* Invoice Header column badge */
+        .tds-header-badge,
         #table_finance_details tbody td:nth-child(2) small {
             background: #e0f2fe;
             color: #0369a1;
             font-weight: 700;
-            padding: 3px 8px;
+            padding: 2px 4px;
             border-radius: 4px;
             font-size: 11px;
             display: inline-block;
+            border: 1px solid #bae6fd;
+            letter-spacing: 0.3px;
         }
 
         /* TDS Deducted Amount */
+        .tds-amount-decided,
         #table_finance_details tbody td:nth-child(3) small {
             color: #d97706;
             font-weight: 800;
             font-size: 13px;
+            letter-spacing: 0.3px;
         }
 
-        /* Payment Received Amount */
-        #table_finance_details tbody td:nth-child(4) small {
-            color: #059669;
-            font-weight: 800;
-            font-size: 13px;
-        }
-
-        /* Deduction Date column */
-        #table_finance_details tbody td:nth-child(5) small {
-            background: #f1f5f9;
-            color: #475569;
-            font-weight: 600;
-            padding: 2px 7px;
-            border-radius: 4px;
-            font-size: 11.5px;
-            display: inline-block;
-        }
-
-        /* Editable Input Fields (Credit Date / Booking, TAN of Deductor / Ref) */
-        #table_finance_details input.saveChanges {
+        /* TDS (26AS) Booked Amt Input */
+        #table_finance_details .tds-received-input {
             width: 100% !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 6px !important;
-            padding: 5px 8px !important;
+            height: 26px !important;
             font-size: 12px !important;
-            color: #1e293b !important;
-            background: #f8fafc !important;
-            height: 32px !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+            background-color: #ffffff !important;
+            border-radius: 6px !important;
+            padding: 2px 4px !important;
+            text-align: right !important;
             transition: all 0.2s ease;
-            outline: none;
             box-sizing: border-box;
+            outline: none;
         }
 
-        #table_finance_details input.saveChanges:focus {
+        #table_finance_details .tds-received-input:focus {
             background: #ffffff !important;
             border-color: #0d4d8b !important;
             box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
         }
 
-        /* Comments Textarea */
-        #table_finance_details textarea.saveChanges {
+        /* Credit Date / Booking Input */
+        #table_finance_details .datepicker-tds-received,
+        #table_finance_details .datepicker-booking {
             width: 100% !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 6px !important;
-            padding: 6px 10px !important;
+            height: 26px !important;
             font-size: 12px !important;
+            font-weight: 600 !important;
             color: #1e293b !important;
-            background: #f8fafc !important;
-            resize: vertical !important;
-            min-height: 44px;
-            line-height: 1.4;
+            border: 1px solid #cbd5e1 !important;
+            background-color: #ffffff !important;
+            border-radius: 6px !important;
+            padding: 2px 4px !important;
+            text-align: center !important;
             transition: all 0.2s ease;
-            outline: none;
             box-sizing: border-box;
+            outline: none;
         }
 
-        #table_finance_details textarea.saveChanges:focus {
+        #table_finance_details .datepicker-tds-received:focus,
+        #table_finance_details .datepicker-booking:focus {
             background: #ffffff !important;
             border-color: #0d4d8b !important;
             box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+        }
+
+        /* TAN of Deductor / Ref Input */
+        #table_finance_details .tan-input,
+        #table_finance_details input[name="tan_of_deductor"] {
+            width: 100% !important;
+            height: 26px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: #1e293b !important;
+            border: 1px solid #cbd5e1 !important;
+            background-color: #ffffff !important;
+            border-radius: 6px !important;
+            padding: 2px 4px !important;
+            text-align: center !important;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        #table_finance_details .tan-input:focus,
+        #table_finance_details input[name="tan_of_deductor"]:focus {
+            background: #ffffff !important;
+            border-color: #0d4d8b !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+        }
+
+        #table_finance_details .tds-comment-input {
+            width: 100% !important;
+            min-width: 0;
+            height: 26px;
+            min-height: 26px;
+            margin: 0;
+            padding: 3px 4px !important;
+            font-size: 12px !important;
+            line-height: 18px;
+            color: #1e293b !important;
+            border: 1px solid #cbd5e1 !important;
+            background-color: #ffffff !important;
+            border-radius: 6px !important;
+            box-sizing: border-box;
+            resize: vertical;
+            outline: none;
+        }
+
+        #table_finance_details .tds-comment-input:focus {
+            border-color: #0d4d8b !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+        }
+
+        /* Toggle Verify Button */
+        #table_finance_details .toggleTdsVerifyBtn,
+        #table_finance_details .tds-badge-verified,
+        #table_finance_details .tds-badge-unverified {
+            width: 100%;
+            max-width: 76px;
+            min-width: 0 !important;
+            height: 24px !important;
+            font-size: 11px !important;
+            padding: 2px 4px !important;
+            gap: 3px !important;
+        }
+
+        #table_finance_details .toggleTdsVerifyBtn {
+            font-weight: 700 !important;
+            border-radius: 5px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08) !important;
+            white-space: nowrap !important;
+        }
+
+        #table_finance_details .toggleTdsVerifyBtn:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
         }
 
         /* =====================================================================
@@ -582,20 +679,20 @@ try {
         }
         html.theme-dark #table_finance_details tbody tr:hover td { background-color: var(--tds-surface-2) !important; }
         html.theme-dark .table-striped tbody tr:nth-of-type(odd) td { background-color: rgba(255, 255, 255, 0.02) !important; }
+        html.theme-dark #table_finance_details tbody td:nth-child(1) .tds-client-name,
         html.theme-dark #table_finance_details tbody td:nth-child(1) small { color: #38bdf8 !important; }
-        html.theme-dark #table_finance_details tbody td:nth-child(2) small { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+        html.theme-dark #table_finance_details tbody td:nth-child(2) .tds-header-badge,
+        html.theme-dark #table_finance_details tbody td:nth-child(2) small { background: rgba(56, 189, 248, 0.15) !important; color: #7dd3fc !important; border-color: rgba(56, 189, 248, 0.3) !important; }
+        html.theme-dark #table_finance_details tbody td:nth-child(3) .tds-amount-decided,
         html.theme-dark #table_finance_details tbody td:nth-child(3) small { color: #fbbf24 !important; }
-        html.theme-dark #table_finance_details tbody td:nth-child(4) small { color: #34d399 !important; }
-        html.theme-dark #table_finance_details tbody td:nth-child(5) small { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
-
-        /* Comment textarea */
-        html.theme-dark #table_finance_details textarea,
-        html.theme-dark .saveChanges {
+        html.theme-dark #table_finance_details input.saveChanges,
+        html.theme-dark #table_finance_details textarea.saveChanges {
             background-color: var(--tds-surface-2) !important;
-            border: 1px solid var(--tds-border-2) !important;
+            border-color: var(--tds-border-2) !important;
             color: var(--tds-text) !important;
         }
-        html.theme-dark .saveChanges:focus {
+        html.theme-dark #table_finance_details input.saveChanges:focus,
+        html.theme-dark #table_finance_details textarea.saveChanges:focus {
             border-color: var(--tds-accent) !important;
             box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2) !important;
         }
@@ -647,14 +744,6 @@ try {
                                             <label for="endDate">To Date</label>
                                             <input type="text" name="endDate" id="endDate" class="datepicker-tds" value="<?php echo $endDateStr; ?>" autocomplete="off" placeholder="DD.MM.YYYY">
                                         </div>
-                                        <div class="invoice-filter-item">
-                                            <label for="sortOrder">Sort By Amount</label>
-                                            <select name="sortOrder" id="sortOrder" onchange="$('#filterForm').submit()">
-                                                <option value="" <?php echo $sortOrder == '' ? 'selected' : ''; ?>>Default</option>
-                                                <option value="high" <?php echo $sortOrder == 'high' ? 'selected' : ''; ?>>High to Low</option>
-                                                <option value="low" <?php echo $sortOrder == 'low' ? 'selected' : ''; ?>>Low to High</option>
-                                            </select>
-                                        </div>
                                         <div class="invoice-filter-item item-action">
                                             <label>Action</label>
                                             <button type="button" class="btn-premium btn-solid-primary downloadTdsReport">
@@ -672,32 +761,29 @@ try {
                                         <table class="table table-bordered table-striped table-hover table-sortable" id="table_finance_details">
                                             <thead>
                                                 <tr>
-                                                    <th>
-                                                        <small><a>Client  Name</a></small>
+                                                    <th style="text-align: left;">
+                                                        <small>Client Name</small>
                                                     </th>
-                                                    <th>
-                                                        <small><a>Invoice <br>Header</a></small>
-                                                    </th>
-                                                    <th>
-                                                        <small><a>Amount <br> Deducted</a></small>
-                                                    </th>
-                                                    <th>
-                                                        <small><a>TDS(26AS) <br>Booked Amt</a></small>
-                                                    </th>
-                                                    <!-- <th>
-                                                        <small><a>TDS Received Date</a></small>
-                                                    </th> -->
-                                                    <th>
-                                                        <small><a>Credit Date<br>/Booking</a></small>
-                                                    </th>
-                                                    <th>
-                                                        <small><a>TAN of <br> Deductor/Ref</a></small>
-                                                    </th>
-                                                    <!-- <th>
-                                                        <small><a>TDS certificate details</a></small>
-                                                    </th> -->
                                                     <th style="text-align: center;">
-                                                        <small><a>Verify</a></small>
+                                                        <small>Invoice Header</small>
+                                                    </th>
+                                                    <th style="text-align: right;">
+                                                        <small>Amount Deducted</small>
+                                                    </th>
+                                                    <th style="text-align: center;">
+                                                        <small>TDS(26AS) Booked Amt</small>
+                                                    </th>
+                                                    <th style="text-align: center;">
+                                                        <small>Credit Date / Booking</small>
+                                                    </th>
+                                                    <th style="text-align: center;">
+                                                        <small>TAN of Deductor/Ref</small>
+                                                    </th>
+                                                    <th style="text-align: center;">
+                                                        <small>Verify</small>
+                                                    </th>
+                                                    <th style="text-align: center;">
+                                                        <small>Comments</small>
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -712,18 +798,25 @@ try {
                                                     }
                                                     $decidedRaw = !empty($tds['amount_decided']) ? floatval(str_replace(',', '', $tds['amount_decided'])) : 0.0;
                                                     $decidedVal = number_format($decidedRaw, 2, '.', '');
+
+                                                    $creditDateVal = '';
+                                                    if (!empty($tds['tds_received_date']) && $tds['tds_received_date'] !== '0000-00-00') {
+                                                        $creditDateVal = date('d.m.Y', strtotime($tds['tds_received_date']));
+                                                    } elseif (!empty($tds['credit_date_booking'])) {
+                                                        $creditDateVal = $tds['credit_date_booking'];
+                                                    }
                                                 ?>
                                                     <tr id='addr0' data-id="<?php echo $tds['customer_id'] ?>" data-unique-id="<?php echo htmlspecialchars($tds['unique_id'] ?? ''); ?>" data-decided="<?php echo $decidedVal; ?>">
-                                                        <td  class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                            <small><?php echo $tds['customer_name'] ?></small>
+                                                        <td class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="desc" style="vertical-align: middle;">
+                                                            <small class="tds-client-name"><?php echo htmlspecialchars($tds['customer_name'] ?? ''); ?></small>
                                                         </td>
-                                                        <td   class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                            <small><?php echo htmlspecialchars(resolveTdsInvoiceHeader($tds)); ?></small>
+                                                        <td class="customerAccount text-center" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="vertical-align: middle; text-align: center;">
+                                                            <span class="tds-header-badge"><?php echo htmlspecialchars(resolveTdsInvoiceHeader($tds)); ?></span>
                                                         </td>
-                                                        <td  class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                            <small><?php echo $decidedVal; ?></small>
+                                                        <td class="customerAccount text-right" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="vertical-align: middle; text-align: right;">
+                                                            <span class="tds-amount-decided"><?php echo $decidedVal; ?></span>
                                                         </td>
-                                                        <td style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
+                                                        <td style="vertical-align: middle;">
                                                             <div class="table-edit-control">
                                                                 <input type="text" class="form-control input-sm saveChanges tds-received-input" 
                                                                        data-row="<?php echo $tds['payment_id'] ?>" 
@@ -732,64 +825,40 @@ try {
                                                                        data-decided="<?php echo $decidedVal; ?>"
                                                                        name="tds_received" 
                                                                        value="<?php echo htmlspecialchars($tdsRecVal); ?>" 
-                                                                       placeholder="0.00" 
-                                                                       style="height: 32px; font-size: 12.5px; font-weight: 700; color: #0f172a; border: 1.5px solid #cbd5e1; background-color: #ffffff; border-radius: 6px; padding: 4px 8px; width: 100%; text-align: right;">
+                                                                       placeholder="0.00">
                                                             </div>
                                                         </td>
-                                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                                        <td style="vertical-align: middle;" data-order="<?php echo htmlspecialchars($creditDateVal); ?>" data-search="<?php echo htmlspecialchars($creditDateVal); ?>">
                                                             <div class="table-edit-control">
                                                                 <input type="text" class="form-control input-sm saveChanges datepicker-tds-received" 
                                                                        data-row="<?php echo $tds['payment_id'] ?>" 
                                                                        data-statement="<?php echo $isStatementRow; ?>" 
                                                                        data-column="tds_received_date" 
                                                                        name="tds_received_date" 
-                                                                       value="<?php 
-                                                                           if (!empty($tds['tds_received_date']) && $tds['tds_received_date'] !== '0000-00-00') {
-                                                                               echo date('d.m.Y', strtotime($tds['tds_received_date']));
-                                                                           } 
-                                                                       ?>" 
+                                                                       value="<?php echo htmlspecialchars($creditDateVal); ?>" 
                                                                        placeholder="DD.MM.YYYY" 
-                                                                       autocomplete="off"
-                                                                       style="height: 32px; font-size: 12px; border-radius: 6px; padding: 4px 8px; width: 100%;">
+                                                                       autocomplete="off">
                                                             </div>
                                                         </td>
-                                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                                        <td style="vertical-align: middle;">
                                                             <div class="table-edit-control">
-                                                                <input type="text" class="form-control input-sm saveChanges datepicker-booking" 
-                                                                       data-row="<?php echo $tds['payment_id'] ?>" 
-                                                                       data-statement="<?php echo $isStatementRow; ?>" 
-                                                                       data-column="credit_date_booking" 
-                                                                       name="credit_date_booking" 
-                                                                       value="<?php echo htmlspecialchars($tds['credit_date_booking'] ?? ''); ?>" 
-                                                                       placeholder="DD.MM.YYYY / Booking" 
-                                                                       style="height: 32px; font-size: 12px; border-radius: 6px; padding: 4px 8px; width: 100%;">
-                                                            </div>
-                                                        </td>
-                                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                            <div class="table-edit-control">
-                                                                <input type="text" class="form-control input-sm saveChanges" 
+                                                                <input type="text" class="form-control input-sm saveChanges tan-input" 
                                                                        data-row="<?php echo $tds['payment_id'] ?>" 
                                                                        data-statement="<?php echo $isStatementRow; ?>" 
                                                                        data-column="tan_of_deductor" 
                                                                        name="tan_of_deductor" 
                                                                        value="<?php echo htmlspecialchars($tds['tan_of_deductor'] ?? ''); ?>" 
-                                                                       placeholder="TAN / Ref #" 
-                                                                       style="height: 32px; font-size: 12px; border-radius: 6px; padding: 4px 8px; width: 100%;">
+                                                                       placeholder="TAN / Ref #">
                                                             </div>
                                                         </td>
-                                                        <td data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
-                                                            <div class="table-edit-control">
-                                                                <textarea rows="3" class="saveChanges" data-row="<?php echo $tds['payment_id'] ?>" data-statement="<?php echo $isStatementRow; ?>" data-column="comment" name="payComments" value="" placeholder="" ><?php if (isset($tds['comment'])) echo $tds['comment'] ?></textarea>
-                                                            </div>
-                                                        </td>
-                                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; text-align: center; vertical-align: middle;">
+                                                        <td style="vertical-align: middle; text-align: center;">
                                                             <?php if ($canVerifyTds) { ?>
                                                                 <button type="button" class="btn btn-xs toggleTdsVerifyBtn <?php echo $isTdsVerified ? 'tds-btn-verified' : 'tds-btn-unverified'; ?>" 
                                                                         data-status="<?php echo $tdsStatusText; ?>" 
                                                                         data-pay-id="<?php echo htmlspecialchars($tds['payment_id'] ?? ''); ?>" 
                                                                         data-statement="<?php echo !empty($tds['is_statement']) ? '1' : '0'; ?>"
                                                                         data-decided="<?php echo $decidedVal; ?>"
-                                                                        style="min-width: 84px; height: 26px; font-size: 11.5px; font-weight: 700; border-radius: 4px; padding: 2px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: all 0.2s ease; <?php echo $isTdsVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>"
+                                                                        style="<?php echo $isTdsVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>"
                                                                         title="Click to toggle: <?php echo $isTdsVerified ? 'Mark as Unverified' : 'Verify TDS against Bank Statement'; ?>">
                                                                     <i class="fa <?php echo $isTdsVerified ? 'fa-check' : 'fa-times'; ?>"></i>
                                                                     <span><?php echo $tdsStatusText; ?></span>
@@ -803,8 +872,19 @@ try {
                                                                 </span>
                                                             <?php } ?>
                                                         </td>
+                                                        <td style="vertical-align: middle;">
+                                                            <div class="table-edit-control">
+                                                                <textarea class="form-control input-sm saveChanges tds-comment-input"
+                                                                          data-row="<?php echo htmlspecialchars($tds['payment_id'] ?? ''); ?>"
+                                                                          data-statement="<?php echo $isStatementRow; ?>"
+                                                                          data-column="comment"
+                                                                          name="comment" rows="1"
+                                                                          aria-label="Comments"
+                                                                          placeholder="Comments"><?php echo htmlspecialchars($tds['comment'] ?? ''); ?></textarea>
+                                                            </div>
+                                                        </td>
                                                     </tr>
-<?php } ?>
+                                                <?php } ?>
                                             </tbody>
                                         </table>
                                     </div>
@@ -936,6 +1016,9 @@ try {
             var rowClient = normalizeSearchText(data[0] || "");
             var rowServiceType = normalizeSearchText(data[1] || "");
             var dateValue = (data[4] || "").replace(/<[^>]*>/g, "").trim();
+            if (!dateValue && trElement) {
+                dateValue = ($(trElement).find('input[name="tds_received_date"]').val() || "").trim();
+            }
 
             var searchVal = normalizeSearchText(clientSearch);
             var isCurrentOrRecent = true;
@@ -1004,8 +1087,7 @@ try {
                 status: $('#status').val(),
                 startDate: $('#startDate').val(),
                 endDate: $('#endDate').val(),
-                clientSearch: $('#clientSearch').val(),
-                sortOrder: $('#sortOrder').val()
+                clientSearch: $('#clientSearch').val()
             };
         }
 
@@ -1079,8 +1161,7 @@ try {
             xhr.send('status=' + encodeURIComponent(pendingTdsReport.status) +
                 '&startDate=' + encodeURIComponent(pendingTdsReport.startDate) +
                 '&endDate=' + encodeURIComponent(pendingTdsReport.endDate) +
-                '&clientSearch=' + encodeURIComponent(pendingTdsReport.clientSearch) +
-                '&sortOrder=' + encodeURIComponent(pendingTdsReport.sortOrder));
+                '&clientSearch=' + encodeURIComponent(pendingTdsReport.clientSearch));
         }
 
         $('.downloadTdsReport').click(function () {
@@ -1131,7 +1212,6 @@ try {
                 startDate: pendingTdsReport.startDate,
                 endDate: pendingTdsReport.endDate,
                 clientSearch: pendingTdsReport.clientSearch,
-                sortOrder: pendingTdsReport.sortOrder,
                 format: pendingTdsFormat,
                 email: email
             }, null, 'json').done(function (res) {
@@ -1212,15 +1292,14 @@ try {
             "lengthChange": false,
             "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
             "columnDefs": [
-                { "width": "200px", "targets": 0 },
-                { "width": "130px", "targets": 1 },
-                { "width": "120px", "targets": 2 },
-                { "width": "120px", "targets": 3 },
-                { "width": "130px", "targets": 4 },
-                { "width": "150px", "targets": 5 },
-                { "width": "150px", "targets": 6 },
-                { "width": "160px", "targets": 7 },
-                { "width": "100px", "targets": 8 }
+                { "width": "22%", "targets": 0 },
+                { "width": "8%", "targets": 1, "className": "text-center" },
+                { "width": "11%", "targets": 2, "className": "text-right" },
+                { "width": "12%", "targets": 3, "className": "text-right" },
+                { "width": "13%", "targets": 4, "className": "text-center" },
+                { "width": "12%", "targets": 5, "className": "text-center" },
+                { "width": "9%", "targets": 6, "className": "text-center" },
+                { "width": "13%", "targets": 7 }
             ],
             "language": {
                 "emptyTable": "No TDS records available in table",
@@ -1245,6 +1324,35 @@ try {
                 table.columns.adjust();
             }, 250);
         });
+
+        function applyTdsInputValidation($input) {
+            var decided = parseFloat($input.attr('data-decided') || $input.closest('tr').attr('data-decided') || 0);
+            var raw = $.trim($input.val() || '');
+            var val = parseFloat(raw.replace(/,/g, ''));
+
+            if (raw === '' || isNaN(val) || val <= 0) {
+                $input.css({
+                    'color': '#0f172a',
+                    'border': '1px solid #cbd5e1',
+                    'background-color': '#ffffff'
+                }).removeAttr('title');
+                return;
+            }
+
+            if (decided > 0 && val < decided) {
+                $input.css({
+                    'color': '#dc2626',
+                    'border': '1.5px solid #dc2626',
+                    'background-color': '#fef2f2'
+                }).attr('title', 'Warning: TDS received amount (₹' + val.toFixed(2) + ') is lower than the TDS decided amount (₹' + decided.toFixed(2) + ')');
+            } else {
+                $input.css({
+                    'color': '#059669',
+                    'border': '1.5px solid #16a34a',
+                    'background-color': '#f0fdf4'
+                }).attr('title', 'TDS received: ₹' + val.toFixed(2) + ' (Decided: ₹' + decided.toFixed(2) + ')');
+            }
+        }
 
         // Toggle TDS Verification Status with Acknowledgment Confirmation
         $(document).on('click', '.toggleTdsVerifyBtn', function (e) {

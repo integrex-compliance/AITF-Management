@@ -6967,11 +6967,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             <table class="table table-bordered table-hover table-sortable service_details service-details-table" <?php if ($blockIdx === 0) echo 'id="service_details"'; ?>>
                                                 <thead>
                                                     <tr>
-                                                        <th width="24%" style="padding: 2px"><small>Amount Received</small></th>
-                                                        <th width="18%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;">TDS Deducted</small></th>
-                                                        <th width="17%" style="padding: 2px"><small>Received Date</small></th>
-                                                        <th width="18%" style="padding: 2px"><small>Instrument</small></th>
-                                                        <th width="16%" style="padding: 2px"><small>Reconcile</small></th>
+                                                        <th width="28%" style="padding: 2px"><small>Amount Received</small></th>
+                                                        <th width="22%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;">TDS Deducted</small></th>
+                                                        <th width="21%" style="padding: 2px"><small>Received Date</small></th>
+                                                        <th width="22%" style="padding: 2px"><small>Instrument</small></th>
                                                         <th width="7%" style="padding: 2px; text-align: right;"></th>
                                                     </tr>
                                                 </thead>
@@ -7036,20 +7035,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                         <input type="text" data_row_id="" class="serviceChequeDetails <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="serviceChequeDetails" value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; color: <?php echo $isSettlement ? '#6d28d9' : ($isRowReconciled ? '#334155' : '#0f172a'); ?>; <?php echo $isRowReconciled ? 'cursor: not-allowed; font-weight: 600;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 1px 2px; text-align: center; vertical-align: middle; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
-                                                                    <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
-                                                                        <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="<?php echo $recStatusText; ?>" />
-                                                                        <span role="status" class="btn btn-xs paymentReconcileStatus <?php echo $isVerified ? 'reconcile-verified' : 'reconcile-not-verify'; ?>" data-status="<?php echo $recStatusText; ?>" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: default; <?php echo $isVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>" title="Payment reconciliation status. Verification is managed from Received Payments.">
-                                                                            <?php if ($isVerified) { ?>
-                                                                                <i class="fa fa-check" style="font-size: 13px;"></i>
-                                                                            <?php } else { ?>
-                                                                                <span>Pending</span>
-                                                                            <?php } ?>
-                                                                        </span>
-                                                                    </div>
-                                                                </td>
                                                                 <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control">
+                                                                        <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="<?php echo $recStatusText; ?>" />
                                                                         <input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="<?php echo htmlspecialchars($payInfo['balance'] ?? '0.00'); ?>" />
                                                                         <a class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" data-tds-locked="<?php echo $isTdsLocked ? '1' : '0'; ?>" data-reconciled="<?php echo $isRowReconciled ? '1' : '0'; ?>" value="<?php echo $payInfo['payment_id'] ?>"><i class="fa fa-trash-o pull-right " style="padding-right: 10px; color: <?php echo $isRowReconciled ? '#94a3b8' : '#ef4444'; ?>;" title="<?php echo $isRowReconciled ? 'Cannot delete reconciled payment entry' : 'Delete Row Details'; ?>"></i></a>
                                                                         <input type="hidden" data-row-id="" class="row-id" name="row-id" value="<?php echo $payInfo['payment_id'] ?>">
@@ -7082,16 +7070,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     <input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="" placeholder="" />
                                                                 </div>
                                                             </td>
-                                                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;">
-                                                                <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
-                                                                    <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />
-                                                                    <span role="status" class="btn btn-xs paymentReconcileStatus reconcile-not-verify" data-status="Verify" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: default; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Payment reconciliation status. Verification is managed from Received Payments.">
-                                                                        <span>Pending</span>
-                                                                    </span>
-                                                                </div>
-                                                            </td>
                                                             <td style="padding: 0px;">
                                                                 <div class="table-edit-control">
+                                                                    <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />
                                                                     <input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" />
                                                                     <input type="hidden" data-row-id="" class="row-id" name="row-id" value="">
                                                                 </div>
@@ -22335,16 +22316,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             '<input type="text" data-row-id="" class="serviceChequeDetails" name="serviceChequeDetails" placeholder="" />' +
                         '</div>' +
                     '</td>' +
-                    '<td style="padding: 1px 2px; text-align: center; vertical-align: middle;">' +
-                        '<div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">' +
-                            '<input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />' +
-                            '<span role="status" class="btn btn-xs paymentReconcileStatus reconcile-not-verify" data-status="Verify" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: default; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Payment reconciliation status. Verification is managed from Received Payments.">' +
-                                '<span>Pending</span>' +
-                            '</span>' +
-                        '</div>' +
-                    '</td>' +
                     '<td style="padding: 0px;">' +
                         '<div class="table-edit-control" style="text-align: center;">' +
+                            '<input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />' +
                             '<input type="hidden" data-row-id="" class="serviceBalance" name="serviceBalance" value="0.00" />' +
                             '<input type="hidden" data-row-id="" class="row-id" id="row-id" name="row-id" value="">' +
                             '<a class="removeNewPaymentRow" style="color: #ef4444; cursor: pointer; padding: 2px 5px;" title="Remove Row"><i class="fa fa-trash-o"></i></a>' +
@@ -22988,11 +22962,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '            <div class="row">';
             html += '                <table class="table table-bordered table-hover table-sortable service_details service-details-table">';
             html += '                    <thead><tr>';
-            html += '                        <th width="24%" style="padding: 2px"><small>Payment received</small></th>';
-            html += '                        <th width="18%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;">TDS Deducted</small></th>';
-            html += '                        <th width="17%" style="padding: 2px"><small>Received Date</small></th>';
-            html += '                        <th width="18%" style="padding: 2px"><small>Instrument</small></th>';
-            html += '                        <th width="16%" style="padding: 2px"><small>Reconcile</small></th>';
+            html += '                        <th width="28%" style="padding: 2px"><small>Payment received</small></th>';
+            html += '                        <th width="22%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;">TDS Deducted</small></th>';
+            html += '                        <th width="21%" style="padding: 2px"><small>Received Date</small></th>';
+            html += '                        <th width="22%" style="padding: 2px"><small>Instrument</small></th>';
             html += '                        <th width="7%" style="padding: 2px; text-align: right;"></th>';
             html += '                    </tr></thead>';
             html += '                    <tbody>';
@@ -23001,8 +22974,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                            <td style="padding: 0px; background-color: #ffffff;"><div class="table-edit-control"><label></label><input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="" placeholder="" style="background-color: #ffffff; border-bottom: 1px solid #cbd5e1; color: #b45309; font-weight: 700; text-align: right;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="" placeholder="DD.MM.YYYY"></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="" placeholder="" /></div></td>';
-            html += '                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;"><div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" /><span role="status" class="btn btn-xs paymentReconcileStatus reconcile-not-verify" data-status="Verify" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: default; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Payment reconciliation status. Verification is managed from Received Payments."><span>Pending</span></span></div></td>';
-            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" /><input type="hidden" data_row_id="" class="row-id" name="row-id" value=""></div></td>';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" /><input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" /><input type="hidden" data_row_id="" class="row-id" name="row-id" value=""></div></td>';
             html += '                        </tr>';
             html += '                    </tbody>';
             html += '                </table>';
