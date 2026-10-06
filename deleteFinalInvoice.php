@@ -35,7 +35,8 @@ if (isset($_POST["finalId"]) && !empty($_POST["finalId"])) {
                 'add_to' => 'add_to',
                 'credit_date_booking' => 'credit_date_booking',
                 'tan_of_deductor' => 'tan_of_deductor',
-                'tds_received' => 'tds_received'
+                'tds_received' => 'tds_received',
+                'tds_received_date' => 'tds_received_date'
             ];
 
             $colKey = trim($req['columnName']);
@@ -43,9 +44,10 @@ if (isset($_POST["finalId"]) && !empty($_POST["finalId"])) {
                 $column = $allowedColumns[$colKey];
                 $dataVal = trim((string)$req['columnValue']);
 
-                if ($column === 'certification_stage_date') {
+                if ($column === 'certification_stage_date' || $column === 'tds_received_date') {
                     if (!empty($dataVal)) {
-                        $dataVal = date("Y-m-d", strtotime($dataVal));
+                        $parsedTime = strtotime(str_replace('/', '-', $dataVal));
+                        $dataVal = ($parsedTime !== false && $parsedTime > 0) ? date("Y-m-d", $parsedTime) : NULL;
                     } else {
                         $dataVal = NULL;
                     }

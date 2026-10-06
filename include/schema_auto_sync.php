@@ -510,6 +510,11 @@ if (!function_exists('aitf_ensure_tds_columns')) {
                     $db->exec("ALTER TABLE `payment_system` ADD COLUMN `reconciliation` VARCHAR(100) NULL AFTER `cheque_details`");
                 } catch (Throwable $e) {}
             }
+            if (!isset($payCols['tds_received_date'])) {
+                try {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `tds_received_date` DATE NULL DEFAULT NULL AFTER `payment_date`");
+                } catch (Throwable $e) {}
+            }
             if (!isset($payCols['credit_date_booking'])) {
                 try {
                     $db->exec("ALTER TABLE `payment_system` ADD COLUMN `credit_date_booking` VARCHAR(100) NULL DEFAULT NULL AFTER `payment_date`");
@@ -540,6 +545,9 @@ if (!function_exists('aitf_ensure_tds_columns')) {
                     }
                     if (!isset($spCols['tds_received'])) {
                         $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_received` DECIMAL(12,2) DEFAULT 0.00");
+                    }
+                    if (!isset($spCols['tds_received_date'])) {
+                        $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_received_date` DATE NULL DEFAULT NULL AFTER `payment_date`");
                     }
                     if (!isset($spCols['credit_date_booking'])) {
                         $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `credit_date_booking` VARCHAR(100) NULL DEFAULT NULL AFTER `payment_date`");

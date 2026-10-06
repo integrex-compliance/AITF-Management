@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/invoice_report_lib.php';
+require_once __DIR__ . '/payment_service_names.php';
 
 function tdsReportDateForSql($dateValue) {
     if ($dateValue === '') {
@@ -58,10 +59,10 @@ function fetchTdsReportData($db, $status, $startDateStr, $endDateStr, $clientSea
     $startDate = tdsReportDateForSql($startDateStr);
     $endDate = tdsReportDateForSql($endDateStr);
 
-    $sql = "SELECT ci.id, ci.customer_name, ci.unique_id, ps.service_type AS tds, 
+    $sql = "SELECT ci.id, ci.customer_name, ci.unique_id, ps.service_type AS tds, ps.service_type, ps.payment_header, svc.service_type AS svc_service_type,
                    COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) as amount_decided,
                    COALESCE(NULLIF(ps.tds_amount, 0), ps.payment_received, ps.amount_decided) as payment_received,
-                   ps.payment_date, ps.credit_date_booking, ps.tan_of_deductor, ps.comment
+                   ps.payment_date, ps.tds_received_date, ps.credit_date_booking, ps.tan_of_deductor, ps.comment
             FROM customer_info ci
             LEFT JOIN payment_system ps ON ci.id = ps.customer_id
             LEFT JOIN service svc ON ps.customer_id = svc.customer_id
@@ -119,9 +120,9 @@ function fetchTdsReportData($db, $status, $startDateStr, $endDateStr, $clientSea
     // Also fetch statement_payments TDS
     try {
         $spSql = "SELECT ci.id, ci.customer_name, ci.unique_id, 
-                         CONCAT('TDS (Statement #', sp.id, ')') as tds, 
+                         sp.service_type as tds, sp.service_type, '' as payment_header, '' as svc_service_type, 1 as is_statement,
                          sp.tds_decided as amount_decided, sp.tds_received as payment_received,
-                         sp.payment_date, sp.credit_date_booking, sp.tan_of_deductor, sp.comment
+                         sp.payment_date, sp.tds_received_date, sp.credit_date_booking, sp.tan_of_deductor, sp.comment
                   FROM customer_info ci
                   INNER JOIN statement_payments sp ON ci.id = sp.customer_id
                   WHERE sp.tds_decided > 0";
@@ -194,7 +195,7 @@ function buildTdsReportXlsxBytes($data, $status, $startDateStr, $endDateStr, $cl
     $xlsx->addRow($accentRow);
     $xlsx->setRowHeight(3, 8);
 
-    $headers = array('Sr.', 'Unique ID', 'Client Name', 'Service Type', 'TDS Deducted (Rs.)', 'Payment Received (Rs.)', 'Date', 'TDS Certificate Details');
+    $headers = array('Sr.', 'Unique ID', 'Client Name', 'Invoice Header', 'TDS Deducted (Rs.)', 'Payment Received (Rs.)', 'Date', 'TDS Certificate Details');
     $headerRow = array();
     foreach ($headers as $header) {
         $headerRow[] = array('v' => $header, 's' => 4, 't' => 's');
@@ -230,10 +231,10 @@ function buildTdsReportXlsxBytes($data, $status, $startDateStr, $endDateStr, $cl
                 array('v' => $count++, 's' => $sCenter, 't' => 'n'),
                 array('v' => $tds['unique_id'], 's' => $sText, 't' => 's'),
                 array('v' => $tds['customer_name'], 's' => $sClient, 't' => 's'),
-                array('v' => $tds['tds'], 's' => $sText, 't' => 's'),
+                array('v' => resolveTdsInvoiceHeader($tds), 's' => $sText, 't' => 's'),
                 array('v' => round($deducted, 2), 's' => $sAmount, 't' => 'n'),
                 array('v' => round($received, 2), 's' => $sAmount, 't' => 'n'),
-                array('v' => tdsReportDisplayDate($tds['payment_date']), 's' => $sCenter, 't' => 's'),
+                array('v' => tdsReportDisplayDate($tds['tds_received_date'] ?? ''), 's' => $sCenter, 't' => 's'),
                 array('v' => $tds['comment'], 's' => $sText, 't' => 's'),
             ));
         }

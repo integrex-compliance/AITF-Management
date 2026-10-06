@@ -3,6 +3,7 @@
 $pageIdentifier = "TDS list";
 include_once './dbConnect.php';
 include_once './header.php';
+require_once __DIR__ . '/include/payment_service_names.php';
 date_default_timezone_set('Asia/Kolkata');
 
 if (function_exists('aitf_auto_sync_schema')) {
@@ -52,10 +53,10 @@ if (!empty($endDateStr)) {
 
 $listOfTds = [];
 
-$allTds = "SELECT ci.id, customer_name, ci.unique_id, ps.customer_id, ps.service_type as tds, 
+$allTds = "SELECT ci.id, customer_name, ci.unique_id, ps.customer_id, ps.service_type as tds, ps.service_type, ps.payment_header, 
            COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) as amount_decided,
            ps.tds_received,
-           ps.payment_date, ps.credit_date_booking, ps.tan_of_deductor, ps.comment, ps.payment_id, ps.tds_verified, svc.service_id, svc.service_type, 0 as is_statement
+           ps.payment_date, ps.tds_received_date, ps.credit_date_booking, ps.tan_of_deductor, ps.comment, ps.payment_id, ps.tds_verified, svc.service_id, svc.service_type as svc_service_type, 0 as is_statement
            FROM customer_info ci
            left join payment_system ps ON ci.id=ps.customer_id
            left join service svc on ps.customer_id = svc.customer_id
@@ -98,9 +99,9 @@ try {
         $listOfTds = $statement->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e2) {
         // Fallback without ps.tds_verified or ps.tds_amount
-        $fallbackTds = "SELECT ci.id, customer_name, ci.unique_id, ps.customer_id, ps.service_type as tds, 
-                       ps.amount_decided, ps.tds_received, ps.payment_date, ps.credit_date_booking, ps.tan_of_deductor, ps.comment, ps.payment_id,
-                       'unverified' as tds_verified, svc.service_id, svc.service_type, 0 as is_statement
+        $fallbackTds = "SELECT ci.id, customer_name, ci.unique_id, ps.customer_id, ps.service_type as tds, ps.service_type, ps.payment_header, 
+                       ps.amount_decided, ps.tds_received, ps.payment_date, ps.tds_received_date, ps.credit_date_booking, ps.tan_of_deductor, ps.comment, ps.payment_id,
+                       'unverified' as tds_verified, svc.service_id, svc.service_type as svc_service_type, 0 as is_statement
                        FROM customer_info ci
                        left join payment_system ps ON ci.id=ps.customer_id
                        left join service svc on ps.customer_id = svc.customer_id
@@ -125,10 +126,10 @@ try {
 
 // Also fetch TDS from new Statement system (statement_payments where tds_decided > 0)
 $newTdsQuery = "SELECT ci.id, ci.customer_name, ci.unique_id, sp.customer_id, 
-                CONCAT('TDS (Statement #', sp.id, ')') as tds, 
+                sp.service_type as tds, sp.service_type, '' as payment_header,
                 sp.tds_decided as amount_decided, sp.tds_received,
-                sp.payment_date, sp.credit_date_booking, sp.tan_of_deductor, sp.comment, sp.id as payment_id, sp.tds_verified,
-                0 as service_id, sp.service_type, 1 as is_statement
+                sp.payment_date, sp.tds_received_date, sp.credit_date_booking, sp.tan_of_deductor, sp.comment, sp.id as payment_id, sp.tds_verified,
+                0 as service_id, '' as svc_service_type, 1 as is_statement
                 FROM customer_info ci
                 INNER JOIN statement_payments sp ON ci.id = sp.customer_id
                 WHERE sp.tds_decided > 0";
@@ -623,7 +624,7 @@ try {
                     <div class="container-fluid" style="margin-top: 20px;">
                         <div class="row">
                             <div class="col-md-12">
-                                <h2 class="invoice-section-title"><i class="fa fa-percent"></i> TDS List & Reports</h2>
+                                <h2 class="invoice-section-title">TDS Deducted & Its Status</h2>
                                 <form method="GET" action="listOfTds.php" id="filterForm">
                                     <div class="invoice-filter-panel">
                                         <div class="invoice-filter-item">
@@ -672,31 +673,31 @@ try {
                                             <thead>
                                                 <tr>
                                                     <th>
-                                                        <small><a>Client Name</a></small>
+                                                        <small><a>Client  Name</a></small>
                                                     </th>
                                                     <th>
-                                                        <small><a>Invoice Header</a></small>
+                                                        <small><a>Invoice <br>Header</a></small>
                                                     </th>
                                                     <th>
-                                                        <small><a>Amount Deducted</a></small>
+                                                        <small><a>Amount <br> Deducted</a></small>
                                                     </th>
                                                     <th>
-                                                        <small><a>TDS Received</a></small>
+                                                        <small><a>TDS(26AS) <br>Booked Amt</a></small>
+                                                    </th>
+                                                    <!-- <th>
+                                                        <small><a>TDS Received Date</a></small>
+                                                    </th> -->
+                                                    <th>
+                                                        <small><a>Credit Date<br>/Booking</a></small>
                                                     </th>
                                                     <th>
-                                                        <small><a>Deduction Date</a></small>
+                                                        <small><a>TAN of <br> Deductor/Ref</a></small>
                                                     </th>
-                                                    <th>
-                                                        <small><a>Credit Date/Booking</a></small>
-                                                    </th>
-                                                    <th>
-                                                        <small><a>TAN of Deductor/Ref</a></small>
-                                                    </th>
-                                                    <th>
+                                                    <!-- <th>
                                                         <small><a>TDS certificate details</a></small>
-                                                    </th>
+                                                    </th> -->
                                                     <th style="text-align: center;">
-                                                        <small><a>TDS Verify</a></small>
+                                                        <small><a>Verify</a></small>
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -711,14 +712,13 @@ try {
                                                     }
                                                     $decidedRaw = !empty($tds['amount_decided']) ? floatval(str_replace(',', '', $tds['amount_decided'])) : 0.0;
                                                     $decidedVal = number_format($decidedRaw, 2, '.', '');
-                                                    $isLower = ($tdsRecVal !== '' && floatval($tdsRecVal) < $decidedRaw && $decidedRaw > 0);
                                                 ?>
                                                     <tr id='addr0' data-id="<?php echo $tds['customer_id'] ?>" data-unique-id="<?php echo htmlspecialchars($tds['unique_id'] ?? ''); ?>" data-decided="<?php echo $decidedVal; ?>">
                                                         <td  class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                                             <small><?php echo $tds['customer_name'] ?></small>
                                                         </td>
                                                         <td   class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                            <small><?php echo $tds['tds'] ?></small>
+                                                            <small><?php echo htmlspecialchars(resolveTdsInvoiceHeader($tds)); ?></small>
                                                         </td>
                                                         <td  class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                                             <small><?php echo $decidedVal; ?></small>
@@ -733,14 +733,25 @@ try {
                                                                        name="tds_received" 
                                                                        value="<?php echo htmlspecialchars($tdsRecVal); ?>" 
                                                                        placeholder="0.00" 
-                                                                       style="height: 32px; font-size: 12.5px; font-weight: 700; color: <?php echo $isLower ? '#dc2626' : '#059669'; ?>; border: 1.5px solid <?php echo $isLower ? '#dc2626' : '#d1d5db'; ?>; background-color: <?php echo $isLower ? '#fef2f2' : '#ffffff'; ?>; border-radius: 6px; padding: 4px 8px; width: 100%; text-align: right;"
-                                                                       title="<?php echo $isLower ? 'Warning: TDS received amount (₹' . $tdsRecVal . ') is lower than the TDS decided amount (₹' . $decidedVal . ')' : ''; ?>">
+                                                                       style="height: 32px; font-size: 12.5px; font-weight: 700; color: #0f172a; border: 1.5px solid #cbd5e1; background-color: #ffffff; border-radius: 6px; padding: 4px 8px; width: 100%; text-align: right;">
                                                             </div>
                                                         </td>
-                                                        <td   class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
-                                                            <small><?php if (isset($tds['payment_date']) && !empty($tds['payment_date'])) {
-                                                      echo date("d.m.Y", strtotime($tds['payment_date']));
-                                                  } ?></small>
+                                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                                            <div class="table-edit-control">
+                                                                <input type="text" class="form-control input-sm saveChanges datepicker-tds-received" 
+                                                                       data-row="<?php echo $tds['payment_id'] ?>" 
+                                                                       data-statement="<?php echo $isStatementRow; ?>" 
+                                                                       data-column="tds_received_date" 
+                                                                       name="tds_received_date" 
+                                                                       value="<?php 
+                                                                           if (!empty($tds['tds_received_date']) && $tds['tds_received_date'] !== '0000-00-00') {
+                                                                               echo date('d.m.Y', strtotime($tds['tds_received_date']));
+                                                                           } 
+                                                                       ?>" 
+                                                                       placeholder="DD.MM.YYYY" 
+                                                                       autocomplete="off"
+                                                                       style="height: 32px; font-size: 12px; border-radius: 6px; padding: 4px 8px; width: 100%;">
+                                                            </div>
                                                         </td>
                                                         <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                                             <div class="table-edit-control">
@@ -1178,7 +1189,7 @@ try {
                         table.draw();
                     }
                 });
-                $('.datepicker-booking').datepicker({
+                $('.datepicker-booking, .datepicker-tds-received').datepicker({
                     changeYear: true,
                     changeMonth: true,
                     yearRange: "-20:+100",
@@ -1205,7 +1216,7 @@ try {
                 { "width": "130px", "targets": 1 },
                 { "width": "120px", "targets": 2 },
                 { "width": "120px", "targets": 3 },
-                { "width": "110px", "targets": 4 },
+                { "width": "130px", "targets": 4 },
                 { "width": "150px", "targets": 5 },
                 { "width": "150px", "targets": 6 },
                 { "width": "160px", "targets": 7 },
@@ -1235,40 +1246,7 @@ try {
             }, 250);
         });
 
-        function applyTdsInputValidation($input) {
-            var decided = parseFloat($input.attr('data-decided') || $input.closest('tr').attr('data-decided') || 0);
-            var raw = $.trim($input.val() || '');
-            var val = parseFloat(raw.replace(/,/g, ''));
-
-            if (raw === '' || isNaN(val) || val <= 0) {
-                $input.css({
-                    'color': '#059669',
-                    'border': '1.5px solid #d1d5db',
-                    'background-color': '#ffffff'
-                }).removeAttr('title');
-                return;
-            }
-
-            if (decided > 0 && val < decided) {
-                $input.css({
-                    'color': '#dc2626',
-                    'border': '1.5px solid #dc2626',
-                    'background-color': '#fef2f2'
-                }).attr('title', 'Warning: TDS received amount (₹' + val.toFixed(2) + ') is lower than the TDS decided amount (₹' + decided.toFixed(2) + ')');
-            } else {
-                $input.css({
-                    'color': '#059669',
-                    'border': '1.5px solid #16a34a',
-                    'background-color': '#f0fdf4'
-                }).attr('title', 'TDS received: ₹' + val.toFixed(2) + ' (Decided: ₹' + decided.toFixed(2) + ')');
-            }
-        }
-
-        $(document).on('input keyup', 'input[name="tds_received"]', function () {
-            applyTdsInputValidation($(this));
-        });
-
-        // Toggle TDS Verification Status with Acknowledgment Confirmation & Validation
+        // Toggle TDS Verification Status with Acknowledgment Confirmation
         $(document).on('click', '.toggleTdsVerifyBtn', function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -1282,66 +1260,15 @@ try {
             var $recInput = $tr.find('input[name="tds_received"]');
             var recRaw = $.trim($recInput.val() || '');
             var received = parseFloat(recRaw.replace(/,/g, ''));
+            var displayRec = (!isNaN(received) && received > 0) ? ('₹' + received.toFixed(2)) : (recRaw !== '' ? ('₹' + recRaw) : '₹0.00');
 
             if (!isCurrentlyVerified) {
-                // Validation 1: Blank or zero TDS check
-                if (recRaw === '' || isNaN(received) || received <= 0) {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: '<span style="font-size: 18px; font-weight: 700; color: #dc2626;"><i class="fa fa-exclamation-circle"></i> Blank TDS Cannot Be Reconciled</span>',
-                            html: '<div style="font-size: 13.5px; color: #374151; margin: 10px 0 6px;">' +
-                                  'Please enter the <b>TDS Received</b> amount before reconciling / verifying this entry.' +
-                                  '</div>',
-                            confirmButtonColor: '#0d4d8b',
-                            confirmButtonText: '<i class="fa fa-check"></i> OK'
-                        }).then(function() {
-                            $recInput.focus();
-                            $recInput.css({ 'border-color': '#dc2626', 'background-color': '#fef2f2' });
-                        });
-                    } else {
-                        alert('Blank TDS cannot be reconciled! Please enter the TDS received amount before verifying.');
-                        $recInput.focus();
-                    }
-                    return false;
-                }
-
-                // Validation 2: TDS Received lower than Decided amount check
-                if (decided > 0 && received < decided) {
-                    var diff = (decided - received).toFixed(2);
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: '<span style="font-size: 18px; font-weight: 700; color: #dc2626;"><i class="fa fa-times-circle"></i> Cannot Reconcile / Verify</span>',
-                            html: '<div style="font-size: 13.5px; line-height: 1.6; color: #1f2937; text-align: left; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin: 10px 0 6px;">' +
-                                  '<b style="color: #991b1b; font-size: 14px;"><i class="fa fa-warning"></i> TDS received amount is lower than the TDS decided amount.</b><br>' +
-                                  '<div style="margin-top: 8px; font-size: 13px;">' +
-                                  '• <b>Amount Decided (Deducted):</b> ₹' + decided.toFixed(2) + '<br>' +
-                                  '• <b>TDS Received:</b> ₹' + received.toFixed(2) + '<br>' +
-                                  '• <b>Shortfall / Difference:</b> <span style="color: #dc2626; font-weight: 700;">-₹' + diff + '</span>' +
-                                  '</div></div>' +
-                                  '<div style="font-size: 11.5px; color: #64748b; text-align: left; margin-top: 4px;">' +
-                                  '<i class="fa fa-ban" style="color: #dc2626;"></i> Blank or lower TDS amount cannot be reconciled. Please rectify the amount to match or exceed the decided amount before verifying.</div>',
-                            confirmButtonColor: '#dc2626',
-                            confirmButtonText: '<i class="fa fa-check"></i> Understood'
-                        }).then(function() {
-                            $recInput.focus().select();
-                            $recInput.css({ 'border-color': '#dc2626', 'background-color': '#fef2f2' });
-                        });
-                    } else {
-                        alert('TDS received amount is lower than the TDS decided amount!\n\nDecided: ₹' + decided.toFixed(2) + '\nReceived: ₹' + received.toFixed(2) + '\nDifference: -₹' + diff + '\n\nBlank or lower TDS cannot be reconciled.');
-                        $recInput.focus();
-                    }
-                    return false;
-                }
-
-                // Validation passed -> Require bank statement cross-check acknowledgement
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         title: '<span style="font-size: 19px; font-weight: 700; color: #0d4d8b;"><i class="fa fa-shield" style="margin-right: 6px;"></i> TDS Bank Verification</span>',
                         html: '<div style="font-size: 13.5px; line-height: 1.5; color: #1e293b; text-align: left; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 14px 16px; margin: 10px 0 6px; display: flex; align-items: flex-start; gap: 8px;">' +
                               '<i class="fa fa-info-circle" style="color: #0d4d8b; font-size: 16px; margin-top: 2px; flex-shrink: 0;"></i>' +
-                              '<span style="font-weight: 600; font-size: 13px; color: #0f172a; line-height: 1.45;">I acknowledge that I have cross checked bank statement and this TDS entry is valid.<br><small style="color: #059669; font-weight: 700; font-size: 12px; display: block; margin-top: 4px;">• TDS Received: ₹' + received.toFixed(2) + ' (Decided: ₹' + decided.toFixed(2) + ')</small></span>' +
+                              '<span style="font-weight: 600; font-size: 13px; color: #0f172a; line-height: 1.45;">I acknowledge that I have cross checked bank statement and this TDS entry is valid.<br><small style="color: #059669; font-weight: 700; font-size: 12px; display: block; margin-top: 4px;">• TDS Received: ' + displayRec + (decided > 0 ? (' (Decided: ₹' + decided.toFixed(2) + ')') : '') + '</small></span>' +
                               '</div>' +
                               '<div style="font-size: 11.5px; color: #64748b; text-align: left; margin-top: 4px;"><i class="fa fa-lock"></i> Once verified, this TDS entry will become locked and non-editable in the Payment System.</div>',
                         showCancelButton: true,
@@ -1352,12 +1279,12 @@ try {
                         focusConfirm: true
                     }).then(function (result) {
                         if (result.isConfirmed) {
-                            sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement, received);
+                            sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement, recRaw);
                         }
                     });
                 } else {
-                    if (confirm('I acknowledge that I have cross checked bank statement and this TDS entry is valid.\n\nTDS Received: ₹' + received.toFixed(2) + '\n\nClick OK to verify and lock this TDS entry.')) {
-                        sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement, received);
+                    if (confirm('I acknowledge that I have cross checked bank statement and this TDS entry is valid.\n\nTDS Received: ' + displayRec + '\n\nClick OK to verify and lock this TDS entry.')) {
+                        sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement, recRaw);
                     }
                 }
             } else {

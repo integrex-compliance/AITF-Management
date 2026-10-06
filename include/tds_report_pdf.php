@@ -65,7 +65,7 @@ function buildTdsReportPdfBytes($data, $status, $startDateStr, $endDateStr, $cli
             <th width="5%" align="center">Sr.</th>
             <th width="12%">Unique ID</th>
             <th width="24%">Client Name</th>
-            <th width="16%">Service Type</th>
+            <th width="16%">Invoice Header</th>
             <th width="13%" align="right">TDS Deducted</th>
             <th width="13%" align="right">Payment Received</th>
             <th width="9%" align="center">Date</th>
@@ -103,10 +103,10 @@ function buildTdsReportPdfBytes($data, $status, $startDateStr, $endDateStr, $cli
                 <td align="center" width="5%">' . $count++ . '</td>
                 <td width="12%">' . htmlspecialchars($tds['unique_id']) . '</td>
                 <td width="24%"><b>' . htmlspecialchars($tds['customer_name']) . '</b></td>
-                <td width="16%">' . htmlspecialchars($tds['tds']) . '</td>
+                <td width="16%">' . htmlspecialchars(resolveTdsInvoiceHeader($tds)) . '</td>
                 <td align="right" width="13%">' . formatIndian($deducted) . '</td>
                 <td align="right" width="13%">' . formatIndian($received) . '</td>
-                <td align="center" width="9%">' . tdsReportDisplayDate($tds['payment_date']) . '</td>
+                <td align="center" width="9%">' . tdsReportDisplayDate($tds['tds_received_date'] ?? '') . '</td>
                 <td align="center" width="8%"><b>' . $statusText . '</b></td>
             </tr>';
         }

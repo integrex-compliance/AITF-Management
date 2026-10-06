@@ -206,45 +206,6 @@ if (isset($req['action']) && $req['action'] === 'updateTdsVerifyStatus') {
                         $upStmt->execute([$cleanedRec, $payId]);
                     }
                 }
-
-                // Check TDS received vs decided
-                if ($isStatement) {
-                    $chkStmt = $db->prepare("SELECT tds_decided, tds_received FROM statement_payments WHERE id = ?");
-                    $chkStmt->execute([$payId]);
-                    $row = $chkStmt->fetch(PDO::FETCH_ASSOC);
-                    if (!$row) {
-                        echo json_encode(['success' => false, 'message' => 'Statement payment record not found.']);
-                        exit;
-                    }
-                    $tdsDec = (float)($row['tds_decided'] ?? 0);
-                    $tdsRec = isset($row['tds_received']) && $row['tds_received'] !== null && $row['tds_received'] !== '' ? (float)$row['tds_received'] : 0.0;
-                } else {
-                    $chkStmt = $db->prepare("SELECT COALESCE(NULLIF(tds_amount, 0), amount_decided, payment_received) as amount_decided, tds_received FROM payment_system WHERE payment_id = ?");
-                    $chkStmt->execute([$payId]);
-                    $row = $chkStmt->fetch(PDO::FETCH_ASSOC);
-                    if (!$row) {
-                        echo json_encode(['success' => false, 'message' => 'Payment record not found.']);
-                        exit;
-                    }
-                    $tdsDec = (float)($row['amount_decided'] ?? 0);
-                    $tdsRec = isset($row['tds_received']) && $row['tds_received'] !== null && $row['tds_received'] !== '' ? (float)$row['tds_received'] : 0.0;
-                }
-
-                if ($tdsRec <= 0) {
-                    echo json_encode([
-                        'success' => false, 
-                        'message' => 'Blank TDS cannot be reconciled. Please enter the TDS received amount before verifying.'
-                    ]);
-                    exit;
-                }
-
-                if ($tdsDec > 0 && $tdsRec < $tdsDec) {
-                    echo json_encode([
-                        'success' => false, 
-                        'message' => 'TDS received amount (₹' . number_format($tdsRec, 2) . ') is lower than the TDS decided amount (₹' . number_format($tdsDec, 2) . '). Blank or lower TDS cannot be reconciled.'
-                    ]);
-                    exit;
-                }
             }
 
             if ($isStatement) {

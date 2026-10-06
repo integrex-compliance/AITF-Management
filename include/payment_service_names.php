@@ -2,7 +2,7 @@
 if (!function_exists('normalizePaymentServiceType')) {
     function normalizePaymentServiceType($svcRaw) {
         $raw = trim((string)$svcRaw);
-        if ($raw === '' || strcasecmp($raw, 'payment') === 0) return 'CA';
+        if ($raw === '' || strcasecmp($raw, 'payment') === 0 || strcasecmp($raw, 'tds') === 0) return 'CA';
         $lower = strtolower($raw);
 
         // Clean spaces and underscores/dashes for uniform matching
@@ -28,11 +28,28 @@ if (!function_exists('normalizePaymentServiceType')) {
             return 'SP';
         }
 
-        // 5. 1st Surveillance (SA-I) - check before RC if it's explicitly SA
+        // 5. Re-Certification (RC) - MUST BE CHECKED BEFORE general CA/certification and before SA
+        if (
+            preg_match('/\b(re\s*cert|recert|re\s*certification|recertification|rc)\b/i', $raw) ||
+            strpos($clean, 're cert') !== false ||
+            strpos($clean, 'recert') !== false ||
+            preg_match('/^rc[\s\d_=-]/i', $raw) ||
+            preg_match('/^rc\d+/i', $raw) ||
+            strpos($lower, 'rc-') !== false ||
+            strpos($lower, 'rc -') !== false ||
+            $lower === 'rc'
+        ) {
+            return 'RC';
+        }
+
+        // 6. 1st Surveillance (SA-I) - check before RC if it's explicitly SA
         if (
             preg_match('/\b(1st|1\s*st|first|3rd|3\s*rd|third|5th|5\s*th)\s*surveillance/i', $clean) ||
             preg_match('/surveillance\s*(1|i|01|3|03|5|05)\b/i', $clean) ||
             preg_match('/\bsa\s*[-_]?\s*(0?1|i|0?3|0?5)\b/i', $clean) ||
+            preg_match('/^sa[\s_-]?0?1\b/i', $clean) ||
+            preg_match('/^sa1\b/i', $lower) ||
+            preg_match('/^sa1[\s\d_-]/i', $lower) ||
             strpos($lower, 'sa-01') !== false ||
             strpos($lower, 'sa-1') !== false ||
             preg_match('/\bsa-i\b/i', $raw) ||
@@ -48,11 +65,14 @@ if (!function_exists('normalizePaymentServiceType')) {
             return 'SA-I';
         }
 
-        // 6. 2nd Surveillance (SA-II)
+        // 7. 2nd Surveillance (SA-II)
         if (
             preg_match('/\b(2nd|2\s*nd|second|4th|4\s*th|fourth|6th|6\s*th)\s*surveillance/i', $clean) ||
             preg_match('/surveillance\s*(2|ii|02|4|04|6|06)\b/i', $clean) ||
             preg_match('/\bsa\s*[-_]?\s*(0?2|ii|0?4|0?6)\b/i', $clean) ||
+            preg_match('/^sa[\s_-]?0?2\b/i', $clean) ||
+            preg_match('/^sa2\b/i', $lower) ||
+            preg_match('/^sa2[\s\d_-]/i', $lower) ||
             strpos($lower, 'sa-02') !== false ||
             strpos($lower, 'sa-2') !== false ||
             strpos($lower, 'sa-ii') !== false ||
@@ -68,20 +88,8 @@ if (!function_exists('normalizePaymentServiceType')) {
             return 'SA-II';
         }
 
-        // 7. Re-Certification (RC) - MUST BE CHECKED BEFORE general CA/certification
-        if (
-            preg_match('/\b(re\s*cert|recert|re\s*certification|recertification|rc)\b/i', $raw) ||
-            strpos($clean, 're cert') !== false ||
-            strpos($clean, 'recert') !== false ||
-            strpos($lower, 'rc-') !== false ||
-            strpos($lower, 'rc -') !== false ||
-            $lower === 'rc'
-        ) {
-            return 'RC';
-        }
-
         // 8. General Surveillance (if unspecified 1 or 2, default to SA-I)
-        if (strpos($lower, 'surveillance') !== false) {
+        if (strpos($lower, 'surveillance') !== false || preg_match('/^sa\b|^sa[\s\d_-]/i', $raw)) {
             return 'SA-I';
         }
 
@@ -93,6 +101,7 @@ if (!function_exists('normalizePaymentServiceType')) {
         // 10. Initial Certification (CA)
         if (
             preg_match('/\b(ca|stage\s*1|stage\s*2|stage1|stage2|initial|payment)\b/i', $raw) ||
+            preg_match('/^ca(?=\d|\s|[-_+=\/])/i', $raw) ||
             strpos($lower, 'ca-') !== false ||
             strpos($lower, 'stage 1') !== false ||
             strpos($lower, 'stage 2') !== false ||
@@ -110,6 +119,51 @@ if (!function_exists('normalizePaymentServiceType')) {
             return 'CA';
         }
 
+        // 12. Generic installment notes without service name (e.g. 2nd install, 1st inst, 45K 1st inst, (2ND INST 32500), 22800) -> default to CA
+        if (
+            preg_match('/\b(inst|instal|install|insta|instoll|installement)\b/i', $clean) ||
+            preg_match('/^\(?\d+(\.\d+)?\s*(k|lakh|lac)\b/i', $clean) ||
+            preg_match('/^2nd\b/i', $clean) ||
+            (is_numeric(str_replace([',', ' ', '.'], '', $clean)) && strlen($clean) > 0)
+        ) {
+            return 'CA';
+        }
+
         return $raw;
+    }
+}
+
+if (!function_exists('resolveTdsInvoiceHeader')) {
+    function resolveTdsInvoiceHeader(array $tdsRow) {
+        $header = trim((string)($tdsRow['payment_header'] ?? ''));
+        $rawSvc = trim((string)($tdsRow['service_type'] ?? ($tdsRow['tds'] ?? '')));
+        $tableSvc = trim((string)($tdsRow['svc_service_type'] ?? ($tdsRow['service_type_from_svc'] ?? '')));
+
+        // If explicitly set custom payment header (e.g. DEC-2025, JAN-2026 (3), Till Sep 2026)
+        if ($header !== '' && strcasecmp($header, 'payment') !== 0 && strcasecmp($header, 'tds') !== 0) {
+            return normalizePaymentServiceType($header);
+        }
+
+        // Statement payments
+        if (!empty($tdsRow['is_statement'])) {
+            return normalizePaymentServiceType($rawSvc ?: ($tableSvc ?: 'CA'));
+        }
+
+        // Try normalizing raw service type
+        $norm = normalizePaymentServiceType($rawSvc);
+        $standardServices = ['CA', 'SA-I', 'SA-II', 'RC', 'CR', 'Contract Review', 'SP', 'PTR', 'Transition Audit', 'Generic Training', 'Other'];
+        if (in_array($norm, $standardServices, true)) {
+            return $norm;
+        }
+
+        // Fallback to customer\'s active service from service table
+        if ($tableSvc !== '') {
+            $normTable = normalizePaymentServiceType($tableSvc);
+            if (in_array($normTable, $standardServices, true)) {
+                return $normTable;
+            }
+        }
+
+        return $norm ?: 'CA';
     }
 }
