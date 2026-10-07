@@ -812,9 +812,9 @@
                     </div>
                 </div>
 
-                <!-- ======================================================== -->
+              
                 <!-- POST GUIDELINES FOR STAFF SECTION                        -->
-                <!-- ======================================================== -->
+            
                 <div class="row" id="guidelines-section" style="margin-top: 30px; margin-bottom: 25px;">
                     <div class="col-sm-6">
                         <div class="panel panel-default">

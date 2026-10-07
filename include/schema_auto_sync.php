@@ -150,11 +150,19 @@ if (!function_exists('aitf_auto_sync_schema')) {
                 }
             } catch (Throwable $e) {}
 
-            // 4. Ensure user.e_id column exists
+            // 4. Ensure user.e_id, designation_assigned, applicable_records columns exist
             try {
                 $uStmt = $db->query("SHOW COLUMNS FROM `user` LIKE 'e_id'");
                 if ($uStmt && empty($uStmt->fetchAll())) {
                     $db->exec("ALTER TABLE `user` ADD COLUMN `e_id` VARCHAR(50) NULL");
+                }
+                $uStmtDesig = $db->query("SHOW COLUMNS FROM `user` LIKE 'designation_assigned'");
+                if ($uStmtDesig && empty($uStmtDesig->fetchAll())) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `designation_assigned` VARCHAR(255) NULL");
+                }
+                $uStmtAppRec = $db->query("SHOW COLUMNS FROM `user` LIKE 'applicable_records'");
+                if ($uStmtAppRec && empty($uStmtAppRec->fetchAll())) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `applicable_records` TEXT NULL");
                 }
             } catch (Throwable $e) {}
 

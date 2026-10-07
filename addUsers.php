@@ -137,6 +137,20 @@
                                             </div>                                                                        
                                         </div>
 
+                                        <div class="row" style="margin-top: 10px;">
+                                            <div class="col-sm-12 form-group float-label-control">
+                                                <label>Designation Assigned</label>
+                                                <input type="text" class="designationAssigned" id="designationAssigned" name="designationAssigned" placeholder="Designation Assigned">
+                                            </div>
+                                        </div>
+
+                                        <div class="row" style="margin-top: 12px;">
+                                            <div class="col-sm-12 form-group">
+                                                <label style="font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Applicable Records and reporting documents with its locations</label>
+                                                <textarea class="form-control applicableRecords" id="applicableRecords" name="applicableRecords" rows="4" style="border: 1px solid #cbd5e1 !important; border-radius: 6px !important; padding: 8px 12px !important; resize: vertical; font-size: 13px; background: #ffffff !important; min-height: 95px; line-height: 1.5;" placeholder="1. Project Analysis (qmscare G-drive)&#10;2. Marketing Analysis (qmscare G-drive)&#10;3. ERP QMS Software Application..."></textarea>
+                                            </div>
+                                        </div>
+
                                         <div class="text-right" style="margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
                                             <button type="submit" class="btn btn-sm btn-info addUser" style="background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important; border: none; font-weight: 700; padding: 6px 20px; border-radius: 6px;">
                                                 <i class="fa fa-plus"></i> Add User
@@ -220,6 +234,21 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <div class="row" style="margin-top: 10px;">
+                                            <div class="col-sm-12 form-group float-label-control">
+                                                <label>Designation Assigned</label>
+                                                <input type="text" class="editDesignationAssigned" id="editDesignationAssigned" name="editDesignationAssigned" placeholder="Designation Assigned">
+                                            </div>
+                                        </div>
+
+                                        <div class="row" style="margin-top: 12px;">
+                                            <div class="col-sm-12 form-group">
+                                                <label style="font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Applicable Records and reporting documents with its locations</label>
+                                                <textarea class="form-control editApplicableRecords" id="editApplicableRecords" name="editApplicableRecords" rows="4" style="border: 1px solid #cbd5e1 !important; border-radius: 6px !important; padding: 8px 12px !important; resize: vertical; font-size: 13px; background: #ffffff !important; min-height: 95px; line-height: 1.5;" placeholder="Applicable records and documents with locations..."></textarea>
+                                            </div>
+                                        </div>
+
                                         <input type="hidden" class="userId" id="userId" name="userId" value="">
                                         <div class="text-right" style="margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
                                             <button type="button" class="btn btn-sm btn-default updateCancel" style="border-radius: 6px; margin-right: 6px;">Cancel</button>
@@ -776,6 +805,8 @@
                         $('.editUserAbbr').val(data['abbreviation']);
                         $('.editUserEmail').val(data['email_id']);
                         $('.editUserRole').val(data['role']);
+                        $('.editDesignationAssigned').val(data['designation_assigned'] || '');
+                        $('.editApplicableRecords').val(data['applicable_records'] || '');
                         $('.userId').val(data['user_id']);
                         $('.addUserSection').hide();
                         $('.updateUserDiv').slideDown(200);
@@ -793,6 +824,8 @@
 
             $(document).on('click', '.updateCancel', function (e) {
                 e.preventDefault();
+                $('.editDesignationAssigned').val('');
+                $('.editApplicableRecords').val('');
                 $('.updateUserDiv').slideUp(200, function() {
                     $('.addUserSection').fadeIn(200);
                 });

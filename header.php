@@ -132,6 +132,8 @@ echo '<script>
 if (!Utitlity::checkIfLoggedIn()) {
     header("Location: login.php?reason=login_required");
     exit;
+} else if (isset($pageIdentifier) && ($pageIdentifier == "My Dashboard" || $pageIdentifier == "MY DASHBOARD")) {
+    $addMyDashboardClass = "active";
 } else if (isset($pageIdentifier) && $pageIdentifier == "Home Page") {
     $addClass = "active";
     if (!aitf_has_access("Client List")) {
@@ -378,6 +380,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             </a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
+        <li><a href="myDashboard.php" class="animate <?php echo isset($addMyDashboardClass) ? $addMyDashboardClass : ''; ?>"><span>MY DASHBOARD</span><i class="sub_icon fa fa-tachometer"></i></a></li>
         <?php if (Utitlity::checkForDirector()) { ?>
             <li class="mgmt-space-item"><a href="directorSpace.php" class="animate mgmt-space-link <?php echo $addDirectorSpaceClass ?? '' ?>"><span class="mgmt-space-text"><i class="fa fa-star mgmt-star-icon" style="color: #fbbf24; margin-right: 4px; font-size: 10px;"></i> CONTROL MANAGEMENT</span><i
                         class="sub_icon fa fa-black-tie mgmt-icon"></i></a></li>
@@ -619,12 +622,14 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <?php if ($hideSidebar) { ?>
             <!-- Limited mobile menu for permission-only access users -->
             <ul class="nav navbar-nav visible-xs">
+                <li><a href="myDashboard.php">MY DASHBOARD</a></li>
                 <li><a href="auditorDashboard.php"><i class="fa fa-arrow-left"></i> Back to Dashboard</a></li>
                 <li class="active"><a href="invoicePage.php">INVOICES</a></li>
                 <li><a href="guidelines.php" style="color: #10b981; font-weight: 700;"><i class="fa fa-book"></i> GUIDELINES</a></li>
             </ul>
             <?php } else { ?>
             <ul class="nav navbar-nav visible-xs">
+                <li><a href="myDashboard.php">MY DASHBOARD</a></li>
                 <?php if (Utitlity::checkForDirector()) { ?>
                     <li><a href="directorSpace.php">CONTROL MANAGEMENT</a></li>
                     <li><a href="adminDashboard.php">MGMT DASHBOARD</a></li>
