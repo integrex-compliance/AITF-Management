@@ -8,12 +8,12 @@
     // Fetch logged in user details including designation_assigned & applicable_records
     $userRow = null;
     if (!empty($_SESSION['id'])) {
-        $uStmt = $db->prepare("SELECT user_id, user_name, abbreviation, email_id, role, e_id, contact_no, account_status, designation_assigned, applicable_records FROM user WHERE user_id = :id LIMIT 1");
+        $uStmt = $db->prepare("SELECT user_id, user_name, abbreviation, email_id, role, e_id, contact_no, account_status, designation_assigned, applicable_records, work_description FROM user WHERE user_id = :id LIMIT 1");
         $uStmt->execute([':id' => $_SESSION['id']]);
         $userRow = $uStmt->fetch(PDO::FETCH_ASSOC);
     }
     if (!$userRow && !empty($_SESSION['username'])) {
-        $uStmt = $db->prepare("SELECT user_id, user_name, abbreviation, email_id, role, e_id, contact_no, account_status, designation_assigned, applicable_records FROM user WHERE LOWER(user_name) = :uname OR LOWER(email_id) = :uemail LIMIT 1");
+        $uStmt = $db->prepare("SELECT user_id, user_name, abbreviation, email_id, role, e_id, contact_no, account_status, designation_assigned, applicable_records, work_description FROM user WHERE LOWER(user_name) = :uname OR LOWER(email_id) = :uemail LIMIT 1");
         $uStmt->execute([':uname' => strtolower($_SESSION['username']), ':uemail' => strtolower($_SESSION['username'])]);
         $userRow = $uStmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -25,6 +25,7 @@
 
     $designationAssigned = trim((string)($userRow['designation_assigned'] ?? ''));
     $applicableRecords = trim((string)($userRow['applicable_records'] ?? ''));
+    $workDescription = trim((string)($userRow['work_description'] ?? ''));
     $userEmail = trim((string)($userRow['email_id'] ?? ($_SESSION['email'] ?? '')));
     $userRole = trim((string)($userRow['role'] ?? ($_SESSION['role'] ?? 'User')));
     $userEid = trim((string)($userRow['e_id'] ?? ''));
@@ -61,6 +62,18 @@
             $trimmed = trim($l);
             if ($trimmed !== '') {
                 $recordLines[] = $trimmed;
+            }
+        }
+    }
+
+    // Split work description by newline for structured rendering
+    $workDescLines = [];
+    if ($workDescription !== '') {
+        $rawWorkLines = preg_split('/\r\n|\r|\n/', $workDescription);
+        foreach ($rawWorkLines as $wl) {
+            $trimmedWl = trim($wl);
+            if ($trimmedWl !== '') {
+                $workDescLines[] = $trimmedWl;
             }
         }
     }
@@ -504,10 +517,16 @@
             word-break: break-word;
         }
 
-        /* Applicable Records Section */
+        /* Profile Sections (Applicable Records & Work Description) */
         .profile-records-container {
-            padding: 20px 24px 26px 24px;
+            padding: 22px 24px;
             background: #ffffff;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .profile-records-container:last-child {
+            border-bottom: none;
+            padding-bottom: 26px;
         }
 
         .records-section-title {
@@ -591,6 +610,42 @@
         }
         .dash-tab-pane.active {
             display: block;
+        }
+
+        .dash-placeholder-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .dash-placeholder-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #eff6ff;
+            color: #0d4d8b;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 12px;
+        }
+
+        .dash-placeholder-title {
+            margin: 0 0 6px 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .dash-placeholder-desc {
+            margin: 0;
+            font-size: 13px;
+            color: #64748b;
+            max-width: 480px;
+            margin: 0 auto;
         }
 
         @media (max-width: 768px) {
@@ -767,6 +822,7 @@
 
         html.theme-dark .profile-records-container {
             background: var(--hpd-surface) !important;
+            border-bottom-color: var(--hpd-border) !important;
         }
 
         html.theme-dark .records-section-title i,
@@ -800,6 +856,24 @@
         html.theme-dark .profile-hero-sub strong {
             color: var(--hpd-accent) !important;
         }
+
+        html.theme-dark .dash-placeholder-box {
+            background: var(--hpd-surface-2) !important;
+            border-color: var(--hpd-border) !important;
+        }
+
+        html.theme-dark .dash-placeholder-icon {
+            background: rgba(74, 158, 255, 0.12) !important;
+            color: var(--hpd-accent) !important;
+        }
+
+        html.theme-dark .dash-placeholder-title {
+            color: var(--hpd-text) !important;
+        }
+
+        html.theme-dark .dash-placeholder-desc {
+            color: var(--hpd-text-dim) !important;
+        }
     </style>
 
     <div id="page-content-wrapper">
@@ -811,20 +885,14 @@
                     <button type="button" class="dash-tab-btn active" data-target="#pane-profile">
                         <i class="fa fa-user-circle"></i> Profile
                     </button>
-                    <button type="button" class="dash-tab-btn" data-target="#pane-hr-activity">
-                        <i class="fa fa-briefcase"></i> Responsibility &amp; Authorities
-                    </button>
-                    <button type="button" class="dash-tab-btn" data-target="#pane-guidelines">
-                        <i class="fa fa-book"></i> Work Guidelines
-                    </button>
-                    <button type="button" class="dash-tab-btn" data-target="#pane-personal-issue">
-                        <i class="fa fa-exclamation-circle"></i> Resources Issue Record
+                    <button type="button" class="dash-tab-btn" data-target="#pane-attendance">
+                        <i class="fa fa-calendar-check-o"></i> Attendance
                     </button>
                     <button type="button" class="dash-tab-btn" data-target="#pane-task-mgmt">
                         <i class="fa fa-tasks"></i> Task Management
                     </button>
-                    <button type="button" class="dash-tab-btn" data-target="#pane-attendance">
-                        <i class="fa fa-calendar-check-o"></i> Attendance
+                    <button type="button" class="dash-tab-btn" data-target="#pane-guidelines">
+                        <i class="fa fa-book"></i> Work Guidelines
                     </button>
                 </div>
 
@@ -836,7 +904,7 @@
                         
                         <!-- MasterCreator Styled Card -->
                         <div class="qms_complete_btn">
-                            <i class="fa fa-id-card-o"></i> User Profile &amp; Designated Responsibilities
+                            <i class="fa fa-id-card-o"></i> User Profile &amp; Responsibilities
                         </div>
                         <div class="well master-profile-well">
                             
@@ -936,14 +1004,48 @@
                                 <?php endif; ?>
                             </div>
 
+                            <!-- Work Description / Responsibilities & Authorities Section -->
+                            <div class="profile-records-container">
+                                <div class="records-section-title">
+                                    <i class="fa fa-list-alt"></i> Work Description (Main Responsibilities, Authorities, and Reporting by Individuals):
+                                </div>
+                                <?php if (!empty($workDescLines)): ?>
+                                    <div class="records-clean-list">
+                                        <?php foreach ($workDescLines as $index => $line): ?>
+                                            <?php $displayText = preg_replace('/^\s*\d+[\.\)\-]\s*/', '', $line); ?>
+                                            <div class="record-clean-item">
+                                                <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                <i class="fa fa-file-text-o record-clean-icon"></i>
+                                                <span class="record-clean-text"><?php echo htmlspecialchars($displayText); ?></span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="records-empty-placeholder">Not assigned yet</div>
+                                <?php endif; ?>
+                            </div>
+
+                        </div>
+                    </div>
+                    <!-- 2. Attendance Tab Pane -->
+                    <div class="dash-tab-pane" id="pane-attendance">
+                        <div class="qms_complete_btn">
+                            <i class="fa fa-calendar-check-o"></i> Attendance
+                        </div>
+                        <div class="well master-profile-well" style="padding: 24px;">
+                            <div class="dash-placeholder-box">
+                                <div class="dash-placeholder-icon">
+                                    <i class="fa fa-clock-o"></i>
+                                </div>
+                                <h4 class="dash-placeholder-title">Coming Soon</h4>
+                                <p class="dash-placeholder-desc">
+                                    Attendance feature is currently under development and will be available soon.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="dash-tab-pane" id="pane-hr-activity"></div>
-                    <div class="dash-tab-pane" id="pane-guidelines"></div>
-                    <div class="dash-tab-pane" id="pane-personal-issue"></div>
-                    
-                    <!-- Task Management Tab Pane -->
+                    <!-- 3. Task Management Tab Pane -->
                     <div class="dash-tab-pane" id="pane-task-mgmt">
                         <div class="qms_complete_btn">
                             <i class="fa fa-tasks"></i> Task Management
@@ -966,19 +1068,35 @@
                                 </div>
                             </div>
                             
-                            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 40px 20px; text-align: center;">
-                                <div style="width: 52px; height: 52px; border-radius: 50%; background: #eff6ff; color: #0d4d8b; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 12px;">
+                            <div class="dash-placeholder-box">
+                                <div class="dash-placeholder-icon">
                                     <i class="fa fa-tasks"></i>
                                 </div>
-                                <h4 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 700; color: #1e293b;">Task Management Section</h4>
-                                <p style="margin: 0; font-size: 13px; color: #64748b; max-width: 480px; margin: 0 auto;">
+                                <h4 class="dash-placeholder-title">Task Management Section</h4>
+                                <p class="dash-placeholder-desc">
                                     No pending tasks assigned currently. New tasks will be listed here with status, priority, and deadlines.
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="dash-tab-pane" id="pane-attendance"></div>
+                    <!-- 4. Work Guidelines Tab Pane -->
+                    <div class="dash-tab-pane" id="pane-guidelines">
+                        <div class="qms_complete_btn">
+                            <i class="fa fa-book"></i> Work Guidelines
+                        </div>
+                        <div class="well master-profile-well" style="padding: 24px;">
+                            <div class="dash-placeholder-box">
+                                <div class="dash-placeholder-icon">
+                                    <i class="fa fa-book"></i>
+                                </div>
+                                <h4 class="dash-placeholder-title">Work Guidelines</h4>
+                                <p class="dash-placeholder-desc">
+                                    Work guidelines and procedural documentation will appear here.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

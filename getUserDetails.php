@@ -12,7 +12,7 @@ date_default_timezone_set('Asia/Kolkata');
 
 if (isset($_GET['userId']) && !empty($_GET['userId'])) {
     try { 
-        $userDetails = "SELECT user_id, user_name, abbreviation, email_id, role, designation_assigned, applicable_records FROM user WHERE user_id = :userid";
+        $userDetails = "SELECT user_id, user_name, abbreviation, email_id, role, designation_assigned, applicable_records, work_description FROM user WHERE user_id = :userid";
         $statement = $db->prepare($userDetails);
         $statement->bindParam(':userid', $_GET['userId']);
         $statement->execute();

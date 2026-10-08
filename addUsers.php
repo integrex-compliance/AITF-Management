@@ -151,6 +151,13 @@
                                             </div>
                                         </div>
 
+                                        <div class="row" style="margin-top: 12px;">
+                                            <div class="col-sm-12 form-group">
+                                                <label style="font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Work Description (Main Responsibilities, Authorities, and Reporting by Individuals)</label>
+                                                <textarea class="form-control workDescription" id="workDescription" name="workDescription" rows="4" style="border: 1px solid #cbd5e1 !important; border-radius: 6px !important; padding: 8px 12px !important; resize: vertical; font-size: 13px; background: #ffffff !important; min-height: 95px; line-height: 1.5;" placeholder="Work Description (Main Responsibilities, Authorities, and Reporting by Individuals)..."></textarea>
+                                            </div>
+                                        </div>
+
                                         <div class="text-right" style="margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
                                             <button type="submit" class="btn btn-sm btn-info addUser" style="background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important; border: none; font-weight: 700; padding: 6px 20px; border-radius: 6px;">
                                                 <i class="fa fa-plus"></i> Add User
@@ -246,6 +253,13 @@
                                             <div class="col-sm-12 form-group">
                                                 <label style="font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Applicable Records and reporting documents with its locations</label>
                                                 <textarea class="form-control editApplicableRecords" id="editApplicableRecords" name="editApplicableRecords" rows="4" style="border: 1px solid #cbd5e1 !important; border-radius: 6px !important; padding: 8px 12px !important; resize: vertical; font-size: 13px; background: #ffffff !important; min-height: 95px; line-height: 1.5;" placeholder="Applicable records and documents with locations..."></textarea>
+                                            </div>
+                                        </div>
+
+                                        <div class="row" style="margin-top: 12px;">
+                                            <div class="col-sm-12 form-group">
+                                                <label style="font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Work Description (Main Responsibilities, Authorities, and Reporting by Individuals)</label>
+                                                <textarea class="form-control editWorkDescription" id="editWorkDescription" name="editWorkDescription" rows="4" style="border: 1px solid #cbd5e1 !important; border-radius: 6px !important; padding: 8px 12px !important; resize: vertical; font-size: 13px; background: #ffffff !important; min-height: 95px; line-height: 1.5;" placeholder="Work Description (Main Responsibilities, Authorities, and Reporting by Individuals)..."></textarea>
                                             </div>
                                         </div>
 
@@ -807,6 +821,7 @@
                         $('.editUserRole').val(data['role']);
                         $('.editDesignationAssigned').val(data['designation_assigned'] || '');
                         $('.editApplicableRecords').val(data['applicable_records'] || '');
+                        $('.editWorkDescription').val(data['work_description'] || '');
                         $('.userId').val(data['user_id']);
                         $('.addUserSection').hide();
                         $('.updateUserDiv').slideDown(200);
@@ -826,6 +841,7 @@
                 e.preventDefault();
                 $('.editDesignationAssigned').val('');
                 $('.editApplicableRecords').val('');
+                $('.editWorkDescription').val('');
                 $('.updateUserDiv').slideUp(200, function() {
                     $('.addUserSection').fadeIn(200);
                 });

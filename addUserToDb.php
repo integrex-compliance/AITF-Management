@@ -94,8 +94,9 @@ if (isset($_POST['directorAddUser']) && $_POST['directorAddUser'] === '1') {
             $hashedpwd = password_hash($_POST['userPassword'], PASSWORD_DEFAULT);
             $designation = trim((string)($_POST['designationAssigned'] ?? ''));
             $applicableRecords = trim((string)($_POST['applicableRecords'] ?? ''));
+            $workDescription = trim((string)($_POST['workDescription'] ?? ''));
 
-            $addUser = "INSERT INTO user(user_name, abbreviation, email_id, password, role, designation_assigned, applicable_records) VALUES (:name, :userAbbr, :email, :password, :role, :designation, :applicableRecords)";
+            $addUser = "INSERT INTO user(user_name, abbreviation, email_id, password, role, designation_assigned, applicable_records, work_description) VALUES (:name, :userAbbr, :email, :password, :role, :designation, :applicableRecords, :workDescription)";
             $statement = $db->prepare($addUser);
             $statement->bindParam(':name', $_POST['userName']);
             $statement->bindParam(':email', $_POST['userEmail']);
@@ -104,6 +105,7 @@ if (isset($_POST['directorAddUser']) && $_POST['directorAddUser'] === '1') {
             $statement->bindParam(':role', $_POST['userRole']);
             $statement->bindParam(':designation', $designation);
             $statement->bindParam(':applicableRecords', $applicableRecords);
+            $statement->bindParam(':workDescription', $workDescription);
             $statement->execute();
             header("Location: addUsers.php");
             exit;
@@ -114,8 +116,9 @@ if (isset($_POST['directorAddUser']) && $_POST['directorAddUser'] === '1') {
         try {
             $designation = trim((string)($_POST['editDesignationAssigned'] ?? ''));
             $applicableRecords = trim((string)($_POST['editApplicableRecords'] ?? ''));
+            $workDescription = trim((string)($_POST['editWorkDescription'] ?? ''));
 
-            $updateUser = "UPDATE user SET user_name = :name, abbreviation = :abbr, email_id = :email, role = :role, designation_assigned = :designation, applicable_records = :applicableRecords WHERE user_id = :userId";
+            $updateUser = "UPDATE user SET user_name = :name, abbreviation = :abbr, email_id = :email, role = :role, designation_assigned = :designation, applicable_records = :applicableRecords, work_description = :workDescription WHERE user_id = :userId";
             $statement = $db->prepare($updateUser);
             $statement->bindParam(':name', $_POST['editUserName']);
             $statement->bindParam(':abbr', $_POST['editUserAbbr']);
@@ -123,6 +126,7 @@ if (isset($_POST['directorAddUser']) && $_POST['directorAddUser'] === '1') {
             $statement->bindParam(':role', $_POST['editUserRole']);
             $statement->bindParam(':designation', $designation);
             $statement->bindParam(':applicableRecords', $applicableRecords);
+            $statement->bindParam(':workDescription', $workDescription);
             $statement->bindParam(':userId', $_POST['userId']);
             $statement->execute();
             header("Location: addUsers.php");

@@ -164,6 +164,10 @@ if (!function_exists('aitf_auto_sync_schema')) {
                 if ($uStmtAppRec && empty($uStmtAppRec->fetchAll())) {
                     $db->exec("ALTER TABLE `user` ADD COLUMN `applicable_records` TEXT NULL");
                 }
+                $uStmtWorkDesc = $db->query("SHOW COLUMNS FROM `user` LIKE 'work_description'");
+                if ($uStmtWorkDesc && empty($uStmtWorkDesc->fetchAll())) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `work_description` TEXT NULL");
+                }
             } catch (Throwable $e) {}
 
             // 5. Ensure soft-delete columns in service and customer_info
