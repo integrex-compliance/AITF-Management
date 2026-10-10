@@ -444,6 +444,7 @@ if (!function_exists('aitf_get_guidelines_for_current_user')) {
     {
         aitf_ensure_guidelines_schema($db);
 
+        $passedRole = $userRole;
         if ($userId === null) {
             $userId = (int)($_SESSION['id'] ?? 0);
         }
@@ -457,7 +458,11 @@ if (!function_exists('aitf_get_guidelines_for_current_user')) {
             $userName = (string)($_SESSION['user_full_name'] ?? ($_SESSION['username'] ?? ''));
         }
 
-        $isTopMgmt = aitf_is_top_management_role($userRole) || Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin();
+        if ($passedRole !== null) {
+            $isTopMgmt = aitf_is_top_management_role($userRole);
+        } else {
+            $isTopMgmt = aitf_is_top_management_role($userRole) || Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin();
+        }
 
         $params = [];
         $where = ["g.is_active = 1"];

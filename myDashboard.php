@@ -14,9 +14,25 @@
         }
     }
 
-    // Fetch logged in user details with robust error handling
+    // 1. Identify actual logged-in user credentials
+    $actualLoggedInUserId = (int)($_SESSION['id'] ?? 0);
+    $actualLoggedInRole = (string)($_SESSION['role'] ?? '');
+    $actualLoggedInUsername = (string)($_SESSION['username'] ?? '');
+
+    // 2. Check if logged-in user has Management / Director privileges
+    $isManagementUser = (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($actualLoggedInRole))
+        || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()))
+        || in_array($actualLoggedInRole, ['Director', 'Top Mgmt', 'Main Admin', 'Admin'], true);
+
+    // 3. Fetch all system users for Management Switcher
+    $allSystemUsers = [];
+    if ($isManagementUser && function_exists('aitf_get_all_system_users') && isset($db) && $db) {
+        $allSystemUsers = aitf_get_all_system_users($db);
+    }
+
+    // 4. Fetch default logged-in user details with robust error handling
     $userRow = null;
-    $isAuditorUser = (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') || !empty($_SESSION['auditor_id']);
+    $isAuditorUser = ($actualLoggedInRole === 'Auditor') || !empty($_SESSION['auditor_id']);
 
     if (!empty($_SESSION['id'])) {
         try {
@@ -46,7 +62,6 @@
             if ($audData = $audStmt->fetch(PDO::FETCH_ASSOC)) {
                 $audLoginEmail = !empty($audData['login_email']) ? $audData['login_email'] : ($audData['auditor_email'] ?? '');
                 $audNo = !empty($audData['auditor_number']) ? $audData['auditor_number'] : '';
-                // Try matching user table by email, auditor_number (e_id), or name
                 try {
                     $uStmt = $db->prepare("SELECT * FROM user WHERE (LOWER(email_id) = LOWER(:email) AND email_id != '') OR (e_id = :eid AND e_id != '') OR LOWER(user_name) = LOWER(:uname) LIMIT 1");
                     $uStmt->execute([':email' => $audLoginEmail, ':eid' => $audNo, ':uname' => $audData['auditor_name']]);
@@ -73,6 +88,81 @@
                 }
             }
         } catch (Throwable $e) {}
+    }
+
+    // 5. Management Switcher: Check if viewing another user's dashboard
+    $isViewingOther = false;
+    $currentViewKey = '';
+    $viewingTargetName = '';
+
+    if ($isManagementUser && !empty($_GET['view_user'])) {
+        $reqUserKey = trim((string)$_GET['view_user']);
+        if ($reqUserKey !== '' && $reqUserKey !== 'self') {
+            $targetUserRow = null;
+            $isAuditorTarget = false;
+
+            if (strpos($reqUserKey, 'auditor_') === 0) {
+                $targetAudId = (int)substr($reqUserKey, 8);
+                if ($targetAudId > 0) {
+                    try {
+                        $audStmt = $db->prepare("SELECT auditors_id, auditor_name, abbrevation, auditor_number, auditor_email, login_email FROM auditors WHERE auditors_id = :aid LIMIT 1");
+                        $audStmt->execute([':aid' => $targetAudId]);
+                        if ($audData = $audStmt->fetch(PDO::FETCH_ASSOC)) {
+                            $isAuditorTarget = true;
+                            $audLoginEmail = !empty($audData['login_email']) ? $audData['login_email'] : ($audData['auditor_email'] ?? '');
+                            $audNo = !empty($audData['auditor_number']) ? $audData['auditor_number'] : '';
+                            try {
+                                $uStmt = $db->prepare("SELECT * FROM user WHERE (LOWER(email_id) = LOWER(:email) AND email_id != '') OR (e_id = :eid AND e_id != '') OR LOWER(user_name) = LOWER(:uname) LIMIT 1");
+                                $uStmt->execute([':email' => $audLoginEmail, ':eid' => $audNo, ':uname' => $audData['auditor_name']]);
+                                $targetUserRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+                            } catch (Throwable $e) {}
+
+                            if (!$targetUserRow) {
+                                $targetUserRow = [
+                                    'user_id' => 0,
+                                    'user_name' => $audData['auditor_name'],
+                                    'abbreviation' => $audData['abbrevation'] ?? '',
+                                    'email_id' => $audLoginEmail,
+                                    'role' => 'Auditor',
+                                    'e_id' => $audNo,
+                                    'pc_id' => '',
+                                    'contact_no' => $audNo,
+                                    'account_status' => 'active',
+                                    'designation_assigned' => 'Senior Auditor',
+                                    'applicable_records' => '',
+                                    'work_description' => '',
+                                    'resource_issue_record' => ''
+                                ];
+                            }
+                        }
+                    } catch (Throwable $e) {}
+                }
+            } else {
+                $targetUid = (int)preg_replace('/[^0-9]/', '', $reqUserKey);
+                if ($targetUid > 0) {
+                    try {
+                        $uStmt = $db->prepare("SELECT * FROM user WHERE user_id = :uid LIMIT 1");
+                        $uStmt->execute([':uid' => $targetUid]);
+                        $targetUserRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+                    } catch (Throwable $e) {}
+                }
+            }
+
+            if ($targetUserRow) {
+                // If it's not the same user as actual logged-in user, switch the active dashboard
+                $isSameUser = false;
+                if (!empty($targetUserRow['user_id']) && $actualLoggedInUserId > 0 && (int)$targetUserRow['user_id'] === $actualLoggedInUserId) {
+                    $isSameUser = true;
+                }
+                if (!$isSameUser) {
+                    $userRow = $targetUserRow;
+                    $isViewingOther = true;
+                    $currentViewKey = $reqUserKey;
+                    $viewingTargetName = $targetUserRow['user_name'];
+                    $isAuditorUser = ($targetUserRow['role'] === 'Auditor') || ($targetUserRow['role'] === 'Auditors') || $isAuditorTarget;
+                }
+            }
+        }
     }
 
     $userName = trim($userRow['user_name'] ?? ($_SESSION['username'] ?? 'User'));
@@ -1268,6 +1358,35 @@
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4) !important;
         }
 
+        html.theme-dark .dash-tabs-bar {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+        }
+        html.theme-dark .dash-user-switcher-container .dash-user-switcher-label {
+            color: #94a3b8 !important;
+        }
+        html.theme-dark #dashUserSwitcherSelect {
+            background: #0f172a !important;
+            border-color: #334155 !important;
+            color: #f1f5f9 !important;
+        }
+        html.theme-dark .dash-viewing-alert {
+            background: linear-gradient(135deg, #0d1b32 0%, #091322 100%) !important;
+            border-color: #1e3a8a !important;
+            border-left-color: #3b82f6 !important;
+        }
+        html.theme-dark .dash-viewing-alert div {
+            color: #cbd5e1 !important;
+        }
+        html.theme-dark .dash-viewing-alert strong {
+            color: #ffffff !important;
+        }
+        html.theme-dark .dash-viewing-alert .btn {
+            background: #111a2e !important;
+            border-color: #1e293b !important;
+            color: #f1f5f9 !important;
+        }
+
         html.theme-dark .qms_complete_btn {
             background: linear-gradient(135deg, #16243d 0%, #0d1b33 100%) !important;
             border-color: var(--hpd-border-2) !important;
@@ -1611,12 +1730,70 @@
                     <button type="button" class="dash-tab-btn" data-target="#pane-guidelines">
                         <i class="fa fa-book"></i> Work Guidelines
                     </button>
-                    <?php if ($isAuditorUser): ?>
-                    <a href="auditorDashboard.php" class="dash-tab-btn" style="margin-left: auto; background: linear-gradient(135deg, #0d4d8b 0%, #2563eb 100%); color: #ffffff !important; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(13, 77, 139, 0.25);">
+                    <?php if ($isAuditorUser && !$isViewingOther): ?>
+                    <a href="auditorDashboard.php" class="dash-tab-btn" style="<?php echo !$isManagementUser ? 'margin-left: auto;' : ''; ?> background: linear-gradient(135deg, #0d4d8b 0%, #2563eb 100%); color: #ffffff !important; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(13, 77, 139, 0.25);">
                         <i class="fa fa-clipboard-check"></i> Auditor Dashboard <i class="fa fa-external-link" style="font-size: 10.5px;"></i>
                     </a>
                     <?php endif; ?>
+
+                    <?php if ($isManagementUser): ?>
+                    <!-- View Other Dashboard Section (For Management Role) -->
+                    <div class="dash-user-switcher-container" style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 2px 4px 2px 14px;">
+                        <span class="dash-user-switcher-label" style="font-size: 12px; font-weight: 700; color: #475569; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                            <i class="fa fa-users" style="color: #0d4d8b; font-size: 13px;"></i> View Other Dashboard:
+                        </span>
+                        <div style="position: relative; min-width: 230px;">
+                            <select id="dashUserSwitcherSelect" class="form-control" style="height: 34px; font-size: 12.5px; border-radius: 8px; border: 1.5px solid <?php echo $isViewingOther ? '#2563eb' : '#cbd5e1'; ?>; background: <?php echo $isViewingOther ? '#eff6ff' : '#ffffff'; ?>; color: <?php echo $isViewingOther ? '#1e40af' : '#0f172a'; ?>; padding: 4px 26px 4px 10px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                <option value="" <?php echo !$isViewingOther ? 'selected' : ''; ?>>👤 My Dashboard (Self)</option>
+                                <?php if (!empty($allSystemUsers)): ?>
+                                    <optgroup label="System Users &amp; Staff">
+                                        <?php foreach ($allSystemUsers as $su): 
+                                            $suKey = $su['key'];
+                                            $isSel = ($isViewingOther && $currentViewKey === $suKey);
+                                            $isMe = ($su['user_type'] === 'user' && (int)$su['user_id'] === $actualLoggedInUserId);
+                                        ?>
+                                        <option value="<?php echo htmlspecialchars($suKey); ?>" <?php echo $isSel ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($su['name']); ?> (<?php echo htmlspecialchars($su['role']); ?>)<?php echo $isMe ? ' - [You]' : ''; ?>
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endif; ?>
+                            </select>
+                            <i class="fa fa-chevron-down" style="position: absolute; right: 10px; top: 11px; font-size: 10px; color: <?php echo $isViewingOther ? '#2563eb' : '#94a3b8'; ?>; pointer-events: none;"></i>
+                        </div>
+                        <?php if ($isViewingOther): ?>
+                        <a href="myDashboard.php" class="dash-switcher-reset-btn" title="Back to my own dashboard" style="display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; font-size: 12px; font-weight: 600; border-radius: 8px; background: #fee2e2; border: 1px solid #fecaca; color: #b91c1c; text-decoration: none; transition: all 0.15s ease;">
+                            <i class="fa fa-times"></i> Reset
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
+
+                <?php if ($isViewingOther): ?>
+                <!-- Alert Banner when viewing another user's dashboard in Management Mode -->
+                <div class="dash-viewing-alert" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; border-left: 5px solid #2563eb; border-radius: 10px; padding: 12px 18px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 6px rgba(37,99,235,0.08);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 36px; height: 36px; border-radius: 9px; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">
+                            <i class="fa fa-eye"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700; color: #1e3a8a;">
+                                Viewing Dashboard of: <strong style="color: #0f172a; font-size: 15px;"><?php echo htmlspecialchars($userName); ?></strong>
+                                <span class="badge" style="background: #2563eb; color: #fff; font-size: 11px; margin-left: 6px; padding: 3px 8px; font-weight: 600;"><?php echo htmlspecialchars($userRole); ?></span>
+                            </div>
+                            <div style="font-size: 12px; color: #475569; margin-top: 2px;">
+                                You are reviewing this user's profile, responsibilities, and directives in Management View.
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="myDashboard.php" class="btn" style="background: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; font-weight: 600; font-size: 12.5px; border-radius: 7px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none;">
+                            <i class="fa fa-arrow-left"></i> Return to My Dashboard
+                        </a>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <!-- 2. Tab Content Panes -->
                 <div class="dash-tab-content">
@@ -2152,6 +2329,20 @@ $(document).ready(function() {
         } else {
             $('#guidelinesNoMatch').hide();
         }
+    });
+
+    // Management Dashboard Switcher Change Event
+    $('#dashUserSwitcherSelect').on('change', function() {
+        var selectedVal = $(this).val();
+        var activeTab = $('.dash-tab-btn.active').data('target') || '';
+        var targetUrl = 'myDashboard.php';
+        if (selectedVal) {
+            targetUrl += '?view_user=' + encodeURIComponent(selectedVal);
+        }
+        if (activeTab) {
+            targetUrl += activeTab;
+        }
+        window.location.href = targetUrl;
     });
 });
 </script>

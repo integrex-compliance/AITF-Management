@@ -185,13 +185,21 @@ if (!Utitlity::checkIfLoggedIn()) {
 } else if (isset($pageIdentifier) && $pageIdentifier == "Finance Page") {
     $addFinanceClass = "active";
     if (!aitf_has_access("Payment Due")) {
-        header("Location: login.php?reason=login_required");
+        if (isset($_SESSION['username'])) {
+            header("Location: homePage.php");
+        } else {
+            header("Location: login.php?reason=login_required");
+        }
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "TDS list") {
     $addtds = "active";
     if (!aitf_has_access("TDS Deducted")) {
-        header("Location: login.php?reason=login_required");
+        if (isset($_SESSION['username'])) {
+            header("Location: homePage.php");
+        } else {
+            header("Location: login.php?reason=login_required");
+        }
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Due letter") {
@@ -655,7 +663,9 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <?php } ?>
                 <li><a href="homePage.php">CLIENTS</a></li>
                 <li><a href="marketingPage.php">MARKETING</a></li>
+                <?php if (aitf_has_access("Payment Due")) { ?>
                 <li><a href="paymentPage.php">PAYMENT</a></li>
+                <?php } ?>
                 <li><a href="auditPlanning.php">AUDIT PLANNING</a></li>
                 <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
                 <li><a href="masterCreator.php">MASTER CREATOR</a></li>
@@ -663,7 +673,9 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <?php if (aitf_has_access("Guidelines")) { ?>
                 <li><a href="guidelines.php" style="color: #10b981; font-weight: 700;"><i class="fa fa-book"></i> GUIDELINES</a></li>
                 <?php } ?>
+                <?php if (aitf_has_access("TDS Deducted")) { ?>
                 <li><a href="listOfTds.php">TDS DEDUCTED</a></li>
+                <?php } ?>
                 <li><a href="intimationLetter.php">INTIMATION LETTERS</a></li>
                 <li><a href="clientList.php">CLIENT LIST</a></li>
                 <li><a href="invoicePage.php">INVOICE</a></li>

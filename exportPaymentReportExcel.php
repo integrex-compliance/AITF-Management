@@ -1,4 +1,13 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/include/rbac_matrix.php';
+if (!aitf_has_access("Payment Due")) {
+    http_response_code(403);
+    exit('Access Denied');
+}
+
 include_once './dbConnect.php';
 include_once './commonutil.php';
 include_once __DIR__ . '/include/invoice_report_lib.php';

@@ -8,7 +8,7 @@ function aitf_has_access($module) {
     $role = $_SESSION['role'] ?? '';
     
     // Top Mgmt has access to everything
-    if (in_array(trim($role), ['Top Mgmt', 'Director', 'Main Admin'], true)) {
+    if (in_array(trim($role), ['Top Mgmt', 'Director', 'Main Admin', 'top mgmt', 'Management'], true)) {
         return true;
     }
     
@@ -21,11 +21,14 @@ function aitf_has_access($module) {
         'Marketing' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Received Payment' => ['Admin', 'Finance', 'Management'],
         'Received Payments' => ['Admin', 'Finance', 'Management'],
-        'Payment Due' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
+        'Payment Due' => ['Finance', 'finance'],
+        'Payment' => ['Finance', 'finance'],
+        'Finance Page' => ['Finance', 'finance'],
         'Statement' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Audit Planning' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Master Creator' => [],
-        'TDS Deducted' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
+        'TDS Deducted' => ['Finance', 'finance'],
+        'TDS list' => ['Finance', 'finance'],
         'Intimation Due' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Invoices' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Bills' => ['Admin', 'Finance'],

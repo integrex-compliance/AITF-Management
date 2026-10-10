@@ -1,5 +1,15 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 header('Content-Type: application/json');
+
+require_once __DIR__ . '/include/rbac_matrix.php';
+if (!aitf_has_access("Payment Due")) {
+    echo json_encode(['success' => false, 'message' => 'Access Denied. Only Top Mgmt and Finance roles are authorized.']);
+    exit;
+}
+
 include_once './dbConnect.php';
 include_once './commonutil.php';
 require_once('tcpdf_include.php');

@@ -1,4 +1,12 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/include/rbac_matrix.php';
+if (!aitf_has_access("Payment Due")) {
+    http_response_code(403);
+    exit('Access Denied');
+}
 // Buffer includes so the PDF response starts with its binary signature.
 ob_start();
 require_once __DIR__ . '/dbConnect.php';

@@ -1,3 +1,14 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/include/rbac_matrix.php';
+if (!aitf_has_access("TDS Deducted")) {
+    header("Location: homePage.php");
+    echo "<script>window.location.href='homePage.php';</script>";
+    exit;
+}
+?>
 <div id="wrapper" class="active">
 <?php
 $pageIdentifier = "TDS list";
