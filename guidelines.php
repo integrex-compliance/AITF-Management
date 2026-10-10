@@ -1,3 +1,11 @@
+<?php
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') {
+    header('Location: auditorDashboard.php#guidelines');
+    exit;
+}
+?>
 <div id="wrapper" class="active">
     <?php
     $pageIdentifier = "Guidelines";

@@ -913,7 +913,7 @@
                                                                     <?php } ?>
                                                                 </div>
                                                             </td>
-                                                            <td>
+                                                            <td id="mc-recipients-cell-<?php echo $mg['id']; ?>">
                                                                 <?php if ($mRecCount > 0) { ?>
                                                                     <span class="label label-success" style="font-size: 10.5px;">Sent to <?php echo $mRecCount; ?> User(s)</span>
                                                                 <?php } else { ?>
@@ -921,9 +921,12 @@
                                                                 <?php } ?>
                                                             </td>
                                                             <td style="text-align: center; vertical-align: middle; white-space: nowrap;">
-                                                                <a href="addUsers.php#guidelines-dist-section" class="btn btn-xs btn-primary" style="padding: 2px 6px; font-size: 11px;" title="Send to users on Add Users page">
+                                                                <button type="button" class="btn btn-xs btn-primary btn-open-assign-modal" 
+                                                                        data-id="<?php echo $mg['id']; ?>" 
+                                                                        data-title="<?php echo htmlspecialchars($mg['title'], ENT_QUOTES); ?>"
+                                                                        style="padding: 2px 7px; font-size: 11px;" title="Send Guideline to Users">
                                                                     <i class="fa fa-paper-plane"></i> Send
-                                                                </a>
+                                                                </button>
                                                                 <button type="button" class="btn btn-xs btn-danger btn-delete-mc-guideline" 
                                                                         data-id="<?php echo $mg['id']; ?>" 
                                                                         data-title="<?php echo htmlspecialchars($mg['title'], ENT_QUOTES); ?>"
@@ -938,6 +941,72 @@
                                         <?php } ?>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal for Assigning / Sending Guideline to Users (Master Creator) -->
+                <div class="modal fade" id="assignGuidelineModal" tabindex="-1" role="dialog" aria-labelledby="assignGuidelineModalLabel">
+                    <div class="modal-dialog" role="document" style="max-width: 620px;">
+                        <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+                            <div class="panel-heading" style="background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%); color: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-size: 15px; font-weight: 700; color: #fff;">
+                                    <span><i class="fa fa-paper-plane"></i></span> Send Guideline to Users
+                                </div>
+                                <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 0.9; margin: 0; font-size: 22px;">&times;</button>
+                            </div>
+
+                            <div class="modal-body" style="padding: 18px 20px;">
+                                <input type="hidden" id="modalGuidelineId" value="">
+
+                                <div style="margin-bottom: 14px; background: #f8fafc; border-left: 4px solid #0d4d8b; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 6px; padding: 10px 14px;">
+                                    <small style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.4px;">Guideline Subject:</small>
+                                    <div id="modalGuidelineTitle" style="font-weight: 700; color: #0f172a; font-size: 14px; margin-top: 2px;"></div>
+                                </div>
+
+                                <!-- Role Quick Filter Pills -->
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+                                    <button type="button" class="btn btn-xs btn-user-filter active" data-filter="all" style="border-radius: 14px; padding: 3px 12px; font-weight: 700; background: #0d4d8b; color: #fff; border: 1px solid #0d4d8b;">All (<span id="filterCountAll">0</span>)</button>
+                                    <button type="button" class="btn btn-xs btn-default btn-user-filter" data-filter="staff" style="border-radius: 14px; padding: 3px 12px; font-weight: 600;">Office Staff</button>
+                                    <button type="button" class="btn btn-xs btn-default btn-user-filter" data-filter="auditor" style="border-radius: 14px; padding: 3px 12px; font-weight: 600;">Auditors</button>
+                                    <button type="button" class="btn btn-xs btn-default btn-user-filter" data-filter="admin" style="border-radius: 14px; padding: 3px 12px; font-weight: 600;">Admin / Mgmt</button>
+                                </div>
+
+                                <!-- Search & Quick Selection Actions -->
+                                <div class="row" style="margin-bottom: 10px;">
+                                    <div class="col-xs-6">
+                                        <input type="text" id="userListSearchInput" class="form-control input-sm" placeholder="Search user name, email, or role..." style="border-radius: 6px;">
+                                    </div>
+                                    <div class="col-xs-6 text-right" style="padding-top: 5px;">
+                                        <a href="javascript:void(0)" id="btnSelectAllUsers" style="font-size: 11.5px; margin-right: 8px; font-weight: 700; color: #0d4d8b;"><i class="fa fa-check-square-o"></i> Select All</a>
+                                        <a href="javascript:void(0)" id="btnSelectAllAuditors" style="font-size: 11.5px; margin-right: 8px; font-weight: 600; color: #059669;">+ All Auditors</a>
+                                        <a href="javascript:void(0)" id="btnDeselectAllUsers" style="font-size: 11.5px; color: #dc2626; font-weight: 700;"><i class="fa fa-times"></i> Clear</a>
+                                    </div>
+                                </div>
+
+                                <div id="modalUsersListContainer" style="max-height: 290px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0; background: #fff;">
+                                    <div class="text-center text-muted" style="padding: 25px;" id="modalLoadingUsersSpinner">
+                                        <i class="fa fa-spinner fa-spin" style="font-size: 18px; color: #0d4d8b;"></i> Loading all system users...
+                                    </div>
+                                    <table class="table table-hover table-condensed table-striped" style="margin-bottom: 0; font-size: 12.5px;">
+                                        <tbody id="modalUsersGrid">
+                                            <!-- User rows injected via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div style="margin-top: 10px; font-size: 12px; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
+                                    <span id="selectedUsersCountLabel" style="font-weight: 700; color: #0d4d8b; font-size: 12.5px;">0 Selected</span>
+                                    <span style="color: #64748b;"><i class="fa fa-info-circle"></i> Sent guidelines appear in recipient's My Dashboard</span>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                                <button type="button" class="btn btn-sm btn-default" data-dismiss="modal" style="border-radius: 6px; font-weight: 600;">Cancel</button>
+                                <button type="button" class="btn btn-sm btn-info" id="btnSubmitGuidelineAssignments" style="background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%); border: none; font-weight: 700; border-radius: 6px; padding: 7px 20px; box-shadow: 0 2px 6px rgba(13,77,139,0.3);">
+                                    <i class="fa fa-paper-plane"></i> Send Guideline to Selected (<span id="submitCountBadge">0</span>)
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1161,6 +1230,225 @@
                         doDelete();
                     }
                 }
+            });
+
+            // Staff Guidelines Assign Modal in Master Creator
+            function updateMasterSelectedCount() {
+                var checkedCount = $('#modalUsersGrid input.user-assign-checkbox:checked').length;
+                $('#selectedUsersCountLabel').text(checkedCount + ' Selected');
+                $('#submitCountBadge').text(checkedCount);
+            }
+
+            $(document).on('click', '.btn-open-assign-modal', function(e) {
+                e.preventDefault();
+                var gid = $(this).data('id');
+                var gtitle = $(this).data('title');
+
+                $('#modalGuidelineId').val(gid);
+                $('#modalGuidelineTitle').text(gtitle || ('Staff Guideline #' + gid));
+                $('#userListSearchInput').val('');
+                $('.btn-user-filter').removeClass('active').css({'background': '', 'color': '', 'border-color': ''});
+                $('.btn-user-filter[data-filter="all"]').addClass('active').css({'background': '#0d4d8b', 'color': '#fff', 'border-color': '#0d4d8b'});
+                $('#modalLoadingUsersSpinner').show();
+                $('#modalUsersGrid').empty();
+                $('#selectedUsersCountLabel').text('0 Selected');
+                $('#submitCountBadge').text('0');
+                $('#assignGuidelineModal').modal('show');
+
+                $.ajax({
+                    url: 'guidelines_action.php',
+                    type: 'GET',
+                    data: {
+                        action: 'get_guideline_assignment_info',
+                        guideline_id: gid,
+                        is_ajax: 1
+                    },
+                    dataType: 'json',
+                    success: function(resp) {
+                        $('#modalLoadingUsersSpinner').hide();
+                        if (resp.success && resp.all_users) {
+                            $('#filterCountAll').text(resp.all_users.length);
+                            var assignedKeys = resp.assigned_keys || [];
+                            var gridHtml = '';
+
+                            $.each(resp.all_users, function(idx, u) {
+                                var isChecked = assignedKeys.indexOf(u.key) !== -1 ? 'checked' : '';
+                                var roleText = u.role || 'Staff';
+                                var roleLower = roleText.toLowerCase();
+                                var categoryType = 'staff';
+                                var badgeStyle = 'background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;';
+
+                                if (roleLower.indexOf('audit') !== -1 || u.user_type === 'auditor') {
+                                    categoryType = 'auditor';
+                                    badgeStyle = 'background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;';
+                                } else if (roleLower.indexOf('admin') !== -1 || roleLower.indexOf('mgmt') !== -1 || roleLower.indexOf('director') !== -1) {
+                                    categoryType = 'admin';
+                                    badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
+                                }
+
+                                var searchStr = (u.name + ' ' + roleText + ' ' + (u.email || '')).toLowerCase();
+                                var cleanN = (u.name || '').replace(/[^a-zA-Z0-9\s]/g, '').trim();
+                                var parts = cleanN.split(/\s+/);
+                                var initials = parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : (cleanN.substring(0, 2).toUpperCase() || 'U');
+
+                                gridHtml += '<tr class="user-select-row" data-category="' + categoryType + '" data-search="' + searchStr + '" style="cursor: pointer;">' +
+                                                '<td style="width: 36px; text-align: center; vertical-align: middle;">' +
+                                                    '<input type="checkbox" class="user-assign-checkbox" value="' + u.key + '" ' + isChecked + ' ' +
+                                                           'data-name="' + $('<div>').text(u.name).html() + '" data-role="' + $('<div>').text(roleText).html() + '" ' +
+                                                           'data-category="' + categoryType + '" style="cursor: pointer; width: 16px; height: 16px; margin: 0;">' +
+                                                '</td>' +
+                                                '<td style="vertical-align: middle;">' +
+                                                    '<div style="display: flex; align-items: center; gap: 9px;">' +
+                                                        '<div style="width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; color: #0d4d8b; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; border: 1px solid #cbd5e1; flex-shrink: 0;">' +
+                                                            initials +
+                                                        '</div>' +
+                                                        '<div>' +
+                                                            '<strong style="color: #0f172a; font-size: 13px;">' + $('<div>').text(u.name).html() + '</strong>' +
+                                                            (u.email ? '<small class="text-muted" style="display: block; font-size: 11px;">' + $('<div>').text(u.email).html() + '</small>' : '') +
+                                                        '</div>' +
+                                                    '</div>' +
+                                                '</td>' +
+                                                '<td style="vertical-align: middle; text-align: right; width: 130px;">' +
+                                                    '<span class="label" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; ' + badgeStyle + '">' + $('<div>').text(roleText).html() + '</span>' +
+                                                '</td>' +
+                                            '</tr>';
+                            });
+
+                            $('#modalUsersGrid').html(gridHtml);
+                            updateMasterSelectedCount();
+                        } else {
+                            $('#modalUsersGrid').html('<tr><td colspan="3" class="text-center text-danger" style="padding: 15px;">' + (resp.message || 'Failed to load system users') + '</td></tr>');
+                        }
+                    },
+                    error: function() {
+                        $('#modalLoadingUsersSpinner').hide();
+                        $('#modalUsersGrid').html('<tr><td colspan="3" class="text-center text-danger" style="padding: 15px;">Server connection error. Please try again.</td></tr>');
+                    }
+                });
+            });
+
+            $(document).on('click', '.user-select-row', function(e) {
+                if ($(e.target).is('input[type="checkbox"]')) {
+                    updateMasterSelectedCount();
+                    return;
+                }
+                var $chk = $(this).find('.user-assign-checkbox');
+                $chk.prop('checked', !$chk.prop('checked'));
+                updateMasterSelectedCount();
+            });
+
+            $(document).on('click', '.btn-user-filter', function(e) {
+                e.preventDefault();
+                $('.btn-user-filter').removeClass('active').css({'background': '', 'color': '', 'border-color': ''});
+                $(this).addClass('active').css({'background': '#0d4d8b', 'color': '#fff', 'border-color': '#0d4d8b'});
+                filterMasterModalUsers();
+            });
+
+            $(document).on('keyup input', '#userListSearchInput', function() {
+                filterMasterModalUsers();
+            });
+
+            function filterMasterModalUsers() {
+                var q = $.trim($('#userListSearchInput').val()).toLowerCase();
+                var activeFilter = $('.btn-user-filter.active').data('filter') || 'all';
+
+                $('.user-select-row').each(function() {
+                    var $row = $(this);
+                    var searchTxt = $row.data('search') || '';
+                    var category = $row.data('category') || 'staff';
+
+                    var matchesSearch = (q === '' || searchTxt.indexOf(q) !== -1);
+                    var matchesFilter = (activeFilter === 'all' || category === activeFilter);
+
+                    if (matchesSearch && matchesFilter) {
+                        $row.show();
+                    } else {
+                        $row.hide();
+                    }
+                });
+            }
+
+            $(document).on('click', '#btnSelectAllUsers', function(e) {
+                e.preventDefault();
+                $('.user-select-row:visible .user-assign-checkbox').prop('checked', true);
+                updateMasterSelectedCount();
+            });
+
+            $(document).on('click', '#btnSelectAllAuditors', function(e) {
+                e.preventDefault();
+                $('.user-select-row[data-category="auditor"]:visible .user-assign-checkbox').prop('checked', true);
+                updateMasterSelectedCount();
+            });
+
+            $(document).on('click', '#btnDeselectAllUsers', function(e) {
+                e.preventDefault();
+                $('.user-assign-checkbox').prop('checked', false);
+                updateMasterSelectedCount();
+            });
+
+            $(document).on('click', '#btnSubmitGuidelineAssignments', function(e) {
+                e.preventDefault();
+                var gid = $('#modalGuidelineId').val();
+                if (!gid) return;
+
+                var selectedRecipients = [];
+                var selectedNames = [];
+                $('#modalUsersGrid input.user-assign-checkbox:checked').each(function() {
+                    selectedRecipients.push($(this).val());
+                    selectedNames.push($(this).data('name'));
+                });
+
+                var $btn = $(this);
+                var origBtnHtml = $btn.html();
+                $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending Guideline...');
+
+                $.ajax({
+                    url: 'guidelines_action.php',
+                    type: 'POST',
+                    data: {
+                        action: 'assign_guideline_users',
+                        guideline_id: gid,
+                        recipients: selectedRecipients,
+                        is_ajax: 1
+                    },
+                    dataType: 'json',
+                    success: function(resp) {
+                        $btn.prop('disabled', false).html(origBtnHtml);
+                        if (resp.success) {
+                            $('#assignGuidelineModal').modal('hide');
+
+                            var count = resp.recipients_count || 0;
+                            var $cell = $('#mc-recipients-cell-' + gid);
+
+                            if (count > 0) {
+                                $cell.html('<span class="label label-success" style="font-size: 10.5px;"><i class="fa fa-check-circle"></i> Sent to ' + count + ' User(s)</span>');
+                            } else {
+                                $cell.html('<span class="label label-warning" style="font-size: 10.5px;">Not Sent Yet</span>');
+                            }
+
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'Guideline Sent Successfully!',
+                                    text: resp.message + ' The selected users can now view this guideline in their My Dashboard under Work Guidelines.',
+                                    icon: 'success',
+                                    confirmButtonColor: '#0d4d8b'
+                                });
+                            } else {
+                                alert(resp.message);
+                            }
+                        } else {
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire('Error', resp.message || 'Failed to send guideline.', 'error');
+                            } else {
+                                alert(resp.message || 'Failed to send guideline.');
+                            }
+                        }
+                    },
+                    error: function() {
+                        $btn.prop('disabled', false).html(origBtnHtml);
+                        alert('Server communication error. Please try again.');
+                    }
+                });
             });
 
             // Feature Toggles Logic

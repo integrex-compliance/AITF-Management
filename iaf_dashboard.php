@@ -32,13 +32,9 @@
     }
     if (false) {
 
-    // =========================================================================
     // SERVICE-LEVEL QUERY: One row per service per customer
-    // This ensures clients with multiple certificates/standards (e.g. ISO 9001
-    // + ISO 14001) get separate rows with their own certificate numbers,
-    // standards, and per-service status — fixing duplicate cert numbers and
-    // incorrect status issues.
-    // =========================================================================
+  
+ 
     
     $query = "SELECT
         c.id as internal_client_id,

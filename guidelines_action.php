@@ -39,10 +39,14 @@ if (!isset($_SESSION['username']) || empty($_SESSION['username'])) {
 
 $action = $_POST['action'] ?? ($_GET['action'] ?? '');
 
+function aitf_can_manage_guidelines() {
+    return Utitlity::checkForDirector() || aitf_is_top_management_role() || Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin();
+}
+
 // Action: CREATE GUIDELINE (Master Creator)
 if ($action === 'create_guideline') {
-    if (!Utitlity::checkForDirector() && !aitf_is_top_management_role() && !Utitlity::checkForUserMainAdmin()) {
-        sendResponse(false, 'Permission denied. Only Management can create staff guidelines.', [], $isAjax);
+    if (!aitf_can_manage_guidelines()) {
+        sendResponse(false, 'Permission denied. Only Management and Admin can create staff guidelines.', [], $isAjax);
     }
 
     $title = trim((string)($_POST['guideline_title'] ?? ''));
@@ -61,7 +65,7 @@ if ($action === 'create_guideline') {
     $res = aitf_create_guideline($db, $title, $description, $createdBy, $createdRole, $files);
 
     if ($res['success']) {
-        sendResponse(true, 'Guideline posted successfully! You can now assign users from the Add Users page.', [
+        sendResponse(true, 'Guideline posted successfully! You can now send it to users.', [
             'guideline_id' => $res['guideline_id'],
             'attachments_count' => $res['attachments_count']
         ], $isAjax);
@@ -70,10 +74,10 @@ if ($action === 'create_guideline') {
     }
 }
 
-// Action: ASSIGN / SEND GUIDELINE TO USERS (from addUsers.php)
+// Action: ASSIGN / SEND GUIDELINE TO USERS (from addUsers.php or masterCreator.php)
 if ($action === 'assign_guideline_users') {
-    if (!Utitlity::checkForDirector() && !aitf_is_top_management_role() && !Utitlity::checkForUserMainAdmin()) {
-        sendResponse(false, 'Permission denied. Only Management can assign guidelines to users.', [], $isAjax);
+    if (!aitf_can_manage_guidelines()) {
+        sendResponse(false, 'Permission denied. Only Management and Admin can assign guidelines to users.', [], $isAjax);
     }
 
     $guidelineId = (int)($_POST['guideline_id'] ?? 0);
@@ -102,7 +106,7 @@ if ($action === 'assign_guideline_users') {
 
 // Action: GET GUIDELINE RECIPIENTS & USERS LIST (for the Send modal)
 if ($action === 'get_guideline_assignment_info') {
-    if (!Utitlity::checkForDirector() && !aitf_is_top_management_role() && !Utitlity::checkForUserMainAdmin()) {
+    if (!aitf_can_manage_guidelines()) {
         sendResponse(false, 'Permission denied.', [], true);
     }
 
@@ -135,8 +139,8 @@ if ($action === 'get_guideline_assignment_info') {
 
 // Action: DELETE GUIDELINE
 if ($action === 'delete_guideline') {
-    if (!Utitlity::checkForDirector() && !aitf_is_top_management_role() && !Utitlity::checkForUserMainAdmin()) {
-        sendResponse(false, 'Permission denied. Only Management can delete staff guidelines.', [], $isAjax);
+    if (!aitf_can_manage_guidelines()) {
+        sendResponse(false, 'Permission denied. Only Management and Admin can delete staff guidelines.', [], $isAjax);
     }
 
     $id = (int)($_POST['guideline_id'] ?? 0);

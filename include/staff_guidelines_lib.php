@@ -94,6 +94,40 @@ if (!function_exists('aitf_get_all_system_users')) {
             error_log("Error fetching users for guidelines: " . $e->getMessage());
         }
 
+        // 2. Also fetch auditors from 'auditors' table if not already represented
+        try {
+            $audStmt = $db->query("SELECT auditors_id, auditor_name, abbrevation, auditor_email, login_email FROM auditors ORDER BY auditor_name ASC");
+            while ($row = $audStmt->fetch(PDO::FETCH_ASSOC)) {
+                $aid = (int)$row['auditors_id'];
+                $email = !empty($row['login_email']) ? trim($row['login_email']) : trim((string)$row['auditor_email']);
+                $name = trim((string)$row['auditor_name']);
+                
+                // Check if already in $users by email or name
+                $alreadyAdded = false;
+                foreach ($users as $u) {
+                    if ((!empty($email) && strtolower($u['email']) === strtolower($email)) || 
+                        (strtolower($u['name']) === strtolower($name))) {
+                        $alreadyAdded = true;
+                        break;
+                    }
+                }
+                if (!$alreadyAdded && !empty($name)) {
+                    $key = 'auditor_' . $aid;
+                    $users[$key] = [
+                        'key' => $key,
+                        'user_id' => $aid,
+                        'user_type' => 'auditor',
+                        'name' => $name,
+                        'email' => $email,
+                        'role' => 'Auditor',
+                        'abbreviation' => trim((string)($row['abbrevation'] ?? ''))
+                    ];
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error fetching auditors for guidelines: " . $e->getMessage());
+        }
+
         return array_values($users);
     }
 }
@@ -406,7 +440,7 @@ if (!function_exists('aitf_get_all_guidelines_with_details')) {
 }
 
 if (!function_exists('aitf_get_guidelines_for_current_user')) {
-    function aitf_get_guidelines_for_current_user(PDO $db, $userId = null, $userRole = null, $userEmail = null, $search = '')
+    function aitf_get_guidelines_for_current_user(PDO $db, $userId = null, $userRole = null, $userEmail = null, $userName = null, $search = '')
     {
         aitf_ensure_guidelines_schema($db);
 
@@ -419,7 +453,9 @@ if (!function_exists('aitf_get_guidelines_for_current_user')) {
         if ($userEmail === null) {
             $userEmail = (string)($_SESSION['email'] ?? ($_SESSION['email_id'] ?? ''));
         }
-        $userName = (string)($_SESSION['username'] ?? '');
+        if ($userName === null) {
+            $userName = (string)($_SESSION['user_full_name'] ?? ($_SESSION['username'] ?? ''));
+        }
 
         $isTopMgmt = aitf_is_top_management_role($userRole) || Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin();
 
@@ -435,15 +471,17 @@ if (!function_exists('aitf_get_guidelines_for_current_user')) {
             $whereSql = implode(' AND ', $where);
             $sql = "SELECT DISTINCT g.* FROM staff_guidelines g WHERE {$whereSql} ORDER BY g.id DESC";
         } else {
-            // Regular user: STRICTLY ONLY guidelines sent to this user!
+            // Regular user / Auditor: Guidelines sent to this user or role
             $where[] = "(
-                (r.user_id = :uid)
-                OR (:uemail != '' AND r.user_email = :uemail)
-                OR (:uname != '' AND r.user_name = :uname)
+                (:uid > 0 AND r.user_id = :uid)
+                OR (:uemail != '' AND LOWER(r.user_email) = LOWER(:uemail))
+                OR (:uname != '' AND (LOWER(r.user_name) = LOWER(:uname) OR LOWER(r.user_email) = LOWER(:uname)))
+                OR (g.target_role = 'All' OR (g.target_role != '' AND LOWER(g.target_role) = LOWER(:urole)))
             )";
             $params[':uid'] = (int)$userId;
             $params[':uemail'] = trim($userEmail);
             $params[':uname'] = trim($userName);
+            $params[':urole'] = trim($userRole);
 
             if (!empty($search)) {
                 $where[] = "(g.title LIKE :search OR g.description LIKE :search)";
@@ -453,7 +491,7 @@ if (!function_exists('aitf_get_guidelines_for_current_user')) {
             $whereSql = implode(' AND ', $where);
             $sql = "SELECT DISTINCT g.*, r.assigned_at, r.is_read 
                     FROM staff_guidelines g 
-                    INNER JOIN staff_guideline_recipients r ON g.id = r.guideline_id 
+                    LEFT JOIN staff_guideline_recipients r ON g.id = r.guideline_id 
                     WHERE {$whereSql} 
                     ORDER BY g.id DESC";
         }

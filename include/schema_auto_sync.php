@@ -17,16 +17,82 @@
 require_once __DIR__ . '/agreement_sync_helper.php';
 require_once __DIR__ . '/payment_ledger.php';
 
+if (!function_exists('aitf_ensure_user_profile_columns')) {
+    function aitf_ensure_user_profile_columns($db) {
+        if (!$db) return;
+        static $userColsEnsured = false;
+        if ($userColsEnsured) return;
+
+        try {
+            $userCols = [];
+            $stmt = $db->query("SHOW COLUMNS FROM `user`");
+            if ($stmt) {
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $userCols[strtolower($row['Field'])] = true;
+                }
+            }
+            if (!empty($userCols)) {
+                if (!isset($userCols['e_id'])) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `e_id` VARCHAR(50) NULL");
+                }
+                if (!isset($userCols['pc_id'])) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `pc_id` VARCHAR(50) NULL");
+                }
+                if (!isset($userCols['designation_assigned'])) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `designation_assigned` VARCHAR(255) NULL");
+                }
+                if (!isset($userCols['applicable_records'])) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `applicable_records` TEXT NULL");
+                }
+                if (!isset($userCols['work_description'])) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `work_description` TEXT NULL");
+                }
+                if (!isset($userCols['resource_issue_record'])) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `resource_issue_record` TEXT NULL");
+                }
+                $userColsEnsured = true;
+            }
+        } catch (Throwable $e) {
+            error_log("Failed to ensure user profile columns: " . $e->getMessage());
+        }
+    }
+}
+
 if (!function_exists('aitf_auto_sync_schema')) {
     function aitf_auto_sync_schema($db) {
-        if ($db) aitf_payment_schema($db);
+        if (!$db) return;
+        aitf_ensure_user_profile_columns($db);
+        if (function_exists('aitf_payment_schema')) aitf_payment_schema($db);
+
+        // Also ensure guidelines schema if library is available
+        if (function_exists('aitf_ensure_guidelines_schema')) {
+            aitf_ensure_guidelines_schema($db);
+        }
+
         static $alreadySynced = false;
-        if ($alreadySynced || !$db) {
+        if ($alreadySynced) {
             return;
         }
 
+        // Check if database actually has the latest schema before honoring temp flag cache
+        $dbNeedsSync = false;
+        try {
+            $colCheck = $db->query("SHOW COLUMNS FROM `user` LIKE 'designation_assigned'");
+            if (!$colCheck || $colCheck->rowCount() === 0) {
+                $dbNeedsSync = true;
+            }
+            if (!$dbNeedsSync) {
+                $tblCheck = $db->query("SHOW TABLES LIKE 'staff_guidelines'");
+                if (!$tblCheck || $tblCheck->rowCount() === 0) {
+                    $dbNeedsSync = true;
+                }
+            }
+        } catch (Throwable $e) {
+            $dbNeedsSync = true;
+        }
+
         $flagFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'aitf_schema_synced.flag';
-        if (file_exists($flagFile) && filemtime($flagFile) >= filemtime(__FILE__) && (time() - filemtime($flagFile) < 43200)) {
+        if (!$dbNeedsSync && file_exists($flagFile) && filemtime($flagFile) >= filemtime(__FILE__) && (time() - filemtime($flagFile) < 43200)) {
             $alreadySynced = true;
             return;
         }
@@ -156,6 +222,10 @@ if (!function_exists('aitf_auto_sync_schema')) {
                 if ($uStmt && empty($uStmt->fetchAll())) {
                     $db->exec("ALTER TABLE `user` ADD COLUMN `e_id` VARCHAR(50) NULL");
                 }
+                $uStmtPcId = $db->query("SHOW COLUMNS FROM `user` LIKE 'pc_id'");
+                if ($uStmtPcId && empty($uStmtPcId->fetchAll())) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `pc_id` VARCHAR(50) NULL");
+                }
                 $uStmtDesig = $db->query("SHOW COLUMNS FROM `user` LIKE 'designation_assigned'");
                 if ($uStmtDesig && empty($uStmtDesig->fetchAll())) {
                     $db->exec("ALTER TABLE `user` ADD COLUMN `designation_assigned` VARCHAR(255) NULL");
@@ -167,6 +237,10 @@ if (!function_exists('aitf_auto_sync_schema')) {
                 $uStmtWorkDesc = $db->query("SHOW COLUMNS FROM `user` LIKE 'work_description'");
                 if ($uStmtWorkDesc && empty($uStmtWorkDesc->fetchAll())) {
                     $db->exec("ALTER TABLE `user` ADD COLUMN `work_description` TEXT NULL");
+                }
+                $uStmtResIssue = $db->query("SHOW COLUMNS FROM `user` LIKE 'resource_issue_record'");
+                if ($uStmtResIssue && empty($uStmtResIssue->fetchAll())) {
+                    $db->exec("ALTER TABLE `user` ADD COLUMN `resource_issue_record` TEXT NULL");
                 }
             } catch (Throwable $e) {}
 

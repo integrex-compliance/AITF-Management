@@ -89,23 +89,36 @@ if (isset($_POST['directorAddUser']) && $_POST['directorAddUser'] === '1') {
         exit;
     }
 
+    require_once __DIR__ . '/include/schema_auto_sync.php';
+    if (function_exists('aitf_ensure_user_profile_columns')) {
+        aitf_ensure_user_profile_columns($db);
+    }
+
     if (isset($_POST['userName']) && !empty($_POST['userName']) && isset($_POST['userEmail']) && !empty($_POST['userEmail']) && isset($_POST['userRole']) && !empty($_POST['userRole']) && isset($_POST['userPassword']) && !empty($_POST['userPassword'])) {
         try {
             $hashedpwd = password_hash($_POST['userPassword'], PASSWORD_DEFAULT);
+            $userEid = trim((string)($_POST['userEid'] ?? ''));
+            $userEidVal = $userEid !== '' ? $userEid : null;
+            $userPcId = trim((string)($_POST['userPcId'] ?? ''));
+            $userPcIdVal = $userPcId !== '' ? $userPcId : null;
             $designation = trim((string)($_POST['designationAssigned'] ?? ''));
             $applicableRecords = trim((string)($_POST['applicableRecords'] ?? ''));
             $workDescription = trim((string)($_POST['workDescription'] ?? ''));
+            $resourceIssueRecord = trim((string)($_POST['resourceIssueRecord'] ?? ''));
 
-            $addUser = "INSERT INTO user(user_name, abbreviation, email_id, password, role, designation_assigned, applicable_records, work_description) VALUES (:name, :userAbbr, :email, :password, :role, :designation, :applicableRecords, :workDescription)";
+            $addUser = "INSERT INTO user(user_name, abbreviation, email_id, password, role, e_id, pc_id, designation_assigned, applicable_records, work_description, resource_issue_record) VALUES (:name, :userAbbr, :email, :password, :role, :eId, :pcId, :designation, :applicableRecords, :workDescription, :resourceIssueRecord)";
             $statement = $db->prepare($addUser);
             $statement->bindParam(':name', $_POST['userName']);
             $statement->bindParam(':email', $_POST['userEmail']);
             $statement->bindParam(':userAbbr', $_POST['userAbbr']);
             $statement->bindParam(':password', $hashedpwd);
             $statement->bindParam(':role', $_POST['userRole']);
+            $statement->bindParam(':eId', $userEidVal);
+            $statement->bindParam(':pcId', $userPcIdVal);
             $statement->bindParam(':designation', $designation);
             $statement->bindParam(':applicableRecords', $applicableRecords);
             $statement->bindParam(':workDescription', $workDescription);
+            $statement->bindParam(':resourceIssueRecord', $resourceIssueRecord);
             $statement->execute();
             header("Location: addUsers.php");
             exit;
@@ -114,19 +127,27 @@ if (isset($_POST['directorAddUser']) && $_POST['directorAddUser'] === '1') {
         }
     } else if (isset($_POST['userId']) && !empty($_POST['userId']) && isset($_POST['editUserName']) && !empty($_POST['editUserName']) && isset($_POST['editUserEmail']) && !empty($_POST['editUserEmail']) && isset($_POST['editUserRole']) && !empty($_POST['editUserRole'])) {
         try {
+            $userEid = trim((string)($_POST['editUserEid'] ?? ''));
+            $userEidVal = $userEid !== '' ? $userEid : null;
+            $userPcId = trim((string)($_POST['editUserPcId'] ?? ''));
+            $userPcIdVal = $userPcId !== '' ? $userPcId : null;
             $designation = trim((string)($_POST['editDesignationAssigned'] ?? ''));
             $applicableRecords = trim((string)($_POST['editApplicableRecords'] ?? ''));
             $workDescription = trim((string)($_POST['editWorkDescription'] ?? ''));
+            $resourceIssueRecord = trim((string)($_POST['editResourceIssueRecord'] ?? ''));
 
-            $updateUser = "UPDATE user SET user_name = :name, abbreviation = :abbr, email_id = :email, role = :role, designation_assigned = :designation, applicable_records = :applicableRecords, work_description = :workDescription WHERE user_id = :userId";
+            $updateUser = "UPDATE user SET user_name = :name, abbreviation = :abbr, email_id = :email, role = :role, e_id = :eId, pc_id = :pcId, designation_assigned = :designation, applicable_records = :applicableRecords, work_description = :workDescription, resource_issue_record = :resourceIssueRecord WHERE user_id = :userId";
             $statement = $db->prepare($updateUser);
             $statement->bindParam(':name', $_POST['editUserName']);
             $statement->bindParam(':abbr', $_POST['editUserAbbr']);
             $statement->bindParam(':email', $_POST['editUserEmail']);
             $statement->bindParam(':role', $_POST['editUserRole']);
+            $statement->bindParam(':eId', $userEidVal);
+            $statement->bindParam(':pcId', $userPcIdVal);
             $statement->bindParam(':designation', $designation);
             $statement->bindParam(':applicableRecords', $applicableRecords);
             $statement->bindParam(':workDescription', $workDescription);
+            $statement->bindParam(':resourceIssueRecord', $resourceIssueRecord);
             $statement->bindParam(':userId', $_POST['userId']);
             $statement->execute();
             header("Location: addUsers.php");

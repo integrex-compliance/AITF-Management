@@ -380,6 +380,25 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             </a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
+        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') { ?>
+        <li><a href="auditorDashboard.php#mydashboard" class="animate <?php echo ($pageIdentifier === 'Auditor Dashboard' || $pageIdentifier === 'myDashboard') ? 'active' : ''; ?>"><span>MY DASHBOARD</span><i class="sub_icon fa fa-tachometer"></i></a></li>
+        <li><a href="auditorDashboard.php#assignments" class="animate"><span>MY ASSIGNMENTS</span><i class="sub_icon fa fa-tasks"></i></a></li>
+        <li><a href="auditorDashboard.php#clients" class="animate"><span>MY CLIENTS</span><i class="sub_icon fa fa-users"></i></a></li>
+        <li><a href="auditorDashboard.php#history" class="animate"><span>AUDIT HISTORY</span><i class="sub_icon fa fa-history"></i></a></li>
+        <li><a href="auditorDashboard.php#performance" class="animate"><span>PERFORMANCE</span><i class="sub_icon fa fa-line-chart"></i></a></li>
+        <li class="guidelines-nav-item">
+            <a href="auditorDashboard.php#guidelines" class="animate guidelines-nav-link <?php echo ($pageIdentifier === 'Guidelines') ? 'active' : ''; ?>">
+                <span><i class="fa fa-book" style="color: #34d399; margin-right: 4px; font-size: 11px;"></i> GUIDELINES</span>
+                <i class="sub_icon fa fa-book"></i>
+            </a>
+        </li>
+        <?php if (Utitlity::checkUserPermission('client_access')) { ?>
+        <li><a href="homePage.php" class="animate <?php echo ($pageIdentifier === 'Clients') ? 'active' : ''; ?>" style="color: #a5b4fc !important;"><span>COMPANY CLIENTS</span><i class="sub_icon fa fa-building"></i></a></li>
+        <?php } ?>
+        <?php if (Utitlity::checkUserPermission('invoice_access')) { ?>
+        <li><a href="invoicePage.php" class="animate <?php echo ($pageIdentifier === 'Invoices') ? 'active' : ''; ?>" style="color: #a5b4fc !important;"><span>INVOICES</span><i class="sub_icon fa fa-inr"></i></a></li>
+        <?php } ?>
+        <?php } else { ?>
         <li><a href="myDashboard.php" class="animate <?php echo isset($addMyDashboardClass) ? $addMyDashboardClass : ''; ?>"><span>MY DASHBOARD</span><i class="sub_icon fa fa-tachometer"></i></a></li>
         <?php if (Utitlity::checkForDirector()) { ?>
             <li class="mgmt-space-item"><a href="directorSpace.php" class="animate mgmt-space-link <?php echo $addDirectorSpaceClass ?? '' ?>"><span class="mgmt-space-text"><i class="fa fa-star mgmt-star-icon" style="color: #fbbf24; margin-right: 4px; font-size: 10px;"></i> CONTROL MANAGEMENT</span><i
@@ -387,10 +406,6 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
         <?php } ?>
         <?php if (aitf_has_access("Admin Dashboard") || aitf_has_access("Management Dashboard") || aitf_has_access("Top Mgmt Dashboard") || aitf_has_access("MGMT Dashboard") || aitf_has_access("Mgmt Dashboard")) { ?>
         <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>"><span>MGMT DASHBOARD</span><i class="sub_icon fa fa-line-chart"></i></a></li>
-        <?php } ?>
-        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') { ?>
-        <li><a href="auditorDashboard.php" class="animate"><span>AUDITOR DASHBOARD</span><i class="sub_icon fa fa-home"></i></a></li>
-        <li><a href="auditorPendingDocuments.php" class="animate"><span>PENDING DOCUMENTS</span><i class="sub_icon fa fa-file-text-o"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("IAF Dashboard")) { ?>
         <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>"><span>IAF DASHBOARD</span><i class="sub_icon fa fa-globe"></i></a></li>
@@ -511,6 +526,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>"><span>GoAI</span><i
                         class="sub_icon fa fa-magic"></i></a></li>
         <?php } ?>
+        <?php } // end if role !== 'Auditor' ?>
     </ul>
 </div>
 <?php } // end if (!$hideSidebar) ?>

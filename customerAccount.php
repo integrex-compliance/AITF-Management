@@ -5516,7 +5516,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             #sidebar-wrapper { display: none !important; }
             #wrapper, #wrapper.active { padding-left: 0 !important; }
             /* Hide global customer details edit/delete buttons */
-            .editCustomerDetails, .deleteCustomerDetails, .enableApplication { display: none !important; }
+            .editCustomerDetails, .deleteCustomerDetails, .enableApplication, .cancelApplication { display: none !important; }
             /* Hide 'Add New Service' button for the whole client */
             .btn-info[data-target="#addServiceModal"] { display: none !important; }
             /* Hide Payments, Settings, Invoice tabs */
@@ -5656,6 +5656,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         </a>
                                     <?php } ?>
                                 <?php } ?>
+                                <?php if (!$isAuditor) { ?>
                                 <a class="editCustomerDetails" style="color: white;"
                                     data-id="<?php echo $clientInfo['id'] ?>" title="Edit client details">
                                     <span><i class="fa fa-edit"></i></span>
@@ -5674,6 +5675,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         data-id="<?php echo $clientInfo['id'] ?>" title="Cancel application">
                                         <span><i class="fa fa-ban"></i></span>
                                     </a>
+                                <?php } ?>
                                 <?php } ?>
                             </div>
                         </div>

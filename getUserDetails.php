@@ -12,14 +12,25 @@ date_default_timezone_set('Asia/Kolkata');
 
 if (isset($_GET['userId']) && !empty($_GET['userId'])) {
     try { 
-        $userDetails = "SELECT user_id, user_name, abbreviation, email_id, role, designation_assigned, applicable_records, work_description FROM user WHERE user_id = :userid";
+        require_once __DIR__ . '/include/schema_auto_sync.php';
+        if (function_exists('aitf_ensure_user_profile_columns')) {
+            aitf_ensure_user_profile_columns($db);
+        }
+        $userDetails = "SELECT * FROM user WHERE user_id = :userid";
         $statement = $db->prepare($userDetails);
         $statement->bindParam(':userid', $_GET['userId']);
         $statement->execute();
-        $user = $statement->fetch();
+        $user = $statement->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            $user['pc_id'] = $user['pc_id'] ?? '';
+            $user['designation_assigned'] = $user['designation_assigned'] ?? '';
+            $user['applicable_records'] = $user['applicable_records'] ?? '';
+            $user['work_description'] = $user['work_description'] ?? '';
+            $user['resource_issue_record'] = $user['resource_issue_record'] ?? '';
+        }
         echo json_encode($user);
     } catch (Exception $ex) {
-        echo $ex;
+        echo json_encode(['error' => $ex->getMessage()]);
     }
 } else if (isset($_GET['customerId']) && !empty($_GET['customerId'])) {
     try {

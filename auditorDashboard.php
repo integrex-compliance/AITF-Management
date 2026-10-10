@@ -24,15 +24,122 @@ $auditor = $data['auditor'];
 // Determine the correct user_id from the user table
 // Forms are assigned using the user_id from the `user` table, not `auditors_id`.
 $mappedUserId = (int)$_SESSION['id']; 
+$staffUserRow = null;
 try {
-    $uStmt = $db->prepare("SELECT user_id FROM user WHERE role = 'Auditor' AND (LOWER(email_id) = LOWER(:email) OR (e_id = :eid AND e_id != '')) LIMIT 1");
     $loginEmail = !empty($auditor['login_email']) ? $auditor['login_email'] : ($auditor['email'] ?? '');
     $eid = !empty($auditor['auditor_number']) ? $auditor['auditor_number'] : '';
-    $uStmt->execute([':email' => $loginEmail, ':eid' => $eid]);
-    if ($uRow = $uStmt->fetch(PDO::FETCH_ASSOC)) {
-        $mappedUserId = (int)$uRow['user_id'];
+    
+    // Look up by user_id first if $mappedUserId > 0, else by email, e_id, or name
+    if ($mappedUserId > 0) {
+        $uStmt = $db->prepare("SELECT * FROM user WHERE user_id = :uid LIMIT 1");
+        $uStmt->execute([':uid' => $mappedUserId]);
+        $staffUserRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+    }
+    if (!$staffUserRow) {
+        $uStmt = $db->prepare("SELECT * FROM user WHERE role = 'Auditor' AND ((LOWER(email_id) = LOWER(:email) AND email_id != '') OR (e_id = :eid AND e_id != '') OR LOWER(user_name) = LOWER(:uname)) LIMIT 1");
+        $uStmt->execute([':email' => $loginEmail, ':eid' => $eid, ':uname' => $auditor['auditor_name']]);
+        $staffUserRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+        if ($staffUserRow) {
+            $mappedUserId = (int)$staffUserRow['user_id'];
+        }
     }
 } catch (Exception $e) {}
+
+// Profile & Dashboard values (from user table if linked, fallback to auditor table)
+$audStaffName = !empty($staffUserRow['user_name']) ? $staffUserRow['user_name'] : $auditor['auditor_name'];
+$audStaffEmail = !empty($staffUserRow['email_id']) ? $staffUserRow['email_id'] : (!empty($auditor['login_email']) ? $auditor['login_email'] : ($auditor['email'] ?? ''));
+$audStaffRole = !empty($staffUserRow['role']) ? $staffUserRow['role'] : 'Auditor';
+$audStaffEid = !empty($staffUserRow['e_id']) ? $staffUserRow['e_id'] : (!empty($auditor['auditor_number']) ? $auditor['auditor_number'] : ($auditor['auditor_no'] ?? ''));
+$audStaffPcId = !empty($staffUserRow['pc_id']) ? $staffUserRow['pc_id'] : '';
+$audStaffContact = !empty($staffUserRow['contact_no']) ? $staffUserRow['contact_no'] : ($auditor['phone'] ?? '');
+$audStaffStatus = !empty($staffUserRow['account_status']) ? $staffUserRow['account_status'] : 'active';
+$audStaffAbbr = !empty($staffUserRow['abbreviation']) ? $staffUserRow['abbreviation'] : ($auditor['abbrevation'] ?? '');
+$audDesignation = !empty($staffUserRow['designation_assigned']) ? trim($staffUserRow['designation_assigned']) : 'Senior Auditor';
+$audApplicableRecords = !empty($staffUserRow['applicable_records']) ? trim($staffUserRow['applicable_records']) : '';
+$audWorkDescription = !empty($staffUserRow['work_description']) ? trim($staffUserRow['work_description']) : '';
+$audResourceIssue = !empty($staffUserRow['resource_issue_record']) ? trim($staffUserRow['resource_issue_record']) : '';
+
+require_once __DIR__ . '/include/staff_guidelines_lib.php';
+$guidelinesList = aitf_get_guidelines_for_current_user($db, $mappedUserId, 'Auditor', $audStaffEmail, $audStaffName);
+
+// Function parseSectionGroups if not defined
+if (!function_exists('parseSectionGroups')) {
+    function parseSectionGroups($rawContent) {
+        $groups = [];
+        $rawContent = trim((string)$rawContent);
+        if ($rawContent === '') return $groups;
+
+        if ($rawContent[0] === '[' || $rawContent[0] === '{') {
+            $decoded = json_decode($rawContent, true);
+            if (is_array($decoded)) {
+                foreach ($decoded as $item) {
+                    if (is_array($item)) {
+                        $header = trim($item['header'] ?? '');
+                        $descRaw = trim($item['desc'] ?? '');
+                        $items = [];
+                        if ($descRaw !== '') {
+                            $lines = preg_split('/\r\n|\r|\n/', $descRaw);
+                            foreach ($lines as $l) {
+                                $tl = trim($l);
+                                if ($tl !== '') {
+                                    $clean = preg_replace('/^\s*\d+[\.\)\-]\s*/', '', $tl);
+                                    if ($clean !== '') $items[] = $clean;
+                                }
+                            }
+                        }
+                        if ($header !== '' || !empty($items)) {
+                            $groups[] = ['header' => $header, 'items' => $items];
+                        }
+                    }
+                }
+                if (!empty($groups)) return $groups;
+            }
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', $rawContent);
+        $currentHeader = '';
+        $currentItems = [];
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '') continue;
+            if (preg_match('/^([A-Za-z0-9\s\&\(\)\/]+)[\-\:]$/', $trimmed, $m) && strlen(trim($m[1])) > 3) {
+                if (!empty($currentItems) || $currentHeader !== '') {
+                    $groups[] = ['header' => $currentHeader, 'items' => $currentItems];
+                    $currentItems = [];
+                }
+                $currentHeader = trim($m[1]);
+            } else {
+                $clean = preg_replace('/^\s*\d+[\.\)\-]\s*/', '', $trimmed);
+                if ($clean !== '') $currentItems[] = $clean;
+            }
+        }
+        if (!empty($currentItems) || $currentHeader !== '') {
+            $groups[] = ['header' => $currentHeader, 'items' => $currentItems];
+        }
+        return $groups;
+    }
+}
+
+$audRecordGroups   = parseSectionGroups($audApplicableRecords);
+$audWorkDescGroups = parseSectionGroups($audWorkDescription);
+$audResIssueGroups = parseSectionGroups($audResourceIssue);
+
+// Initials for avatar
+$audInitials = '';
+$cleanName = preg_replace('/[^a-zA-Z0-9\s]/', '', $audStaffName);
+$nameParts = array_values(array_filter(preg_split('/\s+/', trim($cleanName))));
+if (count($nameParts) >= 2) {
+    $audInitials = strtoupper(mb_substr($nameParts[0], 0, 1) . mb_substr(end($nameParts), 0, 1));
+} elseif (count($nameParts) === 1) {
+    $firstWord = $nameParts[0];
+    $audInitials = strtoupper(mb_substr($firstWord, 0, min(2, mb_strlen($firstWord))));
+}
+if (empty($audInitials) && !empty($audStaffAbbr)) {
+    $audInitials = strtoupper(substr($audStaffAbbr, 0, 2));
+}
+if (empty($audInitials)) {
+    $audInitials = strtoupper(substr($audStaffName, 0, 1));
+}
 
 $auditor = $data['auditor'];
 $stats = $data['stats'];
@@ -94,7 +201,7 @@ aitf_touch_login_activity($db);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AITF - Auditor Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     
@@ -156,9 +263,7 @@ aitf_touch_login_activity($db);
         /* Top Navigation */
         .topbar {
             height: 70px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: var(--card-bg);
             border-bottom: 1px solid var(--border-color);
             position: fixed;
             top: 0;
@@ -168,29 +273,34 @@ aitf_touch_login_activity($db);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 24px;
+            padding: 0 24px 0 0;
             box-shadow: var(--shadow-sm);
+        }
+
+        .topbar-brand-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 180px;
+            height: 70px;
+            background: linear-gradient(180deg, #081524 0%, #053c6d 100%);
+            padding: 0 12px;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255, 255, 255, 0.12);
+            flex-shrink: 0;
         }
 
         .topbar-brand {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-weight: 800;
-            font-size: 24px;
-            color: var(--primary);
             text-decoration: none;
-        }
-        html.theme-dark .topbar-brand { color: #f1f5f9; }
-
-        .topbar-brand i {
-            color: var(--accent-blue);
         }
 
         .topbar-right {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 16px;
+            padding-right: 12px;
         }
 
         .theme-toggle {
@@ -276,65 +386,164 @@ aitf_touch_login_activity($db);
             min-height: calc(100vh - 70px);
         }
 
-        /* Sidebar */
+        /* ----------------------------------------------------------- */
+        /* AITF Signature Left Sidebar Styling                         */
+        /* ----------------------------------------------------------- */
         .sidebar {
-            width: 260px;
-            background: var(--sidebar-bg);
-            border-right: 1px solid var(--border-color);
-            position: fixed;
-            height: calc(100vh - 70px);
-            padding: 24px 0;
-            z-index: 99;
-            transition: var(--transition);
+            width: 180px !important;
+            background: linear-gradient(180deg, #0d4d8b 0%, #083b6a 100%) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+            position: fixed !important;
+            top: 70px !important;
+            height: calc(100vh - 70px) !important;
+            padding: 0 !important;
+            z-index: 99 !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            box-shadow: 3px 0 16px rgba(13, 77, 139, 0.22) !important;
+            scrollbar-width: thin !important;
+            scrollbar-color: rgba(255, 255, 255, 0.25) transparent !important;
+            transition: var(--transition) !important;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 4px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.45);
+        }
+
+        .sidebar-nav {
+            display: block;
+            width: 100%;
+            list-style: none;
+            margin: 0;
+            padding: 0;
         }
 
         .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 24px;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-weight: 500;
-            transition: var(--transition);
-            cursor: pointer;
-            border-left: 3px solid transparent;
+            color: #f1f5f9 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            text-decoration: none !important;
+            width: 100% !important;
+            background: transparent !important;
+            border: none !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-left: 3.5px solid transparent !important;
+            padding: 10.5px 14px !important;
+            box-sizing: border-box !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.45px !important;
+            text-transform: uppercase !important;
+            line-height: 1.25 !important;
+            transition: all .18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            cursor: pointer !important;
         }
 
         .nav-item:hover {
-            background: rgba(59, 130, 246, 0.05);
-            color: var(--primary);
-            text-decoration: none;
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.14) !important;
+            text-decoration: none !important;
         }
-        html.theme-dark .nav-item:hover { color: #f1f5f9; }
 
+        .nav-item:hover .sub_icon {
+            color: #ffffff !important;
+            transform: scale(1.15) !important;
+        }
+
+        /* Active class - AITF Signature deep blue with cyan accent */
         .nav-item.active {
-            background: rgba(59, 130, 246, 0.1);
-            color: var(--accent-blue);
-            border-left-color: var(--accent-blue);
+            color: #ffffff !important;
+            background: #062b4f !important;
+            border-left: 3.5px solid #38bdf8 !important;
+            font-weight: 700 !important;
+            text-decoration: none !important;
+            box-shadow: inset 0 0 14px rgba(6, 43, 79, 0.6) !important;
         }
 
-        .nav-item i {
-            font-size: 18px;
-            width: 24px;
-            text-align: center;
+        .nav-item.active .sub_icon {
+            color: #38bdf8 !important;
+            transform: scale(1.1) !important;
         }
-        
+
+        .nav-item .sub_icon {
+            font-size: 13.5px !important;
+            width: 20px !important;
+            text-align: right !important;
+            vertical-align: middle !important;
+            color: #cbd5e1 !important;
+            flex-shrink: 0 !important;
+            margin-left: auto !important;
+            transition: all 0.18s ease !important;
+        }
+
+        /* Guidelines Menu Item — Distinct Vibrant Emerald Styling matching AITF */
+        .nav-item.guidelines-nav-link {
+            color: #34d399 !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px !important;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.04) 100%) !important;
+            border-left: 3.5px solid #10b981 !important;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.22) !important;
+        }
+        .nav-item.guidelines-nav-link .sub_icon {
+            color: #34d399 !important;
+            text-shadow: 0 0 8px rgba(52, 211, 153, 0.5) !important;
+        }
+        .nav-item.guidelines-nav-link:hover {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.35) 0%, rgba(16, 185, 129, 0.12) 100%) !important;
+            color: #ecfdf5 !important;
+        }
+        .nav-item.guidelines-nav-link.active {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.45) 0%, rgba(16, 185, 129, 0.2) 100%) !important;
+            border-left: 3.5px solid #34d399 !important;
+            color: #ffffff !important;
+            box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.3) !important;
+        }
+        .nav-item.guidelines-nav-link.active .sub_icon {
+            color: #ffffff !important;
+        }
+
         .mobile-toggle {
             display: none;
             background: none;
             border: none;
-            color: var(--text-main);
-            font-size: 24px;
+            color: #ffffff;
+            font-size: 18px;
             cursor: pointer;
         }
 
         /* Main Content */
         .main-content {
             flex: 1;
-            margin-left: 260px;
+            margin-left: 180px !important;
             padding: 32px;
             transition: var(--transition);
+        }
+
+        /* Dark Mode Overrides for AITF Sidebar */
+        html.theme-dark .sidebar {
+            background: linear-gradient(180deg, #091d33 0%, #051424 100%) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+        }
+        html.theme-dark .topbar-brand-wrap {
+            background: linear-gradient(180deg, #05101a 0%, #072644 100%) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
+        html.theme-dark .nav-item.active {
+            background: #08213b !important;
+            border-left: 3.5px solid #38bdf8 !important;
         }
         
         .tab-pane {
@@ -754,21 +963,28 @@ aitf_touch_login_activity($db);
 
         @media (max-width: 768px) {
             .mobile-toggle {
-                display: block;
+                display: block !important;
             }
-            
+            .topbar {
+                padding: 0 14px 0 0 !important;
+            }
+            .topbar-brand-wrap {
+                width: 170px !important;
+                padding: 0 12px !important;
+            }
             .sidebar {
-                transform: translateX(-100%);
+                transform: translateX(-100%) !important;
+                width: 180px !important;
             }
             
             .sidebar.show {
-                transform: translateX(0);
-                box-shadow: var(--shadow-lg);
+                transform: translateX(0) !important;
+                box-shadow: var(--shadow-lg) !important;
             }
             
             .main-content {
-                margin-left: 0;
-                padding: 20px;
+                margin-left: 0 !important;
+                padding: 20px 14px !important;
             }
             
             .stats-grid {
@@ -786,10 +1002,656 @@ aitf_touch_login_activity($db);
             }
         }
         
-        @media (max-width: 480px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
+        /* ----------------------------------------------------------- */
+        /* My Dashboard Integration Styles                             */
+        /* ----------------------------------------------------------- */
+        .dash-switch-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%);
+            color: #ffffff !important;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none !important;
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
+            transition: all 0.2s ease;
+        }
+        .dash-switch-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.35);
+            color: #ffffff !important;
+        }
+
+        /* My Dashboard Inner Tabs Bar */
+        .mydash-tabs-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--card-bg);
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin-bottom: 22px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            flex-wrap: wrap;
+        }
+
+        .mydash-tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.2s ease;
+        }
+
+        .mydash-tab-btn:hover {
+            color: var(--primary);
+            background: rgba(13, 77, 139, 0.08);
+        }
+
+        html.theme-dark .mydash-tab-btn:hover {
+            color: #93c5fd;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .mydash-tab-btn.active {
+            background: #0d4d8b;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(13, 77, 139, 0.25);
+        }
+
+        html.theme-dark .mydash-tab-btn.active {
+            background: #2563eb;
+            color: #ffffff !important;
+        }
+
+        .mydash-tab-pane {
+            display: none;
+        }
+
+        .mydash-tab-pane.active {
+            display: block;
+            animation: fadeInTab 0.2s ease;
+        }
+
+        .header-theme-attendance {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+            color: #ffffff !important;
+        }
+        .header-theme-tasks {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+            color: #ffffff !important;
+        }
+        .header-theme-guidelines {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+            color: #ffffff !important;
+        }
+
+        /* Profile Hero Card */
+        .mydash-hero-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 22px;
+            overflow: hidden;
+        }
+
+        .mydash-hero-top {
+            background: linear-gradient(135deg, #091e3a 0%, #0d4d8b 55%, #1d4ed8 100%);
+            padding: 12px 20px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .mydash-hero-body {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .mydash-avatar-wrap {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .mydash-avatar-circle {
+            width: 82px;
+            height: 82px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 50%, #2563eb 100%);
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(13, 77, 139, 0.28);
+            border: 3.5px solid var(--card-bg);
+            text-transform: uppercase;
+        }
+
+        .mydash-avatar-status {
+            position: absolute;
+            bottom: 3px;
+            right: 3px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 3px solid var(--card-bg);
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+        }
+
+        .mydash-hero-info {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .mydash-hero-name {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin: 0 0 4px 0;
+            letter-spacing: -0.02em;
+        }
+
+        .mydash-hero-sub {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0 0 10px 0;
+        }
+
+        .mydash-badges-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .mydash-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 700;
+            transition: all 0.15s ease;
+        }
+
+        .mydash-badge.badge-designation {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+        }
+        .mydash-badge.badge-role {
+            background: #faf5ff;
+            border: 1px solid #e9d5ff;
+            color: #6b21a8;
+        }
+        .mydash-badge.badge-eid {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+        }
+        .mydash-badge.badge-pc {
+            background: #f5f3ff;
+            border: 1px solid #ddd6fe;
+            color: #6d28d9;
+        }
+        .mydash-badge.badge-status {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+
+        /* Basic Details Grid */
+        .mydash-details-grid {
+            padding: 18px 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            background: var(--bg-color);
+        }
+
+        .mydash-detail-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: transform 0.15s;
+        }
+        .mydash-detail-box:hover {
+            transform: translateY(-1px);
+        }
+
+        .mydash-detail-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .mydash-detail-icon.icon-blue { background: #eff6ff; color: #2563eb; }
+        .mydash-detail-icon.icon-purple { background: #f5f3ff; color: #7c3aed; }
+        .mydash-detail-icon.icon-green { background: #ecfdf5; color: #059669; }
+
+        .mydash-detail-text {
+            min-width: 0;
+            flex: 1;
+        }
+        .mydash-detail-lbl {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+        .mydash-detail-val {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text-main);
+            word-break: break-word;
+        }
+
+        /* Records Container & Themes */
+        .profile-records-container {
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: block;
+            width: 100%;
+            height: auto;
+            min-height: 100%;
+            box-sizing: border-box;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .records-section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 9px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: relative;
+        }
+
+        .records-title-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .records-title-icon-wrap {
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13.5px;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .records-title-text {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .records-title-heading {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.25;
+        }
+
+        .records-title-sub {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 500;
+            line-height: 1.2;
+            margin-top: 2px;
+        }
+
+        .records-badge-count {
+            background: rgba(255, 255, 255, 0.22);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 12px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .records-clean-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .record-clean-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 10px 14px;
+            transition: all 0.15s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .record-clean-item:hover {
+            transform: translateX(2px);
+        }
+
+        .record-clean-num {
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 6px;
+            padding: 2px 7px;
+            flex-shrink: 0;
+            margin-top: 1px;
+            line-height: 1.3;
+        }
+
+        .record-clean-icon {
+            font-size: 13px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .record-clean-text {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-main);
+            line-height: 1.5;
+            word-break: break-word;
+            flex: 1;
+        }
+
+        .records-empty-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 24px 16px;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.6);
+            margin: 6px 0;
+        }
+
+        .record-category-card {
+            border-radius: 8px;
+            margin-bottom: 14px;
+            overflow: visible;
+            flex-shrink: 0;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .record-category-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .record-category-header {
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            border-radius: 7px 7px 0 0;
+        }
+
+        .record-category-card .records-clean-list {
+            padding: 10px 12px;
+            gap: 8px;
+            border-radius: 0 0 7px 7px;
+        }
+
+        /* 1. BLUE / SAPPHIRE THEME (Applicable Records) */
+        .records-theme-blue {
+            background: #f8fbff;
+            border: 1.5px solid #bfdbfe;
+        }
+        .records-theme-blue .records-section-title {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 55%, #3b82f6 100%);
+        }
+        .records-theme-blue .record-category-card {
+            background: #ffffff;
+            border: 1px solid #bfdbfe;
+        }
+        .records-theme-blue .record-category-header {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-bottom: 1px solid #bfdbfe;
+            color: #1e3a8a;
+        }
+        .records-theme-blue .record-category-header i { color: #2563eb; }
+        .records-theme-blue .record-clean-item {
+            background: #ffffff;
+            border: 1px solid #e0e7ff;
+        }
+        .records-theme-blue .record-clean-num {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        .records-theme-blue .record-clean-icon { color: #3b82f6; }
+        .records-theme-blue .category-count-badge {
+            background: #dbeafe;
+            color: #1e40af;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+        }
+
+        /* 2. EMERALD / GREEN THEME (Work Description) */
+        .records-theme-emerald {
+            background: #f6fdf9;
+            border: 1.5px solid #a7f3d0;
+        }
+        .records-theme-emerald .records-section-title {
+            background: linear-gradient(135deg, #065f46 0%, #059669 55%, #10b981 100%);
+        }
+        .records-theme-emerald .record-category-card {
+            background: #ffffff;
+            border: 1px solid #a7f3d0;
+        }
+        .records-theme-emerald .record-category-header {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-bottom: 1px solid #a7f3d0;
+            color: #064e3b;
+        }
+        .records-theme-emerald .record-category-header i { color: #059669; }
+        .records-theme-emerald .record-clean-item {
+            background: #ffffff;
+            border: 1px solid #d1fae5;
+        }
+        .records-theme-emerald .record-clean-num {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .records-theme-emerald .record-clean-icon { color: #10b981; }
+        .records-theme-emerald .category-count-badge {
+            background: #d1fae5;
+            color: #065f46;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+        }
+
+        /* 3. AMBER / ORANGE THEME (Resource Issue Record) */
+        .records-theme-amber {
+            background: #fffdf7;
+            border: 1.5px solid #fde68a;
+        }
+        .records-theme-amber .records-section-title {
+            background: linear-gradient(135deg, #92400e 0%, #d97706 55%, #f59e0b 100%);
+        }
+        .records-theme-amber .record-category-card {
+            background: #ffffff;
+            border: 1px solid #fde68a;
+        }
+        .records-theme-amber .record-category-header {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border-bottom: 1px solid #fde68a;
+            color: #78350f;
+        }
+        .records-theme-amber .record-category-header i { color: #d97706; }
+        .records-theme-amber .record-clean-item {
+            background: #ffffff;
+            border: 1px solid #fed7aa;
+        }
+        .records-theme-amber .record-clean-num {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .records-theme-amber .record-clean-icon { color: #f59e0b; }
+        .records-theme-amber .category-count-badge {
+            background: #fef3c7;
+            color: #92400e;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+        }
+
+        /* Dark mode overrides for My Dashboard */
+        html.theme-dark .mydash-badge.badge-designation { background: #1e293b; border-color: #3b82f6; color: #60a5fa; }
+        html.theme-dark .mydash-badge.badge-role { background: #1e293b; border-color: #a855f7; color: #c084fc; }
+        html.theme-dark .mydash-badge.badge-eid { background: #1e293b; border-color: #3b82f6; color: #93c5fd; }
+        html.theme-dark .mydash-badge.badge-pc { background: #1e293b; border-color: #8b5cf6; color: #c4b5fd; }
+        html.theme-dark .mydash-badge.badge-status { background: #1e293b; border-color: #10b981; color: #34d399; }
+        
+        html.theme-dark .records-theme-blue {
+            background: #0d1527 !important;
+            border-color: #1e3a8a !important;
+        }
+        html.theme-dark .records-theme-blue .records-section-title {
+            background: linear-gradient(135deg, #172554 0%, #1e3a8a 55%, #1d4ed8 100%) !important;
+        }
+        html.theme-dark .records-theme-blue .record-category-card {
+            background: #111a2e !important;
+            border-color: #1e3a8a !important;
+        }
+        html.theme-dark .records-theme-blue .record-category-header {
+            background: #162444 !important;
+            border-bottom-color: #1e3a8a !important;
+            color: #93c5fd !important;
+        }
+        html.theme-dark .records-theme-blue .record-clean-item {
+            background: #0f172a !important;
+            border-color: #1e3a8a !important;
+        }
+        html.theme-dark .records-theme-blue .record-clean-num {
+            background: #1e3a8a !important;
+            border-color: #2563eb !important;
+            color: #bfdbfe !important;
+        }
+
+        html.theme-dark .records-theme-emerald {
+            background: #091a14 !important;
+            border-color: #065f46 !important;
+        }
+        html.theme-dark .records-theme-emerald .records-section-title {
+            background: linear-gradient(135deg, #022c22 0%, #065f46 55%, #047857 100%) !important;
+        }
+        html.theme-dark .records-theme-emerald .record-category-card {
+            background: #0c241c !important;
+            border-color: #065f46 !important;
+        }
+        html.theme-dark .records-theme-emerald .record-category-header {
+            background: #103328 !important;
+            border-bottom-color: #065f46 !important;
+            color: #a7f3d0 !important;
+        }
+        html.theme-dark .records-theme-emerald .record-clean-item {
+            background: #091a14 !important;
+            border-color: #065f46 !important;
+        }
+        html.theme-dark .records-theme-emerald .record-clean-num {
+            background: #065f46 !important;
+            border-color: #059669 !important;
+            color: #d1fae5 !important;
+        }
+
+        html.theme-dark .records-theme-amber {
+            background: #1c1507 !important;
+            border-color: #92400e !important;
+        }
+        html.theme-dark .records-theme-amber .records-section-title {
+            background: linear-gradient(135deg, #451a03 0%, #78350f 55%, #b45309 100%) !important;
+        }
+        html.theme-dark .records-theme-amber .record-category-card {
+            background: #241c0e !important;
+            border-color: #92400e !important;
+        }
+        html.theme-dark .records-theme-amber .record-category-header {
+            background: #332512 !important;
+            border-bottom-color: #92400e !important;
+            color: #fde68a !important;
+        }
+        html.theme-dark .records-theme-amber .record-clean-item {
+            background: #1c1507 !important;
+            border-color: #78350f !important;
+        }
+        html.theme-dark .records-theme-amber .record-clean-num {
+            background: #78350f !important;
+            border-color: #92400e !important;
+            color: #fef3c7 !important;
+        }
+        html.theme-dark .records-empty-placeholder {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            color: #94a3b8 !important;
         }
     </style>
 </head>
@@ -797,16 +1659,25 @@ aitf_touch_login_activity($db);
 
     <!-- Topbar -->
     <header class="topbar">
-        <div style="display: flex; align-items: center; gap: 16px;">
-            <button class="mobile-toggle" id="mobileToggle">
+        <div class="topbar-brand-wrap">
+            <a href="auditorDashboard.php" class="topbar-brand" title="AITF ERP">
+                <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;">
+                    <span style="font-family: 'Poppins', 'Inter', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 1px; line-height: 1;">
+                        <span style="color: #CF2120;">A</span><span style="color: #ffffff;">IT</span><span style="color: #CF2120;">F</span>
+                    </span>
+                    <span style="font-family: 'Poppins', 'Inter', sans-serif; font-weight: 600; font-size: 10px; color: #ffffff; letter-spacing: 2px; margin-top: 2px; line-height: 1;">ERP</span>
+                </div>
+            </a>
+            <button class="mobile-toggle" id="mobileToggle" title="Toggle Navigation">
                 <i class="fas fa-bars"></i>
             </button>
-            <a href="#" class="topbar-brand">
-                <i class="fa-solid fa-leaf"></i> AITF
-            </a>
         </div>
         
         <div class="topbar-right">
+            <a href="myDashboard.php" class="dash-switch-pill" title="Open My Staff Profile & Responsibilities Dashboard">
+                <i class="fas fa-id-card"></i>
+                <span class="hidden-xs">My Dashboard</span>
+            </a>
             <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
                 <i class="fas fa-moon"></i>
             </button>
@@ -829,42 +1700,41 @@ aitf_touch_login_activity($db);
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <nav>
-                <a class="nav-item active" data-tab="dashboard" href="#dashboard">
-                    <i class="fas fa-home"></i> Dashboard
+            <nav class="sidebar-nav">
+                <a class="nav-item active animate" data-tab="mydashboard" href="#mydashboard">
+                    <span>MY DASHBOARD</span>
+                    <i class="sub_icon fas fa-tachometer-alt"></i>
                 </a>
-                <a class="nav-item" data-tab="assignments" href="#assignments">
-                    <i class="fas fa-tasks"></i> My Assignments
+                <a class="nav-item animate" data-tab="assignments" href="#assignments">
+                    <span>MY ASSIGNMENTS</span>
+                    <i class="sub_icon fas fa-tasks"></i>
                 </a>
-                <a class="nav-item" href="auditorPendingDocuments.php">
-                    <i class="fas fa-file-alt"></i> Pending Documents
+                <a class="nav-item animate" data-tab="clients" href="#clients">
+                    <span>MY CLIENTS</span>
+                    <i class="sub_icon fas fa-users"></i>
                 </a>
-                <a class="nav-item" data-tab="clients" href="#clients">
-                    <i class="fas fa-users"></i> My Clients
+                <a class="nav-item animate" data-tab="history" href="#history">
+                    <span>AUDIT HISTORY</span>
+                    <i class="sub_icon fas fa-history"></i>
                 </a>
-                <a class="nav-item" data-tab="history" href="#history">
-                    <i class="fas fa-history"></i> Audit History
+                <a class="nav-item animate" data-tab="performance" href="#performance">
+                    <span>PERFORMANCE</span>
+                    <i class="sub_icon fas fa-chart-line"></i>
                 </a>
-                <a class="nav-item" data-tab="profile" href="#profile">
-                    <i class="fas fa-user"></i> Profile
-                </a>
-                <a class="nav-item" data-tab="updates" href="#updates">
-                    <i class="fas fa-bell"></i> Updates and News
-                </a>
-                <a class="nav-item" data-tab="performance" href="#performance">
-                    <i class="fas fa-chart-bar"></i> Performance
-                </a>
-                <a href="guidelines.php" class="nav-item" style="color: #10b981; font-weight: 600;">
-                    <i class="fas fa-book"></i> Guidelines
+                <a class="nav-item animate guidelines-nav-link" data-tab="guidelines" href="#guidelines">
+                    <span><i class="fas fa-book" style="color: #34d399; margin-right: 5px; font-size: 11px;"></i> GUIDELINES</span>
+                    <i class="sub_icon fas fa-book"></i>
                 </a>
                 <?php if (Utitlity::checkUserPermission('client_access')) { ?>
-                <a href="homePage.php" class="nav-item" style="color: #6366f1;">
-                    <i class="fas fa-building"></i> Company Clients
+                <a href="homePage.php" class="nav-item animate" style="color: #a5b4fc !important;">
+                    <span>COMPANY CLIENTS</span>
+                    <i class="sub_icon fas fa-building"></i>
                 </a>
                 <?php } ?>
                 <?php if (Utitlity::checkUserPermission('invoice_access')) { ?>
-                <a href="invoicePage.php" class="nav-item" style="color: #6366f1;">
-                    <i class="fas fa-rupee-sign"></i> Invoices
+                <a href="invoicePage.php" class="nav-item animate" style="color: #a5b4fc !important;">
+                    <span>INVOICES</span>
+                    <i class="sub_icon fas fa-rupee-sign"></i>
                 </a>
                 <?php } ?>
             </nav>
@@ -872,72 +1742,461 @@ aitf_touch_login_activity($db);
 
         <!-- Main Content -->
         <main class="main-content">
-            
-            <!-- Dashboard Tab -->
-            <div id="tab-dashboard" class="tab-pane active">
-                <div class="welcome-banner">
-                    <h1 class="welcome-title">Welcome back, <?php echo htmlspecialchars($auditor['auditor_name']); ?>!</h1>
-                    <div class="welcome-date"><i class="far fa-calendar-alt"></i> <?php echo date('l, F j, Y'); ?></div>
-                </div>
 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon total"><i class="fas fa-clipboard-check"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['total']; ?>"><?php echo (int)$stats['total']; ?></div>
-                        <div class="stat-label">Total Audits</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon ca"><i class="fas fa-file-contract"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['ca']; ?>"><?php echo (int)$stats['ca']; ?></div>
-                        <div class="stat-label">CA Audits</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon sa1"><i class="fas fa-search"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['sa1']; ?>"><?php echo (int)$stats['sa1']; ?></div>
-                        <div class="stat-label">SA-I Audits</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon sa2"><i class="fas fa-search-plus"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['sa2']; ?>"><?php echo (int)$stats['sa2']; ?></div>
-                        <div class="stat-label">SA-II Audits</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon rc"><i class="fas fa-sync-alt"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['rc']; ?>"><?php echo (int)$stats['rc']; ?></div>
-                        <div class="stat-label">RC Audits</div>
-                    </div>
-                </div>
-
-                <div class="section-header">
-                    <h2 class="section-title">Upcoming Audits</h2>
-                </div>
+            <!-- My Staff Dashboard Tab -->
+            <div id="tab-mydashboard" class="tab-pane active">
                 
-                <?php if (!empty($futureAudits)): ?>
-                <div class="upcoming-grid">
-                    <?php foreach ($futureAudits as $fa): 
-                        $badgeClass = 'badge-' . strtolower(str_replace('-', '', $fa['service_type']));
-                        $displayDate = !empty($fa['planned_date']) ? $fa['planned_date'] : (!empty($fa['audit_dates']) ? $fa['audit_dates'] : ($fa['parsed_audit_date'] ?? 'N/A'));
-                        $displayLoc = !empty($fa['location']) ? $fa['location'] : 'N/A';
-                    ?>
-                    <a href="customerAccount.php?customerid=<?php echo $fa['customer_id']; ?>" class="upcoming-card" style="text-decoration:none; color:inherit; display:block;">
-                        <div class="upcoming-header">
-                            <div class="upcoming-client"><?php echo htmlspecialchars($fa['customer_name']); ?></div>
-                            <span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($fa['service_type']); ?></span>
-                        </div>
-                        <div class="upcoming-details">
-                            <div><i class="far fa-calendar-alt"></i> <?php echo htmlspecialchars($displayDate); ?></div>
-                            <div><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($displayLoc); ?></div>
-                        </div>
-                    </a>
-                    <?php endforeach; ?>
+                <!-- Inner Tabs Bar for My Dashboard -->
+                <div class="mydash-tabs-bar" role="tablist">
+                    <button type="button" class="mydash-tab-btn active" data-target="#mydash-pane-profile">
+                        <i class="fas fa-user-circle"></i> Profile
+                    </button>
+                    <button type="button" class="mydash-tab-btn" data-target="#mydash-pane-attendance">
+                        <i class="fas fa-calendar-check"></i> Attendance
+                    </button>
+                    <button type="button" class="mydash-tab-btn" data-target="#mydash-pane-task-mgmt">
+                        <i class="fas fa-tasks"></i> Task Management
+                    </button>
+                    <button type="button" class="mydash-tab-btn" data-target="#mydash-pane-guidelines">
+                        <i class="fas fa-book"></i> Work Guidelines
+                    </button>
                 </div>
-                <?php else: ?>
-                <div class="empty-state">
-                    <i class="fas fa-calendar-times"></i>
-                    <h3>No upcoming audits scheduled</h3>
-                    <p class="text-muted">You're all caught up for now.</p>
+
+                <!-- 1. Profile Tab Pane -->
+                <div class="mydash-tab-pane active" id="mydash-pane-profile">
+
+                    <!-- Profile Hero Card -->
+                    <div class="mydash-hero-card">
+                    <div class="mydash-hero-top">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-user-circle"></i>
+                            <span>Staff Profile &amp; Responsibilities</span>
+                        </div>
+                        <span style="background: rgba(255, 255, 255, 0.2); padding: 3px 10px; border-radius: 20px; font-size: 11px; text-transform: none;">
+                            <i class="fas fa-shield-alt"></i> <?php echo htmlspecialchars($audStaffRole); ?>
+                        </span>
+                    </div>
+
+                    <div class="mydash-hero-body">
+                        <div class="mydash-avatar-wrap">
+                            <div class="mydash-avatar-circle" title="<?php echo htmlspecialchars($audStaffName); ?>">
+                                <?php echo htmlspecialchars($audInitials); ?>
+                            </div>
+                            <div class="mydash-avatar-status" title="Active"></div>
+                        </div>
+                        <div class="mydash-hero-info">
+                            <h3 class="mydash-hero-name"><?php echo htmlspecialchars($audStaffName); ?></h3>
+                            <div class="mydash-hero-sub">
+                                Assessment &amp; Institute for Technical Forum (AITF)
+                            </div>
+                            <div class="mydash-badges-row">
+                                <div class="mydash-badge badge-designation" title="Designation Assigned">
+                                    <i class="fas fa-briefcase"></i>
+                                    <span><?php echo htmlspecialchars($audDesignation); ?></span>
+                                </div>
+                                <div class="mydash-badge badge-role" title="User Role">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <span><?php echo htmlspecialchars($audStaffRole); ?></span>
+                                </div>
+                                <?php if (!empty($audStaffEid)): ?>
+                                <div class="mydash-badge badge-eid" title="Employee ID">
+                                    <i class="fas fa-id-badge"></i>
+                                    <span>Emp ID: <?php echo htmlspecialchars($audStaffEid); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($audStaffPcId)): ?>
+                                <div class="mydash-badge badge-pc" title="PC ID">
+                                    <i class="fas fa-desktop"></i>
+                                    <span>PC: <?php echo htmlspecialchars($audStaffPcId); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                <div class="mydash-badge badge-status" title="Account Status">
+                                    <i class="fas fa-circle" style="font-size: 8px;"></i>
+                                    <span><?php echo htmlspecialchars(ucfirst($audStaffStatus ?: 'Active')); ?></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Details Grid -->
+                    <div class="mydash-details-grid">
+                        <div class="mydash-detail-box">
+                            <span class="mydash-detail-icon icon-blue"><i class="fas fa-envelope"></i></span>
+                            <div class="mydash-detail-text">
+                                <div class="mydash-detail-lbl">Email Address</div>
+                                <div class="mydash-detail-val"><?php echo $audStaffEmail !== '' ? htmlspecialchars($audStaffEmail) : '-'; ?></div>
+                            </div>
+                        </div>
+                        <div class="mydash-detail-box">
+                            <span class="mydash-detail-icon icon-purple"><i class="fas fa-shield-alt"></i></span>
+                            <div class="mydash-detail-text">
+                                <div class="mydash-detail-lbl">Role</div>
+                                <div class="mydash-detail-val"><?php echo htmlspecialchars($audStaffRole); ?></div>
+                            </div>
+                        </div>
+                        <?php if (!empty($audStaffEid)): ?>
+                        <div class="mydash-detail-box">
+                            <span class="mydash-detail-icon icon-blue"><i class="fas fa-id-card"></i></span>
+                            <div class="mydash-detail-text">
+                                <div class="mydash-detail-lbl">Employee / Auditor ID</div>
+                                <div class="mydash-detail-val"><?php echo htmlspecialchars($audStaffEid); ?></div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($audStaffPcId)): ?>
+                        <div class="mydash-detail-box">
+                            <span class="mydash-detail-icon icon-purple"><i class="fas fa-desktop"></i></span>
+                            <div class="mydash-detail-text">
+                                <div class="mydash-detail-lbl">PC ID</div>
+                                <div class="mydash-detail-val"><?php echo htmlspecialchars($audStaffPcId); ?></div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($audStaffContact)): ?>
+                        <div class="mydash-detail-box">
+                            <span class="mydash-detail-icon icon-green"><i class="fas fa-phone"></i></span>
+                            <div class="mydash-detail-text">
+                                <div class="mydash-detail-lbl">Contact</div>
+                                <div class="mydash-detail-val"><?php echo htmlspecialchars($audStaffContact); ?></div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
-                <?php endif; ?>
+
+                <!-- 2 Column Row: Applicable Records & Work Description -->
+                <div class="row" style="margin: 0 -8px 20px -8px; display: flex; flex-wrap: wrap;">
+                    <!-- 1. APPLICABLE RECORDS (BLUE / SAPPHIRE THEME) -->
+                    <div class="col-sm-6" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
+                        <div class="profile-records-container records-theme-blue" style="width: 100%; flex: 1;">
+                            <div class="records-section-title">
+                                <div class="records-title-main">
+                                    <div class="records-title-icon-wrap">
+                                        <i class="fas fa-folder-open"></i>
+                                    </div>
+                                    <div class="records-title-text">
+                                        <span class="records-title-heading">Applicable Records &amp; Documents</span>
+                                        <span class="records-title-sub">Reporting documents &amp; location records</span>
+                                    </div>
+                                </div>
+                                <?php if (!empty($audRecordGroups)): ?>
+                                    <span class="records-badge-count"><?php echo count($audRecordGroups); ?> Group<?php echo count($audRecordGroups) > 1 ? 's' : ''; ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if (!empty($audRecordGroups)): ?>
+                                <?php foreach ($audRecordGroups as $grp): ?>
+                                    <?php if (!empty($grp['header'])): ?>
+                                        <div class="record-category-card">
+                                            <div class="record-category-header">
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <i class="far fa-folder"></i>
+                                                    <span><?php echo htmlspecialchars($grp['header']); ?></span>
+                                                </div>
+                                                <?php if (!empty($grp['items'])): ?>
+                                                    <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <?php if (!empty($grp['items'])): ?>
+                                                <div class="records-clean-list">
+                                                    <?php foreach ($grp['items'] as $index => $item): ?>
+                                                        <div class="record-clean-item">
+                                                            <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                            <i class="far fa-file-alt record-clean-icon"></i>
+                                                            <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="records-empty-placeholder" style="padding: 10px 14px;">No items specified under this header</div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php elseif (!empty($grp['items'])): ?>
+                                        <div class="records-clean-list" style="margin-bottom: 12px;">
+                                            <?php foreach ($grp['items'] as $index => $item): ?>
+                                                <div class="record-clean-item">
+                                                    <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                    <i class="far fa-file-alt record-clean-icon"></i>
+                                                    <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="records-empty-placeholder">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>Not assigned yet</span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- 2. WORK DESCRIPTION (EMERALD GREEN THEME) -->
+                    <div class="col-sm-6" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
+                        <div class="profile-records-container records-theme-emerald" style="width: 100%; flex: 1;">
+                            <div class="records-section-title">
+                                <div class="records-title-main">
+                                    <div class="records-title-icon-wrap">
+                                        <i class="fas fa-briefcase"></i>
+                                    </div>
+                                    <div class="records-title-text">
+                                        <span class="records-title-heading">Work Description &amp; Responsibilities</span>
+                                        <span class="records-title-sub">Main Responsibilities, Authorities &amp; Reporting</span>
+                                    </div>
+                                </div>
+                                <?php if (!empty($audWorkDescGroups)): ?>
+                                    <span class="records-badge-count"><?php echo count($audWorkDescGroups); ?> Group<?php echo count($audWorkDescGroups) > 1 ? 's' : ''; ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if (!empty($audWorkDescGroups)): ?>
+                                <?php foreach ($audWorkDescGroups as $grp): ?>
+                                    <?php if (!empty($grp['header'])): ?>
+                                        <div class="record-category-card">
+                                            <div class="record-category-header">
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <i class="fas fa-tasks"></i>
+                                                    <span><?php echo htmlspecialchars($grp['header']); ?></span>
+                                                </div>
+                                                <?php if (!empty($grp['items'])): ?>
+                                                    <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <?php if (!empty($grp['items'])): ?>
+                                                <div class="records-clean-list">
+                                                    <?php foreach ($grp['items'] as $index => $item): ?>
+                                                        <div class="record-clean-item">
+                                                            <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                            <i class="far fa-check-square record-clean-icon"></i>
+                                                            <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="records-empty-placeholder" style="padding: 10px 14px;">No items specified under this header</div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php elseif (!empty($grp['items'])): ?>
+                                        <div class="records-clean-list" style="margin-bottom: 12px;">
+                                            <?php foreach ($grp['items'] as $index => $item): ?>
+                                                <div class="record-clean-item">
+                                                    <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                    <i class="far fa-check-square record-clean-icon"></i>
+                                                    <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="records-empty-placeholder">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>Not assigned yet</span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. RESOURCE ISSUE RECORD (WARM AMBER / ORANGE THEME) -->
+                <div style="margin-bottom: 24px;">
+                    <div class="profile-records-container records-theme-amber">
+                        <div class="records-section-title">
+                            <div class="records-title-main">
+                                <div class="records-title-icon-wrap">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="records-title-text">
+                                    <span class="records-title-heading">Resource Issue Record</span>
+                                    <span class="records-title-sub">Hardware, software, access &amp; resource issue logs</span>
+                                </div>
+                            </div>
+                            <?php if (!empty($audResIssueGroups)): ?>
+                                <span class="records-badge-count"><?php echo count($audResIssueGroups); ?> Group<?php echo count($audResIssueGroups) > 1 ? 's' : ''; ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <?php if (!empty($audResIssueGroups)): ?>
+                            <?php foreach ($audResIssueGroups as $grp): ?>
+                                <?php if (!empty($grp['header'])): ?>
+                                    <div class="record-category-card">
+                                        <div class="record-category-header">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <i class="fas fa-wrench"></i>
+                                                <span><?php echo htmlspecialchars($grp['header']); ?></span>
+                                            </div>
+                                            <?php if (!empty($grp['items'])): ?>
+                                                <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php if (!empty($grp['items'])): ?>
+                                            <div class="records-clean-list">
+                                                <?php foreach ($grp['items'] as $index => $item): ?>
+                                                    <div class="record-clean-item">
+                                                        <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                        <i class="fas fa-exclamation-circle record-clean-icon"></i>
+                                                        <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="records-empty-placeholder" style="padding: 10px 14px;">No items specified under this header</div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php elseif (!empty($grp['items'])): ?>
+                                    <div class="records-clean-list" style="margin-bottom: 12px;">
+                                        <?php foreach ($grp['items'] as $index => $item): ?>
+                                            <div class="record-clean-item">
+                                                <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                <i class="fas fa-exclamation-circle record-clean-icon"></i>
+                                                <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="records-empty-placeholder">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Not assigned yet</span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- 2. Attendance Tab Pane -->
+                <div class="mydash-tab-pane" id="mydash-pane-attendance">
+                    <div class="qms_complete_btn header-theme-attendance">
+                        <i class="fas fa-calendar-check"></i> Attendance
+                    </div>
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 10px 10px; padding: 30px; box-shadow: var(--shadow-sm);">
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(139, 92, 246, 0.12); color: #8b5cf6; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 16px;">
+                                <i class="far fa-clock"></i>
+                            </div>
+                            <h4 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Attendance &amp; Log System</h4>
+                            <p style="font-size: 13.5px; color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.6;">
+                                Daily attendance tracking and duty login records for your auditor profile. Feature is currently being synchronized with ERP biometric &amp; login gateway.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Task Management Tab Pane -->
+                <div class="mydash-tab-pane" id="mydash-pane-task-mgmt">
+                    <div class="qms_complete_btn header-theme-tasks">
+                        <i class="fas fa-tasks"></i> Task Management
+                    </div>
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 10px 10px; padding: 24px; box-shadow: var(--shadow-sm);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+                            <div>
+                                <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-main);">
+                                    <i class="fas fa-check-square" style="color: #0284c7; margin-right: 6px;"></i> Assigned Tasks &amp; Activities
+                                </h4>
+                                <p style="margin: 4px 0 0 0; font-size: 12.5px; color: var(--text-muted);">
+                                    Track, manage and view your internal tasks and workflow assignments
+                                </p>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <span style="padding: 5px 12px; font-size: 12px; background: rgba(2, 132, 199, 0.1); color: #0284c7; border-radius: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="far fa-clock"></i> Active Tasks
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 30px 20px;">
+                            <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(2, 132, 199, 0.12); color: #0284c7; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 16px;">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                            <h4 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Task Management Section</h4>
+                            <p style="font-size: 13.5px; color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.6;">
+                                No pending individual task assignments currently. New workflow tasks will be listed here with priority, deadlines, and tracking.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Work Guidelines Tab Pane -->
+                <div class="mydash-tab-pane" id="mydash-pane-guidelines">
+                    <div class="qms_complete_btn header-theme-guidelines" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-book"></i> Work Guidelines
+                        </div>
+                        <div>
+                            <span class="badge" style="background: rgba(255,255,255,0.25); color: #fff; font-size: 11px; padding: 4px 10px; border-radius: 12px;">
+                                <?php echo count($guidelinesList); ?> Active
+                            </span>
+                        </div>
+                    </div>
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 10px 10px; padding: 20px; box-shadow: var(--shadow-sm);">
+                        <?php if (empty($guidelinesList)): ?>
+                        <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+                            <i class="fas fa-folder-open" style="font-size: 32px; color: var(--text-muted); margin-bottom: 12px; display: block;"></i>
+                            <h3 style="font-size: 16px; margin-bottom: 6px;">No Guidelines Assigned</h3>
+                            <p class="text-muted" style="font-size: 13px;">You do not have any guidelines assigned currently.</p>
+                        </div>
+                        <?php else: ?>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <?php foreach ($guidelinesList as $g): 
+                                $createdTime = strtotime($g['created_at']);
+                                $formattedDate = date('d M Y, h:i A', $createdTime);
+                                $postedBy = !empty($g['created_by']) ? $g['created_by'] : 'Director';
+                                if (in_array(strtolower(trim($postedBy)), ['main admin', 'top mgmt', 'admin', 'director'], true)) {
+                                    $postedBy = 'Management';
+                                }
+                                $attachments = $g['attachments'] ?? [];
+                                $gDesc = trim($g['description'] ?? '');
+                            ?>
+                            <div style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(13, 77, 139, 0.1); color: #0d4d8b; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">
+                                            <i class="fas fa-file-alt"></i>
+                                        </div>
+                                        <div>
+                                            <h4 style="margin: 0; font-size: 14.5px; font-weight: 700; color: var(--text-main);">
+                                                <?php echo htmlspecialchars($g['title']); ?>
+                                            </h4>
+                                            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                                                <span><i class="far fa-user"></i> By: <strong><?php echo htmlspecialchars($postedBy); ?></strong></span>
+                                                <span style="margin: 0 6px;">•</span>
+                                                <span><i class="far fa-clock"></i> <?php echo $formattedDate; ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fas fa-check-circle" style="font-size: 10px;"></i> Active
+                                    </span>
+                                </div>
+                                <?php if ($gDesc !== ''): ?>
+                                <div style="margin-top: 10px; font-size: 13px; color: var(--text-main); line-height: 1.55; background: var(--card-bg); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <?php echo nl2br(htmlspecialchars($gDesc)); ?>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($attachments)): ?>
+                                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-color); align-items: center;">
+                                    <span style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-right: 4px;">
+                                        <i class="fas fa-paperclip"></i> Documents (<?php echo count($attachments); ?>):
+                                    </span>
+                                    <?php foreach ($attachments as $att): 
+                                        $iconInfo = aitf_get_file_icon_info($att['original_name']);
+                                        $fileSizeFormatted = aitf_format_file_size($att['file_size']);
+                                    ?>
+                                    <a href="view_guideline_doc.php?id=<?php echo (int)$att['id']; ?>" target="_blank" 
+                                       style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); text-decoration: none;">
+                                        <i class="<?php echo $iconInfo['icon']; ?>" style="color: <?php echo $iconInfo['color']; ?>;"></i>
+                                        <strong><?php echo htmlspecialchars($att['original_name']); ?></strong>
+                                        <small style="color: var(--text-muted);">(<?php echo $fileSizeFormatted; ?>)</small>
+                                        <i class="fas fa-external-link-alt" style="font-size: 9px; color: var(--text-muted);"></i>
+                                    </a>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Assignments Tab -->
@@ -1075,8 +2334,71 @@ aitf_touch_login_activity($db);
 
             <!-- History Tab -->
             <div id="tab-history" class="tab-pane">
-                <div class="section-header">
-                    <h2 class="section-title">Audit History</h2>
+                <div class="section-header" style="margin-bottom: 20px;">
+                    <h2 class="section-title"><i class="fas fa-chart-pie" style="color: var(--accent-blue); margin-right: 8px;"></i>Audits Overview</h2>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon total"><i class="fas fa-clipboard-check"></i></div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['total']; ?>"><?php echo (int)$stats['total']; ?></div>
+                        <div class="stat-label">Total Audits</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon ca"><i class="fas fa-file-contract"></i></div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['ca']; ?>"><?php echo (int)$stats['ca']; ?></div>
+                        <div class="stat-label">CA Audits</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon sa1"><i class="fas fa-search"></i></div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['sa1']; ?>"><?php echo (int)$stats['sa1']; ?></div>
+                        <div class="stat-label">SA-I Audits</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon sa2"><i class="fas fa-search-plus"></i></div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['sa2']; ?>"><?php echo (int)$stats['sa2']; ?></div>
+                        <div class="stat-label">SA-II Audits</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon rc"><i class="fas fa-sync-alt"></i></div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['rc']; ?>"><?php echo (int)$stats['rc']; ?></div>
+                        <div class="stat-label">RC Audits</div>
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin-top: 30px;">
+                    <h2 class="section-title"><i class="far fa-calendar-check" style="color: var(--accent-blue); margin-right: 8px;"></i>Upcoming Audits</h2>
+                </div>
+                
+                <?php if (!empty($futureAudits)): ?>
+                <div class="upcoming-grid">
+                    <?php foreach ($futureAudits as $fa): 
+                        $badgeClass = 'badge-' . strtolower(str_replace('-', '', $fa['service_type']));
+                        $displayDate = !empty($fa['planned_date']) ? $fa['planned_date'] : (!empty($fa['audit_dates']) ? $fa['audit_dates'] : ($fa['parsed_audit_date'] ?? 'N/A'));
+                        $displayLoc = !empty($fa['location']) ? $fa['location'] : 'N/A';
+                    ?>
+                    <a href="customerAccount.php?customerid=<?php echo $fa['customer_id']; ?>" class="upcoming-card" style="text-decoration:none; color:inherit; display:block;">
+                        <div class="upcoming-header">
+                            <div class="upcoming-client"><?php echo htmlspecialchars($fa['customer_name']); ?></div>
+                            <span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($fa['service_type']); ?></span>
+                        </div>
+                        <div class="upcoming-details">
+                            <div><i class="far fa-calendar-alt"></i> <?php echo htmlspecialchars($displayDate); ?></div>
+                            <div><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($displayLoc); ?></div>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <h3>No upcoming audits scheduled</h3>
+                    <p class="text-muted">You're all caught up for now.</p>
+                </div>
+                <?php endif; ?>
+
+                <div class="section-header" style="margin-top: 35px;">
+                    <h2 class="section-title"><i class="fas fa-history" style="color: var(--accent-blue); margin-right: 8px;"></i>Completed Audits History</h2>
                 </div>
 
                 <?php if (!empty($auditsByDate)): ?>
@@ -1122,40 +2444,6 @@ aitf_touch_login_activity($db);
                     <p class="text-muted">Your completed audits will appear here.</p>
                 </div>
                 <?php endif; ?>
-            </div>
-
-            <!-- Profile Tab -->
-            <div id="tab-profile" class="tab-pane">
-                <div class="section-header">
-                    <h2 class="section-title">My Profile</h2>
-                </div>
-                
-                <div class="profile-card">
-                    <div class="profile-header">
-                        <div class="profile-avatar">
-                            <?php echo strtoupper(substr($auditor['auditor_name'], 0, 1)); ?>
-                        </div>
-                        <div class="profile-info">
-                            <h2><?php echo htmlspecialchars($auditor['auditor_name']); ?></h2>
-                            <span class="badge badge-ca" style="font-size: 14px;">Senior Auditor</span>
-                        </div>
-                    </div>
-                    
-                    <div class="profile-details">
-                        <div class="detail-item">
-                            <span class="detail-label">Auditor Number</span>
-                            <span class="detail-value"><?php echo htmlspecialchars($auditor['auditor_no'] ?? 'N/A'); ?></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Email Address</span>
-                            <span class="detail-value"><?php echo htmlspecialchars($auditor['email'] ?? 'Not provided'); ?></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Phone Number</span>
-                            <span class="detail-value"><?php echo htmlspecialchars($auditor['phone'] ?? 'Not provided'); ?></span>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- Performance Tab -->
@@ -1365,28 +2653,81 @@ aitf_touch_login_activity($db);
                 </div>
             </div>
 
-        <!-- Updates and News Tab -->
-            <div id="tab-updates" class="tab-pane">
-                <div class="section-header">
-                    <h2 class="section-title">Updates and News</h2>
-                    <p style="color:var(--text-muted); margin-top:5px;">Messages and updates from the Director</p>
-                </div>
-                
-                <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; height:500px; box-shadow:var(--shadow-sm);">
-                    <div id="auditorMessageHistory" style="flex:1; overflow-y:auto; padding:20px; background:var(--bg-color);">
-                        <div style="text-align:center; color:var(--text-muted);">Loading...</div>
+            <!-- Guidelines Tab -->
+            <div id="tab-guidelines" class="tab-pane">
+                <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 24px;">
+                    <div>
+                        <h2 class="section-title"><i class="fas fa-book" style="color: #10b981; margin-right: 8px;"></i>Auditor Work Guidelines &amp; Directives</h2>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Official company guidelines, inspection protocols, and work directives assigned to you.</p>
                     </div>
-                    <div style="padding:16px; border-top:1px solid var(--border-color); background:var(--card-bg); border-radius:0 0 12px 12px;">
-                        <form id="auditorMessageForm" onsubmit="event.preventDefault(); sendAuditorMessage();" enctype="multipart/form-data">
-                            <input type="hidden" id="directorId" name="receiver_id">
-                            <textarea id="auditorMsgText" name="message" rows="2" style="width:100%; padding:12px; border:1px solid var(--border-color); border-radius:8px; resize:none; margin-bottom:12px; background:var(--bg-color); color:var(--text-main);" placeholder="Reply to director..."></textarea>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <input type="file" id="auditorMsgFile" name="attachment" accept=".pdf,.doc,.docx,.jpg,.png" style="font-size:12px;">
-                                <button type="submit" style="background:var(--accent-blue); color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer;">Send Reply</button>
+                </div>
+
+                <?php if (empty($guidelinesList)): ?>
+                <div class="empty-state">
+                    <i class="fas fa-folder-open"></i>
+                    <h3>No Guidelines Assigned to You</h3>
+                    <p class="text-muted">You do not have any guidelines assigned to your user account at this moment.</p>
+                </div>
+                <?php else: ?>
+                <div style="display: flex; flex-direction: column; gap: 18px;">
+                    <?php foreach ($guidelinesList as $g): 
+                        $createdTime = strtotime($g['created_at']);
+                        $formattedDate = date('d M Y, h:i A', $createdTime);
+                        $postedBy = !empty($g['created_by']) ? $g['created_by'] : 'Director';
+                        if (in_array(strtolower(trim($postedBy)), ['main admin', 'top mgmt', 'admin', 'director'], true)) {
+                            $postedBy = 'Director';
+                        }
+                        $attachments = $g['attachments'] ?? [];
+                    ?>
+                    <div class="guideline-card" style="background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden;">
+                        <div style="background: var(--bg-color); padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <h4 style="margin: 0; font-size: 15.5px; font-weight: 700; color: var(--text-main);">
+                                    <i class="fas fa-file-alt" style="color: #0d4d8b; margin-right: 8px;"></i>
+                                    <?php echo htmlspecialchars($g['title']); ?>
+                                </h4>
+                                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                    <i class="far fa-clock"></i> Posted on <strong><?php echo $formattedDate; ?></strong> by <strong><?php echo htmlspecialchars($postedBy); ?></strong>
+                                </div>
                             </div>
-                        </form>
+                            <div>
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 12px;">
+                                    <i class="fas fa-check-circle"></i> Active Directive
+                                </span>
+                            </div>
+                        </div>
+                        <div style="padding: 16px 20px;">
+                            <?php $gDesc = trim($g['description'] ?? ''); ?>
+                            <?php if ($gDesc !== ''): ?>
+                            <div style="font-size: 13.5px; color: var(--text-main); line-height: 1.6; margin-bottom: 12px; background: var(--bg-color); padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <?php echo nl2br(htmlspecialchars($gDesc)); ?>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($attachments)): ?>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; <?php echo ($gDesc !== '') ? 'margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color);' : ''; ?>">
+                                <strong style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">
+                                    <i class="fas fa-paperclip"></i> Documents (<?php echo count($attachments); ?>):
+                                </strong>
+                                <?php foreach ($attachments as $att): 
+                                    $iconInfo = aitf_get_file_icon_info($att['original_name']);
+                                    $fileSizeFormatted = aitf_format_file_size($att['file_size']);
+                                ?>
+                                <a href="view_guideline_doc.php?id=<?php echo (int)$att['id']; ?>" target="_blank" 
+                                   style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; padding: 6px 12px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); text-decoration: none; box-shadow: var(--shadow-sm); transition: var(--transition);">
+                                    <i class="<?php echo $iconInfo['icon']; ?>" style="color: <?php echo $iconInfo['color']; ?>; font-size: 14px;"></i>
+                                    <span style="font-weight: 600;"><?php echo htmlspecialchars($att['original_name']); ?></span>
+                                    <span style="color: var(--text-muted); font-size: 11px;">(<?php echo $fileSizeFormatted; ?>)</span>
+                                    <i class="fas fa-external-link-alt" style="font-size: 9px; color: var(--text-muted); margin-left: 2px;"></i>
+                                </a>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
+                    <?php endforeach; ?>
                 </div>
+                <?php endif; ?>
             </div>
 
         </main>
@@ -1453,12 +2794,8 @@ aitf_touch_login_activity($db);
                     sidebar.classList.remove('show');
                 }
 
-                if (tabId === 'dashboard') {
+                if (tabId === 'history') {
                     animateCounters();
-                } else if (tabId === 'updates') {
-                    if (typeof loadAuditorMessages === 'function') {
-                        loadAuditorMessages();
-                    }
                 }
             }
 
@@ -1477,18 +2814,38 @@ aitf_touch_login_activity($db);
 
             // Handle hash on load and hash changes
             window.addEventListener('hashchange', function() {
-                const hashTab = window.location.hash.replace('#', '');
+                let hashTab = window.location.hash.replace('#', '');
+                if (hashTab === 'dashboard') hashTab = 'mydashboard';
                 if (hashTab && document.getElementById('tab-' + hashTab)) {
                     switchTab(hashTab);
                 }
             });
 
-            if (window.location.hash) {
-                const initTab = window.location.hash.replace('#', '');
-                if (initTab && document.getElementById('tab-' + initTab)) {
-                    switchTab(initTab);
-                }
+            const initialHash = window.location.hash.replace('#', '');
+            if (initialHash && initialHash !== 'dashboard' && document.getElementById('tab-' + initialHash)) {
+                switchTab(initialHash);
+            } else {
+                switchTab('mydashboard');
             }
+
+            // My Dashboard Inner Tabs Switching
+            const mydashTabBtns = document.querySelectorAll('.mydash-tab-btn[data-target]');
+            const mydashTabPanes = document.querySelectorAll('.mydash-tab-pane');
+            
+            mydashTabBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = this.getAttribute('data-target');
+                    if (!target) return;
+                    
+                    mydashTabBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    mydashTabPanes.forEach(pane => pane.classList.remove('active'));
+                    const targetPane = document.querySelector(target);
+                    if (targetPane) targetPane.classList.add('active');
+                });
+            });
 
             // Animated Counters
             function animateCounters() {
@@ -1539,111 +2896,6 @@ aitf_touch_login_activity($db);
                     });
                 });
             }
-
-            // Updates Tab Logic
-            let directorId = null;
-            fetch('ajax_messages.php?action=get_director_id')
-                .then(r => r.json())
-                .then(data => {
-                    if(data.success) {
-                        directorId = data.director_id;
-                        document.getElementById('directorId').value = directorId;
-                    }
-                });
-
-            const updatesTabBtn = document.querySelector('.nav-item[data-tab="updates"]');
-            if(updatesTabBtn) {
-                updatesTabBtn.addEventListener('click', () => {
-                    loadAuditorMessages();
-                });
-            }
-
-            window.loadAuditorMessages = function() {
-                if (!directorId) return;
-                const formData = new FormData();
-                formData.append('action', 'fetch_conversation');
-                formData.append('other_user_id', directorId);
-
-                fetch('ajax_messages.php', { method: 'POST', body: formData })
-                    .then(response => response.json())
-                    .then(data => {
-                        const container = document.getElementById('auditorMessageHistory');
-                        if (data.success) {
-                            container.innerHTML = '';
-                            if (data.messages.length === 0) {
-                                container.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:20px;">No updates or messages yet.</div>';
-                            } else {
-                                data.messages.forEach(msg => {
-                                    const isMe = parseInt(msg.sender_id) === parseInt(data.my_id);
-                                    const align = isMe ? 'flex-end' : 'flex-start';
-                                    const bg = isMe ? 'var(--primary-light)' : 'var(--card-bg)';
-                                    const color = isMe ? '#ffffff' : 'var(--text-main)';
-                                    const border = isMe ? 'transparent' : 'var(--border-color)';
-                                    
-                                    let attachmentHtml = '';
-                                    if (msg.attachment) {
-                                        attachmentHtml = `<div style="margin-top:8px;"><a href="${msg.attachment}" target="_blank" style="font-size:12px; color:${isMe?'#93c5fd':'var(--accent-blue)'}; text-decoration:underline;"><i class="fa fa-paperclip"></i> View Attachment</a></div>`;
-                                    }
-                                    
-                                    const timeStr = new Date(msg.created_at).toLocaleString();
-                                    
-                                    const msgDiv = document.createElement('div');
-                                    msgDiv.style.display = 'flex';
-                                    msgDiv.style.flexDirection = 'column';
-                                    msgDiv.style.alignItems = align;
-                                    msgDiv.style.marginBottom = '12px';
-                                    
-                                    msgDiv.innerHTML = `
-                                        <div style="background:${bg}; color:${color}; border:1px solid ${border}; padding:12px 16px; border-radius:12px; max-width:80%; font-size:14px; box-shadow:var(--shadow-sm);">
-                                            <div style="margin-bottom:4px; font-weight:bold; font-size:12px; opacity:0.8;">${isMe ? 'You' : msg.sender_name}</div>
-                                            <div style="margin-bottom:4px; word-wrap:break-word; white-space:pre-wrap;">${msg.message.replace(/</g, '&lt;')}</div>
-                                            ${attachmentHtml}
-                                            <div style="font-size:10px; opacity:0.7; text-align:right; margin-top:6px;">${timeStr}</div>
-                                        </div>
-                                    `;
-                                    container.appendChild(msgDiv);
-                                });
-                                container.scrollTop = container.scrollHeight;
-                            }
-                        } else {
-                            container.innerHTML = '<div style="text-align:center; color:var(--accent-red);">Failed to load messages.</div>';
-                        }
-                    });
-            };
-
-            window.sendAuditorMessage = function() {
-                const form = document.getElementById('auditorMessageForm');
-                const formData = new FormData(form);
-                formData.append('action', 'send_message');
-                
-                if (!formData.get('message').trim() && !document.getElementById('auditorMsgFile').files.length) {
-                    alert("Please enter a message or attach a file.");
-                    return;
-                }
-
-                const submitBtn = form.querySelector('button[type="submit"]');
-                submitBtn.disabled = true;
-                submitBtn.innerText = 'Sending...';
-
-                fetch('ajax_messages.php', { method: 'POST', body: formData })
-                    .then(r => r.json())
-                    .then(data => {
-                        submitBtn.disabled = false;
-                        submitBtn.innerText = 'Send Reply';
-                        if (data.success) {
-                            document.getElementById('auditorMsgText').value = '';
-                            document.getElementById('auditorMsgFile').value = '';
-                            loadAuditorMessages();
-                        } else {
-                            alert("Error: " + data.message);
-                        }
-                    })
-                    .catch(err => {
-                        submitBtn.disabled = false;
-                        submitBtn.innerText = 'Send Reply';
-                        alert("Error sending message.");
-                    });
-            };
 
         });
     </script>
