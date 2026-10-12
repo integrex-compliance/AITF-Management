@@ -1910,7 +1910,7 @@
                                 <?php endif; ?>
                             </div>
 
-                            <!-- Applicable Records & Work Description Side-by-Side Row -->
+                            <!-- Applicable Records & Resource Issue Record Side-by-Side Row -->
                             <div class="row" style="margin: 16px 8px 0 8px; display: flex; flex-wrap: wrap;">
                                 <div class="col-sm-6" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
                                     <!-- 1. APPLICABLE RECORDS (BLUE / SAPPHIRE THEME) -->
@@ -1978,29 +1978,29 @@
                                 </div>
 
                                 <div class="col-sm-6" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
-                                    <!-- 2. WORK DESCRIPTION (EMERALD GREEN THEME) -->
-                                    <div class="profile-records-container records-theme-emerald" style="width: 100%; flex: 1;">
+                                    <!-- 2. RESOURCE ISSUE RECORD (WARM AMBER / ORANGE THEME) -->
+                                    <div class="profile-records-container records-theme-amber" style="width: 100%; flex: 1;">
                                         <div class="records-section-title">
                                             <div class="records-title-main">
                                                 <div class="records-title-icon-wrap">
-                                                    <i class="fa fa-briefcase"></i>
+                                                    <i class="fa fa-exclamation-circle"></i>
                                                 </div>
                                                 <div class="records-title-text">
-                                                    <span class="records-title-heading">Work Description &amp; Responsibilities</span>
-                                                    <span class="records-title-sub">Main Responsibilities, Authorities &amp; Reporting</span>
+                                                    <span class="records-title-heading">Resource Issue Record</span>
+                                                    <span class="records-title-sub">Hardware, software, access &amp; resource issue logs</span>
                                                 </div>
                                             </div>
-                                            <?php if (!empty($workDescGroups)): ?>
-                                                <span class="records-badge-count"><?php echo count($workDescGroups); ?> Group<?php echo count($workDescGroups) > 1 ? 's' : ''; ?></span>
+                                            <?php if (!empty($resIssueGroups)): ?>
+                                                <span class="records-badge-count"><?php echo count($resIssueGroups); ?> Group<?php echo count($resIssueGroups) > 1 ? 's' : ''; ?></span>
                                             <?php endif; ?>
                                         </div>
-                                        <?php if (!empty($workDescGroups)): ?>
-                                            <?php foreach ($workDescGroups as $grp): ?>
+                                        <?php if (!empty($resIssueGroups)): ?>
+                                            <?php foreach ($resIssueGroups as $grp): ?>
                                                 <?php if (!empty($grp['header'])): ?>
                                                     <div class="record-category-card">
                                                         <div class="record-category-header">
                                                             <div style="display: flex; align-items: center; gap: 8px;">
-                                                                <i class="fa fa-tasks"></i>
+                                                                <i class="fa fa-wrench"></i>
                                                                 <span><?php echo htmlspecialchars($grp['header']); ?></span>
                                                             </div>
                                                             <?php if (!empty($grp['items'])): ?>
@@ -2012,7 +2012,7 @@
                                                                 <?php foreach ($grp['items'] as $index => $item): ?>
                                                                     <div class="record-clean-item">
                                                                         <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                        <i class="fa fa-check-square-o record-clean-icon"></i>
+                                                                        <i class="fa fa-exclamation-circle record-clean-icon"></i>
                                                                         <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                                                     </div>
                                                                 <?php endforeach; ?>
@@ -2026,7 +2026,7 @@
                                                         <?php foreach ($grp['items'] as $index => $item): ?>
                                                             <div class="record-clean-item">
                                                                 <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                <i class="fa fa-check-square-o record-clean-icon"></i>
+                                                                <i class="fa fa-exclamation-circle record-clean-icon"></i>
                                                                 <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                                             </div>
                                                         <?php endforeach; ?>
@@ -2043,30 +2043,30 @@
                                 </div>
                             </div>
 
-                            <!-- 3. RESOURCE ISSUE RECORD (WARM AMBER / ORANGE THEME) -->
+                            <!-- 3. WORK DESCRIPTION (EMERALD GREEN THEME) -->
                             <div style="margin: 0 16px 20px 16px; clear: both;">
-                                <div class="profile-records-container records-theme-amber">
+                                <div class="profile-records-container records-theme-emerald">
                                     <div class="records-section-title">
                                         <div class="records-title-main">
                                             <div class="records-title-icon-wrap">
-                                                <i class="fa fa-exclamation-circle"></i>
+                                                <i class="fa fa-briefcase"></i>
                                             </div>
                                             <div class="records-title-text">
-                                                <span class="records-title-heading">Resource Issue Record</span>
-                                                <span class="records-title-sub">Hardware, software, access &amp; resource issue logs</span>
+                                                <span class="records-title-heading">Work Description &amp; Responsibilities</span>
+                                                <span class="records-title-sub">Main Responsibilities, Authorities &amp; Reporting</span>
                                             </div>
                                         </div>
-                                        <?php if (!empty($resIssueGroups)): ?>
-                                            <span class="records-badge-count"><?php echo count($resIssueGroups); ?> Group<?php echo count($resIssueGroups) > 1 ? 's' : ''; ?></span>
+                                        <?php if (!empty($workDescGroups)): ?>
+                                            <span class="records-badge-count"><?php echo count($workDescGroups); ?> Group<?php echo count($workDescGroups) > 1 ? 's' : ''; ?></span>
                                         <?php endif; ?>
                                     </div>
-                                    <?php if (!empty($resIssueGroups)): ?>
-                                        <?php foreach ($resIssueGroups as $grp): ?>
+                                    <?php if (!empty($workDescGroups)): ?>
+                                        <?php foreach ($workDescGroups as $grp): ?>
                                             <?php if (!empty($grp['header'])): ?>
                                                 <div class="record-category-card">
                                                     <div class="record-category-header">
                                                         <div style="display: flex; align-items: center; gap: 8px;">
-                                                            <i class="fa fa-wrench"></i>
+                                                            <i class="fa fa-tasks"></i>
                                                             <span><?php echo htmlspecialchars($grp['header']); ?></span>
                                                         </div>
                                                         <?php if (!empty($grp['items'])): ?>
@@ -2078,7 +2078,7 @@
                                                             <?php foreach ($grp['items'] as $index => $item): ?>
                                                                 <div class="record-clean-item">
                                                                     <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                    <i class="fa fa-exclamation-circle record-clean-icon"></i>
+                                                                    <i class="fa fa-check-square-o record-clean-icon"></i>
                                                                     <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                                                 </div>
                                                             <?php endforeach; ?>
@@ -2092,7 +2092,7 @@
                                                     <?php foreach ($grp['items'] as $index => $item): ?>
                                                         <div class="record-clean-item">
                                                             <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                            <i class="fa fa-exclamation-circle record-clean-icon"></i>
+                                                            <i class="fa fa-check-square-o record-clean-icon"></i>
                                                             <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                                         </div>
                                                     <?php endforeach; ?>

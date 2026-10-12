@@ -1864,7 +1864,7 @@ aitf_touch_login_activity($db);
                     </div>
                 </div>
 
-                <!-- 2 Column Row: Applicable Records & Work Description -->
+                <!-- 2 Column Row: Applicable Records & Resource Issue Record -->
                 <div class="row" style="margin: 0 -8px 20px -8px; display: flex; flex-wrap: wrap;">
                     <!-- 1. APPLICABLE RECORDS (BLUE / SAPPHIRE THEME) -->
                     <div class="col-sm-6" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
@@ -1889,7 +1889,7 @@ aitf_touch_login_activity($db);
                                         <div class="record-category-card">
                                             <div class="record-category-header">
                                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                                    <i class="far fa-folder"></i>
+                                                    <i class="far fa-folder-open"></i>
                                                     <span><?php echo htmlspecialchars($grp['header']); ?></span>
                                                 </div>
                                                 <?php if (!empty($grp['items'])): ?>
@@ -1931,30 +1931,30 @@ aitf_touch_login_activity($db);
                         </div>
                     </div>
 
-                    <!-- 2. WORK DESCRIPTION (EMERALD GREEN THEME) -->
+                    <!-- 2. RESOURCE ISSUE RECORD (WARM AMBER / ORANGE THEME) -->
                     <div class="col-sm-6" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
-                        <div class="profile-records-container records-theme-emerald" style="width: 100%; flex: 1;">
+                        <div class="profile-records-container records-theme-amber" style="width: 100%; flex: 1;">
                             <div class="records-section-title">
                                 <div class="records-title-main">
                                     <div class="records-title-icon-wrap">
-                                        <i class="fas fa-briefcase"></i>
+                                        <i class="fas fa-exclamation-triangle"></i>
                                     </div>
                                     <div class="records-title-text">
-                                        <span class="records-title-heading">Work Description &amp; Responsibilities</span>
-                                        <span class="records-title-sub">Main Responsibilities, Authorities &amp; Reporting</span>
+                                        <span class="records-title-heading">Resource Issue Record</span>
+                                        <span class="records-title-sub">Hardware, software, access &amp; resource issue logs</span>
                                     </div>
                                 </div>
-                                <?php if (!empty($audWorkDescGroups)): ?>
-                                    <span class="records-badge-count"><?php echo count($audWorkDescGroups); ?> Group<?php echo count($audWorkDescGroups) > 1 ? 's' : ''; ?></span>
+                                <?php if (!empty($audResIssueGroups)): ?>
+                                    <span class="records-badge-count"><?php echo count($audResIssueGroups); ?> Group<?php echo count($audResIssueGroups) > 1 ? 's' : ''; ?></span>
                                 <?php endif; ?>
                             </div>
-                            <?php if (!empty($audWorkDescGroups)): ?>
-                                <?php foreach ($audWorkDescGroups as $grp): ?>
+                            <?php if (!empty($audResIssueGroups)): ?>
+                                <?php foreach ($audResIssueGroups as $grp): ?>
                                     <?php if (!empty($grp['header'])): ?>
                                         <div class="record-category-card">
                                             <div class="record-category-header">
                                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                                    <i class="fas fa-tasks"></i>
+                                                    <i class="fas fa-wrench"></i>
                                                     <span><?php echo htmlspecialchars($grp['header']); ?></span>
                                                 </div>
                                                 <?php if (!empty($grp['items'])): ?>
@@ -1966,7 +1966,7 @@ aitf_touch_login_activity($db);
                                                     <?php foreach ($grp['items'] as $index => $item): ?>
                                                         <div class="record-clean-item">
                                                             <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                            <i class="far fa-check-square record-clean-icon"></i>
+                                                            <i class="fas fa-exclamation-circle record-clean-icon"></i>
                                                             <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                                         </div>
                                                     <?php endforeach; ?>
@@ -1980,7 +1980,7 @@ aitf_touch_login_activity($db);
                                             <?php foreach ($grp['items'] as $index => $item): ?>
                                                 <div class="record-clean-item">
                                                     <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                    <i class="far fa-check-square record-clean-icon"></i>
+                                                    <i class="fas fa-exclamation-circle record-clean-icon"></i>
                                                     <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                                 </div>
                                             <?php endforeach; ?>
@@ -1997,30 +1997,30 @@ aitf_touch_login_activity($db);
                     </div>
                 </div>
 
-                <!-- 3. RESOURCE ISSUE RECORD (WARM AMBER / ORANGE THEME) -->
+                <!-- 3. WORK DESCRIPTION (EMERALD GREEN THEME) -->
                 <div style="margin-bottom: 24px;">
-                    <div class="profile-records-container records-theme-amber">
+                    <div class="profile-records-container records-theme-emerald">
                         <div class="records-section-title">
                             <div class="records-title-main">
                                 <div class="records-title-icon-wrap">
-                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <i class="fas fa-briefcase"></i>
                                 </div>
                                 <div class="records-title-text">
-                                    <span class="records-title-heading">Resource Issue Record</span>
-                                    <span class="records-title-sub">Hardware, software, access &amp; resource issue logs</span>
+                                    <span class="records-title-heading">Work Description &amp; Responsibilities</span>
+                                    <span class="records-title-sub">Main Responsibilities, Authorities &amp; Reporting</span>
                                 </div>
                             </div>
-                            <?php if (!empty($audResIssueGroups)): ?>
-                                <span class="records-badge-count"><?php echo count($audResIssueGroups); ?> Group<?php echo count($audResIssueGroups) > 1 ? 's' : ''; ?></span>
+                            <?php if (!empty($audWorkDescGroups)): ?>
+                                <span class="records-badge-count"><?php echo count($audWorkDescGroups); ?> Group<?php echo count($audWorkDescGroups) > 1 ? 's' : ''; ?></span>
                             <?php endif; ?>
                         </div>
-                        <?php if (!empty($audResIssueGroups)): ?>
-                            <?php foreach ($audResIssueGroups as $grp): ?>
+                        <?php if (!empty($audWorkDescGroups)): ?>
+                            <?php foreach ($audWorkDescGroups as $grp): ?>
                                 <?php if (!empty($grp['header'])): ?>
                                     <div class="record-category-card">
                                         <div class="record-category-header">
                                             <div style="display: flex; align-items: center; gap: 8px;">
-                                                <i class="fas fa-wrench"></i>
+                                                <i class="fas fa-tasks"></i>
                                                 <span><?php echo htmlspecialchars($grp['header']); ?></span>
                                             </div>
                                             <?php if (!empty($grp['items'])): ?>
@@ -2032,7 +2032,7 @@ aitf_touch_login_activity($db);
                                                 <?php foreach ($grp['items'] as $index => $item): ?>
                                                     <div class="record-clean-item">
                                                         <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                        <i class="fas fa-exclamation-circle record-clean-icon"></i>
+                                                        <i class="far fa-check-square record-clean-icon"></i>
                                                         <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                                     </div>
                                                 <?php endforeach; ?>
@@ -2046,7 +2046,7 @@ aitf_touch_login_activity($db);
                                         <?php foreach ($grp['items'] as $index => $item): ?>
                                             <div class="record-clean-item">
                                                 <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                <i class="fas fa-exclamation-circle record-clean-icon"></i>
+                                                <i class="far fa-check-square record-clean-icon"></i>
                                                 <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                             </div>
                                         <?php endforeach; ?>
