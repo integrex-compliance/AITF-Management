@@ -67,11 +67,11 @@ if (!function_exists('aitf_ensure_guidelines_schema')) {
 }
 
 if (!function_exists('aitf_get_all_system_users')) {
-    function aitf_get_all_system_users(PDO $db)
+    function aitf_get_all_system_users(PDO $db, $includeAuditorsTable = false)
     {
         $users = [];
 
-        // 1. Fetch from 'user' table
+        // 1. Fetch from 'user' table (Users added via Add User)
         try {
             $stmt = $db->query("SELECT user_id, user_name, abbreviation, email_id, role, 'user' as user_type 
                                 FROM user 
@@ -94,38 +94,40 @@ if (!function_exists('aitf_get_all_system_users')) {
             error_log("Error fetching users for guidelines: " . $e->getMessage());
         }
 
-        // 2. Also fetch auditors from 'auditors' table if not already represented
-        try {
-            $audStmt = $db->query("SELECT auditors_id, auditor_name, abbrevation, auditor_email, login_email FROM auditors ORDER BY auditor_name ASC");
-            while ($row = $audStmt->fetch(PDO::FETCH_ASSOC)) {
-                $aid = (int)$row['auditors_id'];
-                $email = !empty($row['login_email']) ? trim($row['login_email']) : trim((string)$row['auditor_email']);
-                $name = trim((string)$row['auditor_name']);
-                
-                // Check if already in $users by email or name
-                $alreadyAdded = false;
-                foreach ($users as $u) {
-                    if ((!empty($email) && strtolower($u['email']) === strtolower($email)) || 
-                        (strtolower($u['name']) === strtolower($name))) {
-                        $alreadyAdded = true;
-                        break;
+        // 2. Also fetch auditors from 'auditors' table if explicitly requested
+        if ($includeAuditorsTable) {
+            try {
+                $audStmt = $db->query("SELECT auditors_id, auditor_name, abbrevation, auditor_email, login_email FROM auditors ORDER BY auditor_name ASC");
+                while ($row = $audStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $aid = (int)$row['auditors_id'];
+                    $email = !empty($row['login_email']) ? trim($row['login_email']) : trim((string)$row['auditor_email']);
+                    $name = trim((string)$row['auditor_name']);
+                    
+                    // Check if already in $users by email or name
+                    $alreadyAdded = false;
+                    foreach ($users as $u) {
+                        if ((!empty($email) && strtolower($u['email']) === strtolower($email)) || 
+                            (strtolower($u['name']) === strtolower($name))) {
+                            $alreadyAdded = true;
+                            break;
+                        }
+                    }
+                    if (!$alreadyAdded && !empty($name)) {
+                        $key = 'auditor_' . $aid;
+                        $users[$key] = [
+                            'key' => $key,
+                            'user_id' => $aid,
+                            'user_type' => 'auditor',
+                            'name' => $name,
+                            'email' => $email,
+                            'role' => 'Auditor',
+                            'abbreviation' => trim((string)($row['abbrevation'] ?? ''))
+                        ];
                     }
                 }
-                if (!$alreadyAdded && !empty($name)) {
-                    $key = 'auditor_' . $aid;
-                    $users[$key] = [
-                        'key' => $key,
-                        'user_id' => $aid,
-                        'user_type' => 'auditor',
-                        'name' => $name,
-                        'email' => $email,
-                        'role' => 'Auditor',
-                        'abbreviation' => trim((string)($row['abbrevation'] ?? ''))
-                    ];
-                }
+            } catch (Exception $e) {
+                error_log("Error fetching auditors for guidelines: " . $e->getMessage());
             }
-        } catch (Exception $e) {
-            error_log("Error fetching auditors for guidelines: " . $e->getMessage());
         }
 
         return array_values($users);
@@ -279,8 +281,8 @@ if (!function_exists('aitf_assign_guideline_to_users')) {
             return ['success' => false, 'message' => 'Guideline not found.'];
         }
 
-        // Fetch all system users to match metadata
-        $allUsers = aitf_get_all_system_users($db);
+        // Fetch all system users (including auditors if needed) to match metadata
+        $allUsers = aitf_get_all_system_users($db, true);
         $usersByKey = [];
         foreach ($allUsers as $u) {
             $usersByKey[$u['key']] = $u;

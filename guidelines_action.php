@@ -120,7 +120,7 @@ if ($action === 'get_guideline_assignment_info') {
         sendResponse(false, 'Guideline not found.', [], true);
     }
 
-    $allUsers = aitf_get_all_system_users($db);
+    $allUsers = aitf_get_all_system_users($db, true);
     $recipients = $guideline['recipients'] ?? [];
     $recipientKeys = $guideline['recipient_keys'] ?? [];
 

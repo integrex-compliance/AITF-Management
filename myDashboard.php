@@ -24,10 +24,10 @@
         || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()))
         || in_array($actualLoggedInRole, ['Director', 'Top Mgmt', 'Main Admin', 'Admin'], true);
 
-    // 3. Fetch all system users for Management Switcher
+    // 3. Fetch all system users for Management Switcher (Strictly only users created via Add User / 'user' table)
     $allSystemUsers = [];
     if ($isManagementUser && function_exists('aitf_get_all_system_users') && isset($db) && $db) {
-        $allSystemUsers = aitf_get_all_system_users($db);
+        $allSystemUsers = aitf_get_all_system_users($db, false);
     }
 
     // 4. Fetch default logged-in user details with robust error handling
@@ -1746,7 +1746,7 @@
                             <select id="dashUserSwitcherSelect" class="form-control" style="height: 34px; font-size: 12.5px; border-radius: 8px; border: 1.5px solid <?php echo $isViewingOther ? '#2563eb' : '#cbd5e1'; ?>; background: <?php echo $isViewingOther ? '#eff6ff' : '#ffffff'; ?>; color: <?php echo $isViewingOther ? '#1e40af' : '#0f172a'; ?>; padding: 4px 26px 4px 10px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                                 <option value="" <?php echo !$isViewingOther ? 'selected' : ''; ?>>👤 My Dashboard (Self)</option>
                                 <?php if (!empty($allSystemUsers)): ?>
-                                    <optgroup label="System Users &amp; Staff">
+                                    <optgroup label="All Users (<?php echo count($allSystemUsers); ?>)">
                                         <?php foreach ($allSystemUsers as $su): 
                                             $suKey = $su['key'];
                                             $isSel = ($isViewingOther && $currentViewKey === $suKey);
