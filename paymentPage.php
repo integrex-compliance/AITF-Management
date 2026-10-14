@@ -2558,7 +2558,7 @@ if (!aitf_has_access("Payment Due")) {
             }
             renderReminderAttachments();
 
-            // Fetch any additional server service documents
+            // Fetch / verify service invoice attachments from server
             $.getJSON('getPaymentDueAttachments.php', { customerId: id, headerKey: activeReminderData.headerKey })
                 .done(function (res) {
                     if (res && res.success && Array.isArray(res.attachments)) {

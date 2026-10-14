@@ -71,75 +71,7 @@ if (!function_exists('aitf_get_service_attachments')) {
             }
         }
 
-        // 2. Also check if there are any uploaded service files for this customer in service_type_*
-        $baseDir = realpath(__DIR__ . '/..');
-        $serviceTableMap = [
-            'service_type_ca' => ['application_form' => 'Application Form', 'certification_aggrement' => 'Agreement', 'signed_notification' => 'Signed Notification', 'signed_copy' => 'Signed Copy', 'audit_report_I' => 'Audit Report I', 'signed_notification_II' => 'Signed Noti II', 'audit_report_II' => 'Audit Report II', 'certificate_print' => 'Certificate'],
-            'service_type_cr' => ['application_form' => 'Application Form', 'certification_aggrement' => 'Agreement'],
-            'service_type_rc' => ['rc_application_form' => 'RC Application', 'rc_certification_aggrement' => 'RC Agreement', 'rc_signed_noti' => 'RC Signed Noti', 'rc_signed_copy' => 'RC Signed Copy', 'rc_audit_report' => 'RC Audit Report', 'certificate_print' => 'Certificate'],
-            'service_type_sai' => ['info_update_form' => 'Info Update Form', 'signed_noti_sai' => 'SA-I Signed Noti', 'signed_copy_sai' => 'SA-I Signed Copy', 'audit_report_sai' => 'SA-I Audit Report', 'certificate_print' => 'Certificate'],
-            'service_type_saii' => ['update_info_saii' => 'Info Update Form', 'signed_noti_saii' => 'SA-II Signed Noti', 'signed_copy_saii' => 'SA-II Signed Copy', 'audit_report_saii' => 'SA-II Audit Report', 'certificate_print' => 'Certificate'],
-            'service_type_sp' => ['sp_signed_noti' => 'SP Signed Noti', 'sp_signed_copy' => 'SP Signed Copy', 'sp_audit_report' => 'SP Audit Report', 'certificate_upload' => 'Certificate'],
-            'service_type_ta' => ['signed_notification' => 'TA Notification', 'release_schedule' => 'Release Schedule', 'audit_report' => 'TA Audit Report', 'review_report' => 'Review Report']
-        ];
-
-        // Determine if headerKey maps to specific service types
-        $hkUpper = strtoupper($headerKey);
-        $tablesToCheck = [];
-        if (strpos($hkUpper, 'CA') !== false) {
-            $tablesToCheck[] = 'service_type_ca';
-        } elseif (strpos($hkUpper, 'RC') !== false) {
-            $tablesToCheck[] = 'service_type_rc';
-        } elseif (strpos($hkUpper, 'SA-I') !== false || strpos($hkUpper, 'SAI') !== false) {
-            $tablesToCheck[] = 'service_type_sai';
-        } elseif (strpos($hkUpper, 'SA-II') !== false || strpos($hkUpper, 'SAII') !== false) {
-            $tablesToCheck[] = 'service_type_saii';
-        } elseif (strpos($hkUpper, 'CR') !== false) {
-            $tablesToCheck[] = 'service_type_cr';
-        } elseif (strpos($hkUpper, 'SP') !== false) {
-            $tablesToCheck[] = 'service_type_sp';
-        } elseif (strpos($hkUpper, 'TA') !== false) {
-            $tablesToCheck[] = 'service_type_ta';
-        } else {
-            // Check all relevant service tables
-            $tablesToCheck = array_keys($serviceTableMap);
-        }
-
-        foreach ($tablesToCheck as $tbl) {
-            $fields = $serviceTableMap[$tbl] ?? [];
-            if (empty($fields)) continue;
-
-            $custCol = in_array($tbl, ['service_type_rc', 'service_type_sp']) ? ($tbl === 'service_type_rc' ? 'rc_customer' : 'sp_customer') : 'customer_id';
-            try {
-                $stmt = $db->prepare("SELECT * FROM `{$tbl}` WHERE `{$custCol}` = :cid ORDER BY 1 DESC LIMIT 3");
-                $stmt->execute([':cid' => $customerId]);
-                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    foreach ($fields as $colName => $colLabel) {
-                        $rawPath = trim((string)($row[$colName] ?? ''));
-                        if ($rawPath === '' || $rawPath === 'NONC' || strtolower($rawPath) === 'null') {
-                            continue;
-                        }
-                        $cleanRel = ltrim(str_replace('\\', '/', $rawPath), '/');
-                        $fullPath = $baseDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $cleanRel);
-                        if (file_exists($fullPath) && is_file($fullPath)) {
-                            $fSize = filesize($fullPath);
-                            $bName = basename($cleanRel);
-                            $attachments[] = [
-                                'id' => 'doc_' . md5($cleanRel),
-                                'type' => 'service_doc',
-                                'doc_path' => $cleanRel,
-                                'name' => $bName,
-                                'label' => $colLabel . ' (' . $bName . ')',
-                                'sublabel' => aitf_format_file_size($fSize),
-                                'badge' => 'Service Doc',
-                                'badge_class' => 'badge-service-doc'
-                            ];
-                        }
-                    }
-                }
-            } catch (Throwable $e) {}
-        }
-
+        // Only invoices belong to payment reminders (signed docs, audit reports, and certificates are excluded)
         return $attachments;
     }
 }
