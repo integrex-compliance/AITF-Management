@@ -1350,12 +1350,12 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <li class="flyout-item nested-flyout-group sales-subgroup <?php echo $isSalesActive ? 'active' : ''; ?>">
                     <a href="javascript:void(0);" class="flyout-link nested-trigger-link <?php echo $isSalesActive ? 'active' : ''; ?>" title="SALES">
                         <i class="fa fa-shopping-cart flyout-ico" style="color: #38bdf8;"></i>
-                        <span class="flyout-text">SALES</span>
+                        <span class="flyout-text">SALES/ RECEIVABLE</span>
                         <i class="fa fa-angle-right flyout-item-arrow"></i>
                     </a>
                     <ul class="sidebar-subflyout-menu sales-subflyout">
                         <li class="subflyout-header">
-                            <span><i class="fa fa-shopping-cart" style="color: #38bdf8; margin-right: 5px;"></i> SALES</span>
+                            <span><i class="fa fa-shopping-cart" style="color: #38bdf8; margin-right: 5px;"></i> SALES/ RECEIVABLE</span>
                         </li>
                         <?php if ($canAccessInvoices) { ?>
                         <li class="subflyout-item">
@@ -1396,12 +1396,12 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <li class="flyout-item nested-flyout-group purchase-subgroup <?php echo $isPurchaseActive ? 'active' : ''; ?>">
                     <a href="javascript:void(0);" class="flyout-link nested-trigger-link <?php echo $isPurchaseActive ? 'active' : ''; ?>" title="PURCHASE">
                         <i class="fa fa-truck flyout-ico" style="color: #f472b6;"></i>
-                        <span class="flyout-text">PURCHASE</span>
+                        <span class="flyout-text">PAYABLES</span>
                         <i class="fa fa-angle-right flyout-item-arrow"></i>
                     </a>
                     <ul class="sidebar-subflyout-menu purchase-subflyout">
                         <li class="subflyout-header">
-                            <span><i class="fa fa-truck" style="color: #f472b6; margin-right: 5px;"></i> PURCHASE</span>
+                            <span><i class="fa fa-truck" style="color: #f472b6; margin-right: 5px;"></i> PAYABLES</span>
                         </li>
                         <?php if ($canAccessBills) { ?>
                         <li class="subflyout-item">
@@ -3238,12 +3238,3 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
 })();
 </script>
 <!-- ===== END SIDEBAR FLYOUT SCRIPT ===== -->
-
-<script>
-    document.addEventListener('click', function (event) {
-        var disabledTaskManagerLink = event.target.closest('.task-manager-disabled-link');
-        if (disabledTaskManagerLink) {
-            event.preventDefault();
-        }
-    });
-</script>
