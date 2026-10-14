@@ -19,10 +19,13 @@
     $actualLoggedInRole = (string)($_SESSION['role'] ?? '');
     $actualLoggedInUsername = (string)($_SESSION['username'] ?? '');
 
-    // 2. Check if logged-in user has Management / Director privileges
-    $isManagementUser = (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($actualLoggedInRole))
+    // 2. Check if logged-in user has Management / Admin / Finance privileges (for View Other Dashboard & Task Assignment)
+    require_once __DIR__ . '/include/task_lib.php';
+    $canManageTasks = aitf_can_manage_tasks($actualLoggedInRole);
+    $isManagementUser = $canManageTasks
+        || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($actualLoggedInRole))
         || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()))
-        || in_array($actualLoggedInRole, ['Director', 'Top Mgmt', 'Main Admin', 'Admin'], true);
+        || in_array(strtolower(trim($actualLoggedInRole)), ['director', 'top mgmt', 'mgmt', 'main admin', 'admin', 'finance'], true);
 
     // 3. Fetch all system users for Management Switcher (Strictly only users created via Add User / 'user' table)
     $allSystemUsers = [];
@@ -1716,6 +1719,17 @@
         <div class="page-content inset">
             <div class="container-fluid my-dash-container">
                 
+                <?php
+                $dashTaskUid = (int)($userRow['user_id'] ?? $actualLoggedInUserId);
+                $dashPendingTaskCount = 0;
+                if ($dashTaskUid > 0 && isset($db) && $db) {
+                    try {
+                        $tCountStmt = $db->prepare("SELECT COUNT(*) FROM `aitf_tasks` WHERE `assigned_to_user_id` = :uid AND `status` = 'pending' AND `is_deleted` = 0");
+                        $tCountStmt->execute([':uid' => $dashTaskUid]);
+                        $dashPendingTaskCount = (int)$tCountStmt->fetchColumn();
+                    } catch (Throwable $e) {}
+                }
+                ?>
                 <!-- 1. Tabs Bar -->
                 <div class="dash-tabs-bar" role="tablist">
                     <button type="button" class="dash-tab-btn active" data-target="#pane-profile">
@@ -2134,33 +2148,25 @@
                             <i class="fa fa-tasks"></i> Task Management
                         </div>
                         <div class="well master-profile-well" style="padding: 24px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-                                <div>
-                                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">
-                                        <i class="fa fa-check-square-o" style="color: #0284c7; margin-right: 6px;"></i> Assigned Tasks &amp; Activities
-                                    </h4>
-                                    <p style="margin: 4px 0 0 0; font-size: 12.5px; color: #64748b;">
-                                        Track, manage and view your assigned workflow tasks
-                                    </p>
-                                </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <span class="mc-stat-pill" style="padding: 5px 12px; font-size: 12px;">
-                                        <span class="mc-stat-icon icon-blue" style="width: 24px; height: 24px; font-size: 11px;"><i class="fa fa-clock-o"></i></span>
-                                        <strong>Active Tasks</strong>
-                                    </span>
-                                </div>
-                            </div>
-                            
                             <div class="dash-placeholder-box">
-                                <div class="dash-placeholder-icon" style="background: rgba(2, 132, 199, 0.12); color: #0284c7;">
+                                <div class="dash-placeholder-icon" style="background: rgba(37, 99, 235, 0.12); color: #2563eb;">
                                     <i class="fa fa-tasks"></i>
                                 </div>
-                                <h4 class="dash-placeholder-title">Task Management Section</h4>
+                                <h4 class="dash-placeholder-title">Coming Soon</h4>
                                 <p class="dash-placeholder-desc">
-                                    No pending tasks assigned currently. New tasks will be listed here with status, priority, and deadlines.
+                                    Task Management feature is currently under development and will be available soon.
                                 </p>
                             </div>
                         </div>
+                        <?php
+                        /*
+                        // Under development - will be enabled once fully complete:
+                        $targetDashboardUid = (int)($userRow['user_id'] ?? $actualLoggedInUserId);
+                        $targetDashboardName = $userName;
+                        $targetDashboardRole = $userRole;
+                        include __DIR__ . '/include/task_manager_component.php';
+                        */
+                        ?>
                     </div>
 
                     <!-- 4. Work Guidelines Tab Pane -->
@@ -2309,6 +2315,8 @@ $(document).ready(function() {
         $('.dash-tab-btn[data-target="' + hash + '"]').click();
     } else if (hash === '#guidelines' || hash === '#pane-guidelines' || hash === '#work-guidelines') {
         $('.dash-tab-btn[data-target="#pane-guidelines"]').click();
+    } else if (hash === '#tasks' || hash === '#task-mgmt' || hash === '#pane-task-mgmt' || hash === '#task') {
+        $('.dash-tab-btn[data-target="#pane-task-mgmt"]').click();
     }
 
     // Live filter for work guidelines

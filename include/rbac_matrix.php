@@ -43,6 +43,8 @@ function aitf_has_access($module) {
         'Client Analysis' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'App Review Objective' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Doc Upload Status' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
+        'KPI Analysis' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
+        'KPI ANALYSIS' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Audit Data' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Go AI' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
         
@@ -57,6 +59,8 @@ function aitf_has_access($module) {
         'Guidelines' => ['Admin', 'Office Staff', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Auditor', 'auditors', 'Application Reviewer', 'Application Reviewers', 'Report Reviewer', 'Marketing', 'Marketing Head', 'Marketing Executive', 'Working Project'],
         'My Dashboard' => ['Admin', 'Office Staff', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Auditor', 'auditors', 'Application Reviewer', 'Application Reviewers', 'Report Reviewer', 'Marketing', 'Marketing Head', 'Marketing Executive', 'Working Project', 'Management'],
         'MY DASHBOARD' => ['Admin', 'Office Staff', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Auditor', 'auditors', 'Application Reviewer', 'Application Reviewers', 'Report Reviewer', 'Marketing', 'Marketing Head', 'Marketing Executive', 'Working Project', 'Management'],
+        'Task Manager' => ['Admin', 'Office Staff', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Auditor', 'auditors', 'Application Reviewer', 'Application Reviewers', 'Report Reviewer', 'Marketing', 'Marketing Head', 'Marketing Executive', 'Working Project', 'Management'],
+        'TASK MANAGER' => ['Admin', 'Office Staff', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Auditor', 'auditors', 'Application Reviewer', 'Application Reviewers', 'Report Reviewer', 'Marketing', 'Marketing Head', 'Marketing Executive', 'Working Project', 'Management'],
     ];
 
     if (!array_key_exists($module, $access_matrix)) {

@@ -20,11 +20,13 @@ if (!aitf_has_access("Payment Due")) {
     require_once __DIR__ . '/include/payment_due_helper.php';
 
     $allPaymentInfo = aitf_get_due_payments($db);
-    $stmtFirm = $db->query("SELECT firm_bank, bank_ac_no, bank_ifsc_code FROM consulting_firm LIMIT 1");
+    $stmtFirm = $db->query("SELECT firm_name, firm_bank, bank_ac_no, bank_ifsc_code, firm_contact, firm_email FROM consulting_firm LIMIT 1");
     $firmInfo = $stmtFirm ? $stmtFirm->fetch(PDO::FETCH_ASSOC) : [];
     $firmBank = $firmInfo['firm_bank'] ?? 'Bank';
     $firmAc = $firmInfo['bank_ac_no'] ?? '';
     $firmIfsc = $firmInfo['bank_ifsc_code'] ?? '';
+    $firmContact = !empty($firmInfo['firm_contact']) ? trim($firmInfo['firm_contact']) : '9422011836';
+    $firmFormattedPhone = '+91 ' . preg_replace('/^(\d{5})(\d{5})$/', '$1 $2', $firmContact);
     ?>
     <style>
         /* Base typography & resets */
@@ -238,24 +240,48 @@ if (!aitf_has_access("Payment Due")) {
             font-size: 13px;
         }
 
-        /* Mail Count Badge */
+        /* Mail Count Badge (Interactive History Viewer) */
         .reminder-count-container {
-            margin-top: 4px;
+            margin-top: 5px;
             font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
+            font-weight: 700;
+            color: #0d4d8b;
             text-align: center;
             line-height: 1.2;
             white-space: nowrap;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .reminder-count-container:hover {
+            background: #0d4d8b;
+            color: #ffffff;
+            border-color: #0d4d8b;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(13, 77, 139, 0.25);
         }
 
         .reminder-count-container .reminder-count-val {
             font-weight: 800;
-            color: #0d4d8b;
-            background: #f1f5f9;
+            color: #1e40af;
+            background: #dbeafe;
             padding: 1px 6px;
             border-radius: 10px;
             display: inline-block;
+            transition: all 0.2s ease;
+        }
+
+        .reminder-count-container:hover .reminder-count-val {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
         }
 
         /* Action Mail Button */
@@ -857,7 +883,7 @@ if (!aitf_has_access("Payment Due")) {
         }
 
         .mail-preview-pane {
-            height: 200px;
+            height: 250px;
             overflow-y: auto;
             padding: 14px 16px;
             font-size: 13px;
@@ -879,6 +905,244 @@ if (!aitf_has_access("Payment Due")) {
             color: #0f172a !important;
             background: #ffffff !important;
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
+        }
+
+        .modern-body-editor-half {
+            width: 100% !important;
+            min-height: 95px !important;
+            box-sizing: border-box !important;
+            padding: 10px 14px !important;
+            font-size: 12.5px !important;
+            line-height: 1.55 !important;
+            border: none !important;
+            outline: none !important;
+            resize: vertical !important;
+            color: #0f172a !important;
+            background: #ffffff !important;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
+        }
+
+        /* Non-Editable Locked Bank Details Card in Editor */
+        .non-editable-bank-wrapper {
+            background: #f0fdf4;
+            border: 1.5px solid #86efac;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin: 8px 10px;
+            user-select: none;
+        }
+
+        .non-editable-bank-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 6px;
+            margin-bottom: 6px;
+            border-bottom: 1px dashed #bbf7d0;
+        }
+
+        .bank-lock-badge {
+            font-size: 11px;
+            font-weight: 800;
+            color: #166534;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .bank-lock-desc {
+            font-size: 10px;
+            font-weight: 600;
+            color: #15803d;
+            background: #dcfce7;
+            padding: 2px 7px;
+            border-radius: 4px;
+        }
+
+        .non-editable-bank-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px 14px;
+            font-size: 11.5px;
+        }
+
+        .bank-grid-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bank-grid-item label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #166534;
+            text-transform: uppercase;
+            margin: 0 0 1px 0;
+            letter-spacing: 0.3px;
+        }
+
+        .bank-grid-item span {
+            color: #0f172a;
+            font-weight: 700;
+            font-family: inherit;
+        }
+
+        .bank-ac-pill {
+            color: #15803d !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.5px;
+        }
+
+        /* Attachment Section in Reminder Modal */
+        .badge-attachment-count {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #e0f2fe;
+            color: #0369a1;
+            margin-left: 6px;
+        }
+
+        .btn-add-attachment {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            color: #0d4d8b;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 4px 11px;
+            border-radius: 7px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-add-attachment:hover {
+            background: #0d4d8b;
+            color: #ffffff;
+            border-color: #0d4d8b;
+        }
+
+        .attachments-help-text {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 8px;
+            line-height: 1.35;
+        }
+
+        .reminder-attachments-container {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 10px;
+            max-height: 165px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .attachment-card-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 6px 10px;
+            transition: background 0.15s ease;
+        }
+
+        .attachment-card-item:hover {
+            background: #f1f5f9;
+        }
+
+        .attachment-card-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .attachment-card-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .attachment-card-info {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .attachment-card-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .attachment-card-sub {
+            font-size: 11px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .attachment-badge {
+            font-size: 9.5px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-invoice {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .badge-service-doc {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+
+        .badge-manual {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .btn-remove-attachment {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .btn-remove-attachment:hover {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .attachments-empty-msg {
+            padding: 14px;
+            text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
+            font-style: italic;
         }
 
         .badge-auto-template {
@@ -1126,6 +1390,349 @@ if (!aitf_has_access("Payment Due")) {
             background: var(--pp-surface) !important;
             color: var(--pp-text-dim) !important;
         }
+
+        html.theme-dark .modern-body-editor-half {
+            background: var(--pp-surface-2) !important;
+            color: var(--pp-text) !important;
+        }
+
+        html.theme-dark .badge-attachment-count {
+            background: rgba(3, 105, 161, 0.25) !important;
+            color: #38bdf8 !important;
+        }
+
+        html.theme-dark .btn-add-attachment {
+            background: var(--pp-surface-2) !important;
+            color: #60a5fa !important;
+            border-color: var(--pp-border-2) !important;
+        }
+
+        html.theme-dark .btn-add-attachment:hover {
+            background: #1d4ed8 !important;
+            color: #ffffff !important;
+        }
+
+        html.theme-dark .reminder-attachments-container {
+            background: var(--pp-surface-2) !important;
+            border-color: var(--pp-border-2) !important;
+        }
+
+        html.theme-dark .attachment-card-item {
+            background: var(--pp-surface) !important;
+            border-color: var(--pp-border) !important;
+        }
+
+        html.theme-dark .attachment-card-item:hover {
+            background: var(--pp-surface-2) !important;
+        }
+
+        html.theme-dark .attachment-card-title {
+            color: var(--pp-text) !important;
+        }
+
+        html.theme-dark .non-editable-bank-wrapper {
+            background: rgba(22, 101, 52, 0.15) !important;
+            border-color: rgba(34, 197, 94, 0.35) !important;
+        }
+
+        html.theme-dark .non-editable-bank-banner {
+            border-bottom-color: rgba(34, 197, 94, 0.2) !important;
+        }
+
+        html.theme-dark .bank-lock-badge {
+            color: #4ade80 !important;
+        }
+
+        html.theme-dark .bank-lock-desc {
+            background: rgba(34, 197, 94, 0.2) !important;
+            color: #86efac !important;
+        }
+
+        html.theme-dark .bank-grid-item label {
+            color: #86efac !important;
+        }
+
+        html.theme-dark .bank-grid-item span {
+            color: var(--pp-text) !important;
+        }
+
+        html.theme-dark .bank-ac-pill {
+            color: #4ade80 !important;
+        }
+
+        /* Modern CC Notice Box in Reminder Modal */
+        .modern-cc-box {
+            margin-top: 6px;
+            padding: 7px 11px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-size: 11.5px;
+            color: #166534;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            line-height: 1.35;
+        }
+
+        .modern-cc-box i {
+            font-size: 13px;
+            color: #15803d;
+            flex-shrink: 0;
+        }
+
+        .cc-tag {
+            font-family: inherit;
+            font-weight: 700;
+            background: #dcfce7;
+            color: #14532d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            border: 1px solid #86efac;
+            font-size: 11px;
+        }
+
+        /* Reminder Email History Modal (Date & Time Log) */
+        #dueReminderHistoryModal .modal-dialog {
+            max-width: 620px !important;
+            width: 95% !important;
+            margin: 25px auto !important;
+        }
+
+        #dueReminderHistoryModal .modal-content {
+            border-radius: 20px !important;
+            overflow: hidden !important;
+            border: none !important;
+            box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08) !important;
+            background: #ffffff !important;
+        }
+
+        .history-count-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+
+        .reminder-timeline-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .timeline-card-item {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+            position: relative;
+        }
+
+        .timeline-card-item:hover {
+            border-color: #93c5fd;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.08);
+        }
+
+        .timeline-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+
+        .timeline-date-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .timeline-date-badge i {
+            color: #0d4d8b;
+            font-size: 13px;
+        }
+
+        .timeline-order-pill {
+            font-size: 10.5px;
+            font-weight: 700;
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 2px 7px;
+            border-radius: 999px;
+        }
+
+        .timeline-detail-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px 14px;
+            font-size: 12px;
+            color: #475569;
+            margin-bottom: 4px;
+        }
+
+        .timeline-detail-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .timeline-detail-item i {
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .timeline-email-val {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .timeline-cc-val {
+            color: #166534;
+            font-weight: 600;
+            background: #f0fdf4;
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid #bbf7d0;
+            font-size: 11px;
+        }
+
+        .timeline-service-pill {
+            font-size: 10.5px;
+            font-weight: 700;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 2px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .timeline-attachments-box {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 11.5px;
+        }
+
+        .timeline-att-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #334155;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 2px 8px;
+            margin-right: 5px;
+            margin-top: 4px;
+        }
+
+        /* Dark Mode Overrides for CC Notice & History Modal */
+        html.theme-dark .modern-cc-box {
+            background: rgba(22, 101, 52, 0.15) !important;
+            border-color: rgba(34, 197, 94, 0.35) !important;
+            color: #86efac !important;
+        }
+
+        html.theme-dark .modern-cc-box i {
+            color: #4ade80 !important;
+        }
+
+        html.theme-dark .cc-tag {
+            background: rgba(34, 197, 94, 0.2) !important;
+            border-color: rgba(34, 197, 94, 0.4) !important;
+            color: #bbf7d0 !important;
+        }
+
+        html.theme-dark #dueReminderHistoryModal .modal-content {
+            background: var(--pp-surface) !important;
+            border: 1px solid var(--pp-border) !important;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7) !important;
+        }
+
+        html.theme-dark .timeline-card-item {
+            background: var(--pp-surface-2) !important;
+            border-color: var(--pp-border-2) !important;
+        }
+
+        html.theme-dark .timeline-card-item:hover {
+            border-color: var(--pp-accent) !important;
+        }
+
+        html.theme-dark .timeline-card-header {
+            border-bottom-color: var(--pp-border) !important;
+        }
+
+        html.theme-dark .timeline-date-badge {
+            color: var(--pp-text) !important;
+        }
+
+        html.theme-dark .timeline-date-badge i {
+            color: #38bdf8 !important;
+        }
+
+        html.theme-dark .timeline-order-pill {
+            background: var(--pp-surface) !important;
+            color: var(--pp-text-dim) !important;
+        }
+
+        html.theme-dark .timeline-detail-row {
+            color: var(--pp-text-dim) !important;
+        }
+
+        html.theme-dark .timeline-email-val {
+            color: var(--pp-text) !important;
+        }
+
+        html.theme-dark .timeline-cc-val {
+            background: rgba(22, 101, 52, 0.2) !important;
+            border-color: rgba(34, 197, 94, 0.3) !important;
+            color: #86efac !important;
+        }
+
+        html.theme-dark .timeline-service-pill {
+            background: rgba(56, 189, 248, 0.15) !important;
+            color: #38bdf8 !important;
+        }
+
+        html.theme-dark .timeline-attachments-box {
+            border-top-color: var(--pp-border) !important;
+        }
+
+        html.theme-dark .timeline-att-badge {
+            background: var(--pp-surface) !important;
+            border-color: var(--pp-border) !important;
+            color: var(--pp-text) !important;
+        }
+
+        html.theme-dark #historyModalTimelineEmpty {
+            background: var(--pp-surface-2) !important;
+            border-color: var(--pp-border-2) !important;
+        }
+
+        html.theme-dark #historyModalTimelineEmpty h5 {
+            color: var(--pp-text) !important;
+        }
+
+        html.theme-dark #historyModalTimelineEmpty p {
+            color: var(--pp-text-dim) !important;
+        }
     </style>
 
     <div id="page-content-wrapper">
@@ -1157,7 +1764,7 @@ if (!aitf_has_access("Payment Due")) {
                                         <small><a>Client Name</a></small>
                                     </th>
                                     <th class="">
-                                        <small><a>Invoice Header</a></small>
+                                        <small><a>Service Name</a></small>
                                     </th>
                                     <th class="">
                                         <small><a>Invoices Issued</a></small>
@@ -1231,10 +1838,17 @@ if (!aitf_has_access("Payment Due")) {
                                                 data-total-inv="<?php echo number_format((float)($paymentInfo['total_inv'] ?? 0), 2, '.', ''); ?>"
                                                 data-total-paid="<?php echo number_format((float)($paymentInfo['total_paid'] ?? 0), 2, '.', ''); ?>"
                                                 data-total-tds="<?php echo number_format((float)($paymentInfo['total_tds'] ?? 0), 2, '.', ''); ?>"
+                                                data-invoices="<?php echo htmlspecialchars(json_encode($paymentInfo['invoices'] ?? []), ENT_QUOTES, 'UTF-8'); ?>"
                                                 title="Send Payment Reminder Email">
                                                 <i class="fa fa-envelope"></i>
                                             </button>
-                                            <div class="reminder-count-container" title="Reminder emails sent">
+                                            <div class="reminder-count-container btnViewReminderHistory"
+                                                data-customer-id="<?php echo $paymentInfo['id']; ?>"
+                                                data-customer-name="<?php echo htmlspecialchars($paymentInfo['customer_name'], ENT_QUOTES); ?>"
+                                                data-header-key="<?php echo htmlspecialchars($paymentInfo['header_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                data-service="<?php echo htmlspecialchars($paymentInfo['service_type'] ?? '', ENT_QUOTES); ?>"
+                                                data-count="<?php echo (int)($paymentInfo['reminder_count'] ?? 0); ?>"
+                                                title="Click to view reminder email history (Date &amp; Time)">
                                                 Count: <span class="reminder-count-val"><?php echo (int)($paymentInfo['reminder_count'] ?? 0); ?></span>
                                             </div>
                                         </td>
@@ -1346,6 +1960,10 @@ if (!aitf_has_access("Payment Due")) {
                             <i class="fa fa-envelope-o modern-input-icon"></i>
                             <input type="text" id="modalReminderEmail" class="modern-input-control" placeholder="client@example.com" required>
                         </div>
+                        <div class="modern-cc-box">
+                            <i class="fa fa-info-circle text-primary"></i>
+                            <span><strong>CC (Auto-included):</strong> <code class="cc-tag">aitfmcl@gmail.com</code>, <code class="cc-tag">aitfacct@gmail.com</code> (Management &amp; Accounts)</span>
+                        </div>
                     </div>
 
                     <div class="modern-form-group" style="margin-bottom: 12px !important;">
@@ -1374,10 +1992,48 @@ if (!aitf_has_access("Payment Due")) {
                             <!-- Live Formatted Preview Card -->
                             <div id="modalReminderBodyPreview" class="mail-preview-pane"></div>
 
-                            <!-- Editable Textarea -->
+                            <!-- Editable Textareas with Non-Editable Bank Details in Middle -->
                             <div id="modalReminderBodyEditor" style="display: none;">
-                                <textarea id="modalReminderBody" class="modern-body-editor" rows="9" placeholder="Enter custom email message..."></textarea>
+                                <textarea id="modalReminderBodyIntro" class="modern-body-editor-half" rows="4" placeholder="Message above bank details (Salutation, statement details, payment notice)..."></textarea>
+                                
+                                <!-- Locked Non-Editable Bank Details Card -->
+                                <div class="non-editable-bank-wrapper" id="modalReminderBankLockedBox">
+                                    <div class="non-editable-bank-banner">
+                                        <span class="bank-lock-badge"><i class="fa fa-lock"></i> Company Bank Details (Locked / Non-Editable)</span>
+                                        <span class="bank-lock-desc">Protected against changes</span>
+                                    </div>
+                                    <div class="non-editable-bank-grid">
+                                        <div class="bank-grid-item"><label>Bank:</label> <span>IDBI Bank Ltd</span></div>
+                                        <div class="bank-grid-item"><label>Account No:</label> <span class="bank-ac-pill">0087102000027849</span></div>
+                                        <div class="bank-grid-item"><label>IFSC Code:</label> <span>IBKL0000087</span></div>
+                                        <div class="bank-grid-item"><label>Beneficiary Name:</label> <span>AITF Management Certification Limited</span></div>
+                                    </div>
+                                </div>
+
+                                <textarea id="modalReminderBodyClosing" class="modern-body-editor-half" rows="4" placeholder="Message below bank details (UTR confirmation request, queries note, signature)..."></textarea>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Email Attachments Section -->
+                    <div class="modern-form-group" style="margin-bottom: 14px !important;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label class="modern-form-label" style="margin-bottom: 0;">
+                                <i class="fa fa-paperclip" style="color: #0d4d8b;"></i> Attachments
+                                <span id="reminderAttachmentCountBadge" class="badge-attachment-count">0 files</span>
+                            </label>
+                            <div>
+                                <button type="button" class="btn-add-attachment" id="btnTriggerAddAttachment" title="Add attachment from your phone or PC">
+                                    <i class="fa fa-paperclip"></i> Add Attachment
+                                </button>
+                                <input type="file" id="reminderManualFileInput" multiple style="display:none;" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx">
+                            </div>
+                        </div>
+                        <div class="attachments-help-text">
+                            <i class="fa fa-info-circle"></i> Service invoice attachments are fetched automatically by default. You can delete any attachment or add more files from your device.
+                        </div>
+                        <div id="reminderAttachmentsContainer" class="reminder-attachments-container">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
 
@@ -1391,6 +2047,66 @@ if (!aitf_has_access("Payment Due")) {
                 <button type="button" id="btnConfirmSendDueReminder" class="modern-btn-send">
                     <i class="fa fa-paper-plane"></i> Send Email
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Outstanding Payment Reminder History Modal (Date & Time Log) -->
+<div id="dueReminderHistoryModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" style="z-index: 10520;">
+    <div class="modal-dialog" style="max-width: 640px; width: 95%;">
+        <div class="modal-content">
+            <!-- Modern Header -->
+            <div class="modal-header modern-reminder-header">
+                <div class="modern-header-left">
+                    <div class="modern-header-icon" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important; color: #b45309 !important;">
+                        <i class="fa fa-history"></i>
+                    </div>
+                    <div>
+                        <h4 class="modern-header-title">Reminder Email History</h4>
+                        <p class="modern-header-subtitle">Sent emails log with exact date, time, and recipients</p>
+                    </div>
+                </div>
+                <button type="button" class="modern-header-close" data-dismiss="modal" aria-label="Close">&times;</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body modern-reminder-body" style="max-height: 72vh; overflow-y: auto;">
+                <!-- Client Info Card -->
+                <div class="modern-summary-card" style="padding: 12px 16px; margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <span class="summary-label" style="margin-bottom: 2px;">Client Account</span>
+                            <strong id="historyModalClientName" style="font-size: 15px; color: #0f172a; display: block;">Client Name</strong>
+                            <span id="historyModalServiceInfo" style="font-size: 11.5px; color: #64748b; font-weight: 500;">-</span>
+                        </div>
+                        <div class="history-count-badge">
+                            <i class="fa fa-paper-plane text-primary"></i> Total Sent: <span id="historyModalTotalCount" style="font-weight: 800;">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="historyModalTimelineLoading" style="text-align: center; padding: 25px 10px; color: #64748b; font-size: 13px;">
+                    <i class="fa fa-spinner fa-spin fa-2x" style="color: #0d4d8b; margin-bottom: 8px; display: block;"></i> Loading reminder history...
+                </div>
+
+                <!-- Empty State -->
+                <div id="historyModalTimelineEmpty" style="display: none; text-align: center; padding: 30px 15px; background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 12px;">
+                    <i class="fa fa-calendar-times-o" style="font-size: 34px; color: #94a3b8; margin-bottom: 10px; display: block;"></i>
+                    <h5 style="margin: 0 0 4px 0; font-weight: 700; color: #334155;">No reminder emails logged</h5>
+                    <p style="margin: 0; font-size: 12px; color: #64748b;">No reminder email history has been recorded for this client yet.</p>
+                </div>
+
+                <!-- Populated Timeline List -->
+                <div id="historyModalTimelineList" class="reminder-timeline-list" style="display: none;">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer modern-reminder-footer">
+                <button type="button" class="modern-btn-cancel" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -1491,15 +2207,18 @@ if (!aitf_has_access("Payment Due")) {
             form.submit();
         });
 
-        // Firm bank details config for reminder mail preview and body
+        // Locked Non-Editable Bank Details Config (Protected against modification)
         var firmBankConfig = {
-            bankName: <?php echo json_encode($firmBank ?: 'IDBI Bank Ltd'); ?>,
-            accountNo: <?php echo json_encode($firmAc ?: '0087102000027849'); ?>,
-            ifscCode: <?php echo json_encode($firmIfsc ?: 'IBKL0000087'); ?>,
+            bankName: 'IDBI Bank Ltd',
+            accountNo: '0087102000027849',
+            ifscCode: 'IBKL0000087',
             beneficiary: 'AITF Management Certification Limited'
         };
+        var firmPhone = '<?php echo htmlspecialchars($firmFormattedPhone, ENT_QUOTES); ?>';
         var activeReminderData = null;
-        var defaultGeneratedBody = '';
+        var activeAttachments = [];
+        var defaultGeneratedIntro = '';
+        var defaultGeneratedClosing = '';
         var defaultGeneratedSubject = '';
 
         function escapeMailHtml(text) {
@@ -1510,14 +2229,15 @@ if (!aitf_has_access("Payment Due")) {
         function updateMailPreview() {
             if (!activeReminderData) return;
             var isCustom = $('#modalReminderIsCustom').val() === '1';
-            var textBody = $('#modalReminderBody').val();
+            var introText = $('#modalReminderBodyIntro').val();
+            var closingText = $('#modalReminderBodyClosing').val();
+
+            var previewIntroHtml = '';
+            var previewClosingHtml = '';
 
             if (isCustom) {
-                var safeCustom = escapeMailHtml(textBody).replace(/\n/g, '<br>');
-                var customHtml = '<div style="font-size: 13px; line-height: 1.65; color: #1e293b; white-space: pre-wrap;">'
-                    + safeCustom
-                    + '</div>';
-                $('#modalReminderBodyPreview').html(customHtml);
+                previewIntroHtml = escapeMailHtml(introText).replace(/\n/g, '<br>');
+                previewClosingHtml = escapeMailHtml(closingText).replace(/\n/g, '<br>');
             } else {
                 var clientName = escapeMailHtml(activeReminderData.name);
                 var contactPerson = escapeMailHtml(activeReminderData.contactPerson);
@@ -1528,15 +2248,14 @@ if (!aitf_has_access("Payment Due")) {
                 var totalPaid = activeReminderData.fmtPaid;
                 var totalTds = activeReminderData.fmtTds;
 
-                var previewHtml = '<div style="font-size: 13px; line-height: 1.6; color: #1e293b;">'
-                    + '<div style="margin-bottom: 10px;">Dear <strong>' + salutation + '</strong> (' + clientName + '),</div>'
+                previewIntroHtml = '<div style="margin-bottom: 10px;">Dear <strong>' + salutation + '</strong> (' + clientName + '),</div>'
                     + '<p style="margin: 0 0 8px;">Greetings from <strong>AITF MANAGEMENT CERTIFICATION LIMITED</strong>.</p>'
                     + '<p style="margin: 0 0 12px;">We hope this email finds you well. This is a gentle reminder regarding the outstanding payment balance pending in your account.</p>'
                     + '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #0d4d8b; border-radius: 6px; padding: 10px 14px; margin: 12px 0;">'
                     + '<div style="font-size: 12px; font-weight: 700; color: #0d4d8b; margin-bottom: 6px; text-transform: uppercase;">Account &amp; Payment Statement:</div>'
                     + '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">'
                     + '<tr><td style="padding: 3px 0; color: #64748b; width: 45%;">Client Name:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">' + clientName + '</td></tr>'
-                    + '<tr><td style="padding: 3px 0; color: #64748b;">Invoice Header:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">' + serviceType + '</td></tr>'
+                    + '<tr><td style="padding: 3px 0; color: #64748b;">Service Name:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">' + serviceType + '</td></tr>'
                     + '<tr><td style="padding: 3px 0; color: #64748b;">Total Invoiced:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">₹' + totalInv + '</td></tr>'
                     + '<tr><td style="padding: 3px 0; color: #64748b;">Payment Received:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">₹' + totalPaid + '</td></tr>'
                     + (activeReminderData.totalTds > 0 ? '<tr><td style="padding: 3px 0; color: #64748b;">TDS Deducted:</td><td style="padding: 3px 0; font-weight: 600; color: #0f172a;">₹' + totalTds + '</td></tr>' : '')
@@ -1544,23 +2263,154 @@ if (!aitf_has_access("Payment Due")) {
                     + '</table>'
                     + '</div>'
                     + '<p style="margin: 0 0 10px;">As per our accounting records, the total outstanding balance of <strong style="color: #dc2626;">₹' + dueAmount + '/-</strong> is currently overdue. Kindly clear the outstanding balance at your earliest convenience.</p>'
-                    + '<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px 14px; margin: 12px 0; font-size: 12px; color: #166534;">'
-                    + '<strong style="color: #14532d; display: block; margin-bottom: 4px;"><i class="fa fa-bank"></i> Company Bank Details:</strong>'
-                    + '<div>Bank: <b>' + escapeMailHtml(firmBankConfig.bankName) + '</b></div>'
-                    + '<div>Account No: <b>' + escapeMailHtml(firmBankConfig.accountNo) + '</b></div>'
-                    + '<div>IFSC Code: <b>' + escapeMailHtml(firmBankConfig.ifscCode) + '</b></div>'
-                    + '<div>Beneficiary: <b>' + escapeMailHtml(firmBankConfig.beneficiary) + '</b></div>'
-                    + '</div>'
-                    + '<p style="margin: 0 0 10px; font-size: 12px; color: #475569;">If payment has already been initiated, please share the transaction confirmation / UTR details to reconcile your ledger.</p>'
+                    + '<p style="margin: 0 0 4px;">You may transfer the amount via NEFT / RTGS / IMPS to our company account details below:</p>';
+
+                previewClosingHtml = '<p style="margin: 10px 0 10px; font-size: 12px; color: #475569;">If payment has already been initiated, please share the transaction confirmation / UTR details to reconcile your ledger.</p>'
+                    + '<p style="margin: 0 0 10px; font-size: 12px; color: #475569;">Should you have any queries or require copies of the invoices, please feel free to contact us.</p>'
                     + '<div style="margin-top: 14px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #475569;">'
                     + '<strong>Best Regards,</strong><br>'
                     + 'Accounts &amp; Finance Team<br>'
-                    + '<span style="color: #0d4d8b; font-weight: 700;">AITF MANAGEMENT CERTIFICATION LIMITED</span>'
-                    + '</div>'
+                    + '<span style="color: #0d4d8b; font-weight: 700;">AITF MANAGEMENT CERTIFICATION LIMITED</span><br>'
+                    + '<span>Phone: ' + escapeMailHtml(firmPhone) + '</span><br>'
+                    + '<span>Email: aitfacct@gmail.com</span>'
                     + '</div>';
-                $('#modalReminderBodyPreview').html(previewHtml);
             }
+
+            var bankCardHtml = '<div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 6px; padding: 10px 14px; margin: 12px 0; font-size: 12px; color: #166534;">'
+                + '<strong style="color: #14532d; display: block; margin-bottom: 4px;"><i class="fa fa-university"></i> Company Bank Details:</strong>'
+                + '<div>Bank: <b>' + escapeMailHtml(firmBankConfig.bankName) + '</b></div>'
+                + '<div>Account No: <b>' + escapeMailHtml(firmBankConfig.accountNo) + '</b></div>'
+                + '<div>IFSC Code: <b>' + escapeMailHtml(firmBankConfig.ifscCode) + '</b></div>'
+                + '<div>Beneficiary: <b>' + escapeMailHtml(firmBankConfig.beneficiary) + '</b></div>'
+                + '</div>';
+
+            var attachmentsPreviewHtml = '';
+            if (activeAttachments.length > 0) {
+                var attItems = [];
+                activeAttachments.forEach(function (att) {
+                    attItems.push('<span style="display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 7px; margin: 2px 4px 2px 0; font-size: 11px; color: #0f172a;"><i class="fa fa-paperclip text-muted"></i> ' + escapeMailHtml(att.name) + '</span>');
+                });
+                attachmentsPreviewHtml = '<div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 11.5px; color: #475569;">'
+                    + '<strong><i class="fa fa-paperclip"></i> Attached (' + activeAttachments.length + '):</strong><br>'
+                    + '<div style="margin-top: 4px; display: flex; flex-wrap: wrap;">' + attItems.join('') + '</div>'
+                    + '</div>';
+            }
+
+            var fullPreviewHtml = '<div style="font-size: 13px; line-height: 1.6; color: #1e293b;">'
+                + previewIntroHtml
+                + bankCardHtml
+                + previewClosingHtml
+                + attachmentsPreviewHtml
+                + '</div>';
+
+            $('#modalReminderBodyPreview').html(fullPreviewHtml);
         }
+
+        function renderReminderAttachments() {
+            var $c = $('#reminderAttachmentsContainer');
+            $c.empty();
+
+            var count = activeAttachments.length;
+            $('#reminderAttachmentCountBadge').text(count + ' file' + (count === 1 ? '' : 's'));
+
+            if (count === 0) {
+                $c.html('<div class="attachments-empty-msg"><i class="fa fa-paperclip"></i> No attachments selected. (Click "+ Add Attachment" to add files from your device)</div>');
+                updateMailPreview();
+                return;
+            }
+
+            activeAttachments.forEach(function (att, idx) {
+                var iconClass = 'fa-file-pdf-o text-danger';
+                if (att.type === 'manual') {
+                    var ext = (att.name.split('.').pop() || '').toLowerCase();
+                    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) !== -1) {
+                        iconClass = 'fa-file-image-o text-success';
+                    } else if (['xls', 'xlsx', 'csv'].indexOf(ext) !== -1) {
+                        iconClass = 'fa-file-excel-o text-success';
+                    } else if (['doc', 'docx'].indexOf(ext) !== -1) {
+                        iconClass = 'fa-file-word-o text-primary';
+                    } else if (ext === 'pdf') {
+                        iconClass = 'fa-file-pdf-o text-danger';
+                    } else {
+                        iconClass = 'fa-file-text-o text-secondary';
+                    }
+                } else if (att.type === 'service_doc') {
+                    iconClass = 'fa-file-text-o text-primary';
+                }
+
+                var badgeClass = 'badge-invoice';
+                var badgeText = 'Service Invoice';
+                if (att.type === 'service_doc') {
+                    badgeClass = 'badge-service-doc';
+                    badgeText = 'Service Doc';
+                } else if (att.type === 'manual') {
+                    badgeClass = 'badge-manual';
+                    badgeText = 'Manual Upload';
+                }
+
+                var $item = $('<div class="attachment-card-item"></div>');
+                var $left = $('<div class="attachment-card-left"></div>');
+                $left.append('<div class="attachment-card-icon"><i class="fa ' + iconClass + '"></i></div>');
+
+                var $info = $('<div class="attachment-card-info"></div>');
+                $info.append('<div class="attachment-card-title" title="' + escapeMailHtml(att.name) + '">' + escapeMailHtml(att.label || att.name) + '</div>');
+                $info.append('<div class="attachment-card-sub"><span>' + escapeMailHtml(att.sublabel || '') + '</span> <span class="attachment-badge ' + badgeClass + '">' + badgeText + '</span></div>');
+
+                $left.append($info);
+                $item.append($left);
+
+                var $removeBtn = $('<button type="button" class="btn-remove-attachment" title="Remove this attachment"><i class="fa fa-trash-o"></i></button>');
+                $removeBtn.data('att-idx', idx);
+                $removeBtn.click(function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var index = $(this).data('att-idx');
+                    activeAttachments.splice(index, 1);
+                    renderReminderAttachments();
+                });
+
+                $item.append($removeBtn);
+                $c.append($item);
+            });
+
+            updateMailPreview();
+        }
+
+        // Trigger manual file selection from phone or PC
+        $('#btnTriggerAddAttachment').click(function (e) {
+            e.preventDefault();
+            $('#reminderManualFileInput').val('').click();
+        });
+
+        // Add manual files on selection
+        $('#reminderManualFileInput').on('change', function () {
+            var files = this.files;
+            if (!files || files.length === 0) return;
+
+            for (var i = 0; i < files.length; i++) {
+                var file = files[i];
+                var fSizeStr = '';
+                if (file.size >= 1048576) {
+                    fSizeStr = (file.size / 1048576).toFixed(2) + ' MB';
+                } else if (file.size >= 1024) {
+                    fSizeStr = (file.size / 1024).toFixed(1) + ' KB';
+                } else {
+                    fSizeStr = file.size + ' B';
+                }
+
+                activeAttachments.push({
+                    id: 'manual_' + Date.now() + '_' + i,
+                    type: 'manual',
+                    file: file,
+                    name: file.name,
+                    label: file.name,
+                    sublabel: fSizeStr,
+                    badge: 'Manual Upload'
+                });
+            }
+
+            renderReminderAttachments();
+        });
 
         // Switch to Preview Tab
         $('#tabBtnPreview').click(function () {
@@ -1577,13 +2427,14 @@ if (!aitf_has_access("Payment Due")) {
             $('#tabBtnPreview').removeClass('active');
             $('#modalReminderBodyPreview').hide();
             $('#modalReminderBodyEditor').show();
-            $('#modalReminderBody').focus();
+            $('#modalReminderBodyIntro').focus();
         });
 
         // Detect edits in real-time
-        $('#modalReminderBody').on('input', function () {
-            var currentVal = $(this).val();
-            if (currentVal !== defaultGeneratedBody) {
+        $('#modalReminderBodyIntro, #modalReminderBodyClosing').on('input', function () {
+            var curIntro = $('#modalReminderBodyIntro').val();
+            var curClosing = $('#modalReminderBodyClosing').val();
+            if (curIntro !== defaultGeneratedIntro || curClosing !== defaultGeneratedClosing) {
                 $('#modalReminderIsCustom').val('1');
                 $('#btnResetMailBody').show();
             } else {
@@ -1594,7 +2445,8 @@ if (!aitf_has_access("Payment Due")) {
 
         // Reset to default auto-generated body
         $('#btnResetMailBody').click(function () {
-            $('#modalReminderBody').val(defaultGeneratedBody);
+            $('#modalReminderBodyIntro').val(defaultGeneratedIntro);
+            $('#modalReminderBodyClosing').val(defaultGeneratedClosing);
             $('#modalReminderSubject').val(defaultGeneratedSubject);
             $('#modalReminderIsCustom').val('0');
             $(this).hide();
@@ -1648,39 +2500,87 @@ if (!aitf_has_access("Payment Due")) {
             $('#modalReminderDueAmount').text(fmtBalance);
             $('#modalReminderEmail').val(email);
 
-            // Generate default subject and body
+            // Generate default subject and editable parts (excluding the locked bank details)
             defaultGeneratedSubject = "Outstanding Payment Reminder - ₹" + fmtBalance + " - " + name;
             $('#modalReminderSubject').val(defaultGeneratedSubject);
 
             var salutation = contactPerson ? contactPerson : name;
-            defaultGeneratedBody = "Dear " + salutation + " (" + name + "),\n\n"
+            defaultGeneratedIntro = "Dear " + salutation + " (" + name + "),\n\n"
                 + "Greetings from AITF MANAGEMENT CERTIFICATION LIMITED.\n\n"
                 + "We hope this email finds you well. This is a gentle reminder regarding the outstanding payment balance pending in your account.\n\n"
                 + "--- Account & Payment Statement ---\n"
                 + "Client Name: " + name + "\n"
-                + "Invoice Header: " + service + "\n"
+                + "Service Name: " + service + "\n"
                 + "Total Invoiced Amount: ₹" + fmtInv + "\n"
                 + "Total Payment Received: ₹" + fmtPaid + "\n"
                 + (totalTdsNum > 0 ? "TDS Deducted: ₹" + fmtTds + "\n" : "")
                 + "Total Outstanding Due: ₹" + fmtBalance + "/-\n\n"
                 + "As per our accounting records, the total outstanding balance of ₹" + fmtBalance + "/- is currently overdue. We kindly request you to clear the outstanding balance at your earliest convenience.\n\n"
-                + "You may transfer the amount via NEFT / RTGS / IMPS to our company account details below:\n"
-                + "Bank: " + firmBankConfig.bankName + "\n"
-                + "Account No: " + firmBankConfig.accountNo + "\n"
-                + "IFSC Code: " + firmBankConfig.ifscCode + "\n"
-                + "Beneficiary Name: " + firmBankConfig.beneficiary + "\n\n"
-                + "If the payment has already been initiated or processed, please share the transaction confirmation / UTR details with us so that our accounts team can reconcile your ledger.\n\n"
+                + "You may transfer the amount via NEFT / RTGS / IMPS to our company account details below:";
+
+            defaultGeneratedClosing = "If the payment has already been initiated or processed, please share the transaction confirmation / UTR details with us so that our accounts team can reconcile your ledger.\n\n"
                 + "Should you have any queries or require copies of the invoices, please feel free to contact us.\n\n"
                 + "Thank you for your prompt attention and cooperation.\n\n"
                 + "Best Regards,\n"
                 + "Accounts & Finance Team\n"
                 + "AITF MANAGEMENT CERTIFICATION LIMITED\n"
-                + "Phone: +91 9222 1836\n"
+                + "Phone: " + firmPhone + "\n"
                 + "Email: aitfacct@gmail.com\n"
                 + "Website: www.aitf.co.in";
 
-            $('#modalReminderBody').val(defaultGeneratedBody);
+            $('#modalReminderBodyIntro').val(defaultGeneratedIntro);
+            $('#modalReminderBodyClosing').val(defaultGeneratedClosing);
             $('#modalReminderIsCustom').val('0');
+
+            // Initialize default attachments from button data (Invoices)
+            activeAttachments = [];
+            var rawInvoices = $btn.attr('data-invoices');
+            if (rawInvoices) {
+                try {
+                    var invList = JSON.parse(rawInvoices);
+                    if (Array.isArray(invList)) {
+                        invList.forEach(function (inv) {
+                            var invNum = inv.number || ('Invoice #' + inv.id);
+                            var cleanNum = invNum.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+                            var amtFmt = parseFloat(inv.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            activeAttachments.push({
+                                id: 'inv_' + inv.id,
+                                type: 'invoice',
+                                invoice_id: parseInt(inv.id, 10),
+                                name: 'Invoice-' + cleanNum + '.pdf',
+                                label: invNum + ' (Invoice PDF)',
+                                sublabel: 'Amount: ₹' + amtFmt,
+                                badge: 'Service Invoice'
+                            });
+                        });
+                    }
+                } catch (e) {}
+            }
+            renderReminderAttachments();
+
+            // Fetch any additional server service documents
+            $.getJSON('getPaymentDueAttachments.php', { customerId: id, headerKey: activeReminderData.headerKey })
+                .done(function (res) {
+                    if (res && res.success && Array.isArray(res.attachments)) {
+                        var changed = false;
+                        res.attachments.forEach(function (serverAtt) {
+                            var exists = false;
+                            for (var j = 0; j < activeAttachments.length; j++) {
+                                if (activeAttachments[j].id === serverAtt.id) {
+                                    exists = true;
+                                    break;
+                                }
+                            }
+                            if (!exists) {
+                                activeAttachments.push(serverAtt);
+                                changed = true;
+                            }
+                        });
+                        if (changed) {
+                            renderReminderAttachments();
+                        }
+                    }
+                });
 
             // Reset tabs to Preview mode
             $('#tabBtnPreview').addClass('active');
@@ -1701,7 +2601,8 @@ if (!aitf_has_access("Payment Due")) {
             var customerId = $('#modalReminderCustomerId').val();
             var recipientEmail = $.trim($('#modalReminderEmail').val());
             var subject = $.trim($('#modalReminderSubject').val());
-            var body = $.trim($('#modalReminderBody').val());
+            var introVal = $.trim($('#modalReminderBodyIntro').val());
+            var closingVal = $.trim($('#modalReminderBodyClosing').val());
             var isCustom = $('#modalReminderIsCustom').val();
             var $msg = $('#modalReminderStatusMsg');
             var $btn = $(this);
@@ -1720,10 +2621,10 @@ if (!aitf_has_access("Payment Due")) {
                 return;
             }
 
-            if (!body) {
+            if (!introVal && !closingVal) {
                 $msg.removeClass('status-info status-success').addClass('status-error')
                     .html('<i class="fa fa-exclamation-circle"></i> Email body cannot be empty.').show();
-                $('#modalReminderBody').focus();
+                $('#modalReminderBodyIntro').focus();
                 return;
             }
 
@@ -1731,17 +2632,36 @@ if (!aitf_has_access("Payment Due")) {
             $msg.removeClass('status-success status-error').addClass('status-info')
                 .html('<i class="fa fa-spinner fa-spin"></i> Sending payment reminder email, please wait...').show();
 
+            var formData = new FormData();
+            formData.append('customerId', customerId);
+            formData.append('headerKey', activeReminderData.headerKey);
+            formData.append('recipientEmail', recipientEmail);
+            formData.append('subject', subject);
+            formData.append('body_intro', introVal);
+            formData.append('body_closing', closingVal);
+            formData.append('is_custom', isCustom);
+
+            // Separate kept invoices, service docs, and manual files
+            var keptInvoices = [];
+            var keptServiceDocs = [];
+            activeAttachments.forEach(function (att) {
+                if (att.type === 'invoice') {
+                    keptInvoices.push(att.invoice_id);
+                } else if (att.type === 'service_doc') {
+                    keptServiceDocs.push(att.doc_path);
+                } else if (att.type === 'manual' && att.file) {
+                    formData.append('manual_attachments[]', att.file, att.name);
+                }
+            });
+            formData.append('service_invoices', JSON.stringify(keptInvoices));
+            formData.append('service_files', JSON.stringify(keptServiceDocs));
+
             $.ajax({
                 url: 'sendPaymentDueReminder.php',
                 type: 'POST',
-                data: {
-                    customerId: customerId,
-                    headerKey: activeReminderData.headerKey,
-                    recipientEmail: recipientEmail,
-                    subject: subject,
-                    body: body,
-                    is_custom: isCustom
-                },
+                data: formData,
+                processData: false,
+                contentType: false,
                 dataType: 'json',
                 success: function (res) {
                     if (res && res.success) {
@@ -1749,18 +2669,13 @@ if (!aitf_has_access("Payment Due")) {
                             .html('<i class="fa fa-check-circle"></i> ' + (res.message || 'Email sent successfully!')).show();
                         $btn.html('<i class="fa fa-check"></i> Sent');
 
-                        // Update follow-up comment in the table row if logged
-                        if (res.loggedNote) {
-                            var $rowTextarea = $('#tab_customer_list .saveChanges[data-customer-id="' + customerId + '"]');
-                            var currentVal = $rowTextarea.val();
-                            var newVal = currentVal ? currentVal + '\n' + res.loggedNote : res.loggedNote;
-                            $rowTextarea.val(newVal);
-                        }
-
                         // Update reminder email count under Mail button
-                        var $countSpan = $('#tab_customer_list tr[data-customer-id="' + customerId + '"]').find('.reminder-count-val');
+                        var $countContainer = $('#tab_customer_list tr[data-customer-id="' + customerId + '"]').find('.reminder-count-container');
+                        var $countSpan = $countContainer.find('.reminder-count-val');
                         var currentCount = parseInt($countSpan.first().text(), 10) || 0;
-                        $countSpan.text(currentCount + 1);
+                        var newCount = currentCount + 1;
+                        $countSpan.text(newCount);
+                        $countContainer.attr('data-count', newCount);
 
                         setTimeout(function () {
                             $('#duePaymentReminderModal').modal('hide');
@@ -1777,6 +2692,87 @@ if (!aitf_has_access("Payment Due")) {
                     $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send Email');
                 }
             });
+        });
+
+        // View Reminder Email History (Date & Time logs)
+        $('#tab_customer_list').on('click', '.btnViewReminderHistory', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var customerId = $(this).attr('data-customer-id');
+            var customerName = $(this).attr('data-customer-name') || 'Client';
+            var headerKey = $(this).attr('data-header-key') || '';
+            var service = $(this).attr('data-service') || '';
+            var count = parseInt($(this).attr('data-count'), 10) || 0;
+
+            $('#historyModalClientName').text(customerName);
+            var serviceDisplay = headerKey ? ('Service Name: ' + headerKey) : (service ? ('Service Name: ' + service) : '');
+            $('#historyModalServiceInfo').text(serviceDisplay);
+            $('#historyModalTotalCount').text(count);
+            $('#historyModalTimelineLoading').show();
+            $('#historyModalTimelineEmpty').hide();
+            $('#historyModalTimelineList').hide().empty();
+
+            $('#dueReminderHistoryModal').modal('show');
+
+            $.getJSON('getReminderMailHistory.php', { customerId: customerId, headerKey: headerKey })
+                .done(function (res) {
+                    $('#historyModalTimelineLoading').hide();
+                    if (res && res.success && Array.isArray(res.logs) && res.logs.length > 0) {
+                        $('#historyModalTotalCount').text(res.logs.length);
+                        var html = '';
+                        res.logs.forEach(function (log, idx) {
+                            var orderNum = res.logs.length - idx;
+                            var dtDisplay = log.formatted_datetime || ((log.date || '') + ' ' + (log.time || ''));
+                            var recipientDisplay = log.recipient || '-';
+                            var ccDisplay = log.cc || 'aitfmcl@gmail.com, aitfacct@gmail.com';
+                            var serviceBadge = log.service || log.header_key || '';
+
+                            html += '<div class="timeline-card-item">';
+                            html += '  <div class="timeline-card-header">';
+                            html += '    <div class="timeline-date-badge"><i class="fa fa-calendar-check-o"></i> ' + escapeMailHtml(dtDisplay) + '</div>';
+                            html += '    <span class="timeline-order-pill">Reminder #' + orderNum + '</span>';
+                            html += '  </div>';
+                            html += '  <div class="timeline-detail-row" style="margin-bottom: 6px;">';
+                            html += '    <span class="timeline-detail-item" style="font-weight: 700; color: #0d4d8b;"><i class="fa fa-user-circle" style="color: #2563eb; font-size: 13px;"></i> Sent by: <span class="timeline-user-val" style="background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 6px; border: 1px solid #bfdbfe; font-weight: 800;">' + escapeMailHtml(log.sent_by || 'Staff') + '</span></span>';
+                            if (serviceBadge) {
+                                html += '    <span class="timeline-service-pill"><i class="fa fa-tag"></i> Service Name: ' + escapeMailHtml(serviceBadge) + '</span>';
+                            }
+                            html += '  </div>';
+                            html += '  <div class="timeline-detail-row">';
+                            html += '    <span class="timeline-detail-item"><i class="fa fa-envelope"></i> <strong>To:</strong> <span class="timeline-email-val">' + escapeMailHtml(recipientDisplay) + '</span></span>';
+                            html += '    <span class="timeline-detail-item"><i class="fa fa-share"></i> <strong>CC:</strong> <span class="timeline-cc-val">' + escapeMailHtml(ccDisplay) + '</span></span>';
+                            html += '  </div>';
+
+                            if (log.attachments && log.attachments.length > 0) {
+                                html += '  <div class="timeline-attachments-box">';
+                                html += '    <span style="font-weight: 700; color: #475569; margin-right: 6px;"><i class="fa fa-paperclip"></i> ' + log.attachments.length + ' Attachment(s):</span>';
+                                log.attachments.forEach(function (att) {
+                                    var attName = typeof att === 'string' ? att : (att.name || att.label || 'File');
+                                    html += '    <span class="timeline-att-badge"><i class="fa fa-file-pdf-o text-danger"></i> ' + escapeMailHtml(attName) + '</span>';
+                                });
+                                html += '  </div>';
+                            } else if (log.attachments_count > 0) {
+                                html += '  <div class="timeline-attachments-box">';
+                                html += '    <span style="font-weight: 700; color: #475569;"><i class="fa fa-paperclip"></i> ' + log.attachments_count + ' Attachment(s) attached</span>';
+                                html += '  </div>';
+                            }
+                            html += '</div>';
+                        });
+                        $('#historyModalTimelineList').html(html).show();
+                        $('#historyModalTimelineEmpty').hide();
+                    } else {
+                        $('#historyModalTotalCount').text('0');
+                        $('#historyModalTimelineList').hide().empty();
+                        $('#historyModalTimelineEmpty').show();
+                    }
+                })
+                .fail(function () {
+                    $('#historyModalTimelineLoading').hide();
+                    $('#historyModalTotalCount').text('0');
+                    $('#historyModalTimelineList').hide().empty();
+                    $('#historyModalTimelineEmpty').html('<i class="fa fa-exclamation-triangle text-danger" style="font-size: 28px; margin-bottom: 8px; display: block;"></i><h5 style="color: #b91c1c;">Failed to load history</h5><p style="font-size: 12px; color: #64748b;">An error occurred while fetching reminder history.</p>').show();
+                });
         });
 
         $("#menu-toggle").click(function (e) {

@@ -32,6 +32,23 @@ if (!function_exists('aitf_ensure_payment_due_indexes')) {
         try {
             $db->exec("ALTER TABLE `payment_page_comments` ADD COLUMN `reminder_count` INT NOT NULL DEFAULT 0");
         } catch (Throwable $e) {}
+        try {
+            $db->exec("CREATE TABLE IF NOT EXISTS `payment_reminder_mail_logs` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `customer_id` INT NOT NULL,
+                `header_key` VARCHAR(150) NULL,
+                `service_type` VARCHAR(150) NULL,
+                `recipient_email` VARCHAR(255) NOT NULL,
+                `cc_emails` VARCHAR(255) NULL,
+                `subject` VARCHAR(255) NULL,
+                `sent_by` VARCHAR(100) NULL,
+                `attachments_count` INT NOT NULL DEFAULT 0,
+                `attachments_list` TEXT NULL,
+                `sent_at` DATETIME NOT NULL,
+                INDEX `idx_prml_cust` (`customer_id`),
+                INDEX `idx_prml_sent` (`sent_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        } catch (Throwable $e) {}
         $done = true;
     }
 }

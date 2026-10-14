@@ -125,6 +125,698 @@ echo '<script>
         padding-top: 8px !important;
         padding-bottom: 8px !important;
     }
+
+    /* Sidebar Section Categories & Dividers */
+    .sidebar-section-divider {
+        padding: 16px 10px 6px 10px !important;
+        list-style: none !important;
+        pointer-events: none !important;
+        margin: 0 !important;
+    }
+    .sidebar-section-divider:first-of-type {
+        padding-top: 10px !important;
+    }
+    .sidebar-section-divider:not(:first-of-type) {
+        padding-top: 22px !important;
+        margin-top: 4px !important;
+    }
+    .sidebar-section-divider .section-title {
+        font-size: 9.5px !important;
+        font-weight: 700 !important;
+        letter-spacing: 1.2px !important;
+        color: #93c5fd !important;
+        text-transform: uppercase !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        opacity: 0.9;
+    }
+    .sidebar-section-divider .section-title::after {
+        content: '' !important;
+        flex: 1 !important;
+        height: 1px !important;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+    }
+    #wrapper:not(.active) .sidebar-section-divider {
+        padding: 4px 6px !important;
+        margin: 6px 6px !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    #wrapper:not(.active) .sidebar-section-divider .section-title {
+        display: none !important;
+    }
+
+    /* Global Sidebar Link Styling & Spacing - Enhanced Readability */
+    #sidebar_menu li a,
+    .sidebar-nav li a {
+        padding: 10.5px 8.5px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.2px !important;
+        white-space: nowrap !important;
+    }
+    .sidebar-nav li a .dropdown-group-text,
+    .sidebar-nav li a .mgmt-group-text {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.15px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+    .sidebar-nav li a .dropdown-group-text i,
+    .sidebar-nav li a .mgmt-group-text i {
+        font-size: 12.5px !important;
+        width: 15px !important;
+        text-align: center !important;
+        margin-right: 6px !important;
+        display: inline-block !important;
+        flex-shrink: 0 !important;
+    }
+    /* Finance Management fine-tuning so it fits comfortably on one line */
+    .sidebar-nav li.finance-group > a .dropdown-group-text {
+        font-size: 10.5px !important;
+        letter-spacing: -0.15px !important;
+    }
+    .sidebar-nav li.finance-group > a .dropdown-group-text i {
+        margin-right: 5px !important;
+    }
+
+    /* Standalone / Single Items: Clean style with comfortable spacing */
+    .sidebar-nav li:not(.sidebar-dropdown-group):not(.sidebar-section-divider):not(.sidebar-brand) {
+        margin: 1.5px 0 !important;
+    }
+    .sidebar-nav li:not(.sidebar-dropdown-group):not(.sidebar-section-divider):not(.sidebar-brand) > a {
+        background: transparent !important;
+        border-left: 3.5px solid transparent !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .sidebar-nav li:not(.sidebar-dropdown-group):not(.sidebar-section-divider):not(.sidebar-brand) > a:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border-left-color: rgba(255, 255, 255, 0.35) !important;
+        color: #ffffff !important;
+    }
+    .sidebar-nav li:not(.sidebar-dropdown-group):not(.sidebar-section-divider):not(.sidebar-brand) > a .sub_icon {
+        font-size: 14px !important;
+        opacity: 0.85;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .sidebar-nav li:not(.sidebar-dropdown-group):not(.sidebar-section-divider):not(.sidebar-brand) > a:hover .sub_icon {
+        opacity: 1;
+        transform: scale(1.15);
+        color: #ffffff !important;
+    }
+
+    /* Temporarily disabled Task Manager */
+    .sidebar-nav li.task-manager-disabled {
+        position: relative;
+    }
+    .sidebar-nav li.task-manager-disabled > a {
+        cursor: not-allowed !important;
+    }
+    .sidebar-nav li.task-manager-disabled > a:hover {
+        background: linear-gradient(90deg, rgba(30, 41, 59, 0.72), rgba(15, 23, 42, 0.45)) !important;
+        border-left-color: #64748b !important;
+    }
+    .task-manager-coming-soon {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 7px;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        border-radius: 5px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+        color: #e2e8f0;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.35px;
+        line-height: 1;
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(5px, -50%) scale(0.92);
+        transition: opacity 0.18s ease, transform 0.18s ease;
+        z-index: 2;
+    }
+    .task-manager-coming-soon i {
+        color: #fbbf24;
+        font-size: 10px;
+    }
+    .sidebar-nav li.task-manager-disabled:hover .task-manager-coming-soon,
+    .sidebar-nav li.task-manager-disabled:focus-within .task-manager-coming-soon {
+        opacity: 1;
+        transform: translate(0, -50%) scale(1);
+    }
+    #wrapper.active .sidebar-nav li.task-manager-disabled:hover .task-manager-coming-soon,
+    #wrapper.active .sidebar-nav li.task-manager-disabled:focus-within .task-manager-coming-soon {
+        right: -112px;
+    }
+    .sidebar-nav li.task-manager-disabled > a[aria-disabled="true"] {
+        pointer-events: auto;
+    }
+    .task-manager-disabled-link {
+        cursor: not-allowed !important;
+    }
+
+    /* Dropdown Groups: Distinct Group Appearance with Colored Accents & Pill Arrow */
+    .sidebar-nav li.sidebar-dropdown-group {
+        position: relative;
+        margin: 1.5px 0 !important;
+    }
+    .sidebar-nav li.sidebar-dropdown-group > a {
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        user-select: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .sidebar-nav li.sidebar-dropdown-group .group-arrow-icon {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 17px !important;
+        height: 17px !important;
+        border-radius: 4px !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        font-size: 9.5px !important;
+        line-height: 1 !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        flex-shrink: 0 !important;
+        margin-left: 2px !important;
+    }
+    .sidebar-nav li.sidebar-dropdown-group:hover .group-arrow-icon,
+    .sidebar-nav li.sidebar-dropdown-group.flyout-hover .group-arrow-icon {
+        background: rgba(255, 255, 255, 0.22) !important;
+        border-color: rgba(255, 255, 255, 0.35) !important;
+        color: #ffffff !important;
+        transform: translateX(2px) scale(1.05) !important;
+    }
+
+    /* Active State: Any currently open Group or Standalone Tab turns vibrant YELLOW */
+    .sidebar-nav li.sidebar-dropdown-group > a.active,
+    .sidebar-nav li.sidebar-dropdown-group.active > a,
+    .sidebar-nav li:not(.sidebar-dropdown-group):not(.sidebar-section-divider):not(.sidebar-brand) > a.active {
+        color: #fbbf24 !important;
+        background: #062b4f !important;
+        border-left: 3.5px solid #fbbf24 !important;
+        font-weight: 700 !important;
+    }
+    .sidebar-nav li.sidebar-dropdown-group > a.active .dropdown-group-text,
+    .sidebar-nav li.sidebar-dropdown-group.active > a .dropdown-group-text,
+    .sidebar-nav li.sidebar-dropdown-group > a.active .mgmt-group-text,
+    .sidebar-nav li.sidebar-dropdown-group.active > a .mgmt-group-text,
+    .sidebar-nav li:not(.sidebar-dropdown-group):not(.sidebar-section-divider):not(.sidebar-brand) > a.active span {
+        color: #fbbf24 !important;
+    }
+    .sidebar-nav li.sidebar-dropdown-group > a.active .dropdown-group-text i,
+    .sidebar-nav li.sidebar-dropdown-group.active > a .dropdown-group-text i,
+    .sidebar-nav li.sidebar-dropdown-group > a.active .mgmt-group-text i,
+    .sidebar-nav li.sidebar-dropdown-group.active > a .mgmt-group-text i {
+        color: #fbbf24 !important;
+    }
+    .sidebar-nav li.sidebar-dropdown-group > a.active .group-arrow-icon,
+    .sidebar-nav li.sidebar-dropdown-group.active > a .group-arrow-icon {
+        color: #fbbf24 !important;
+        border-color: rgba(251, 191, 36, 0.5) !important;
+        background: rgba(251, 191, 36, 0.18) !important;
+    }
+    .sidebar-nav li:not(.sidebar-dropdown-group):not(.sidebar-section-divider):not(.sidebar-brand) > a.active .sub_icon,
+    .sidebar-nav li.sidebar-dropdown-group > a.active .sub_icon,
+    .sidebar-nav li.sidebar-dropdown-group.active > a .sub_icon {
+        color: #fbbf24 !important;
+        opacity: 1 !important;
+    }
+
+    /* 1. TOP MGMT Group */
+    .sidebar-nav li.top-mgmt-group > a.mgmt-group-link {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        border-left: 3.5px solid rgba(245, 158, 11, 0.6) !important;
+        background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.01) 100%) !important;
+    }
+    .sidebar-nav li.top-mgmt-group > a.mgmt-group-link .group-arrow-icon {
+        color: #fbbf24 !important;
+        border-color: rgba(251, 191, 36, 0.28) !important;
+        background: rgba(251, 191, 36, 0.1) !important;
+    }
+    .sidebar-nav li.top-mgmt-group > a.mgmt-group-link:hover,
+    .sidebar-nav li.top-mgmt-group.flyout-hover > a.mgmt-group-link {
+        background: linear-gradient(90deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.05) 100%) !important;
+        border-left-color: #fbbf24 !important;
+        color: #ffffff !important;
+    }
+    .sidebar-nav li.top-mgmt-group > a.mgmt-group-link.active,
+    .sidebar-nav li.top-mgmt-group.active > a.mgmt-group-link {
+        color: #fbbf24 !important;
+        background: #062b4f !important;
+        border-left: 3.5px solid #fbbf24 !important;
+        font-weight: 700 !important;
+    }
+    #wrapper.active .top-mgmt-sub-icon { display: none !important; }
+    #wrapper.active .group-arrow-icon { display: inline-flex !important; }
+    #wrapper:not(.active) .top-mgmt-sub-icon { display: inline-block !important; }
+    #wrapper:not(.active) .group-arrow-icon { display: none !important; }
+    .top-mgmt-group .sidebar-flyout-menu { border-left-color: #fbbf24 !important; }
+    .top-mgmt-group .sidebar-flyout-menu .flyout-header { color: #fbbf24 !important; }
+
+    /* 2. Clients Group */
+    .sidebar-nav li.clients-group > a.clients-group-link {
+        border-left: 3.5px solid rgba(96, 165, 250, 0.6) !important;
+        background: linear-gradient(90deg, rgba(96, 165, 250, 0.08) 0%, rgba(96, 165, 250, 0.01) 100%) !important;
+    }
+    .sidebar-nav li.clients-group > a.clients-group-link .group-arrow-icon {
+        color: #60a5fa !important;
+        border-color: rgba(96, 165, 250, 0.28) !important;
+        background: rgba(96, 165, 250, 0.1) !important;
+    }
+    .sidebar-nav li.clients-group > a.clients-group-link:hover,
+    .sidebar-nav li.clients-group.flyout-hover > a.clients-group-link {
+        background: linear-gradient(90deg, rgba(96, 165, 250, 0.2) 0%, rgba(96, 165, 250, 0.05) 100%) !important;
+        border-left-color: #38bdf8 !important;
+        color: #ffffff !important;
+    }
+    .sidebar-nav li.clients-group > a.clients-group-link.active,
+    .sidebar-nav li.clients-group.active > a.clients-group-link {
+        color: #fbbf24 !important;
+        background: #062b4f !important;
+        border-left: 3.5px solid #fbbf24 !important;
+        font-weight: 700 !important;
+    }
+    #wrapper.active .clients-sub-building { display: none !important; }
+    #wrapper:not(.active) .clients-sub-building { display: inline-block !important; }
+    .clients-group .sidebar-flyout-menu { border-left-color: #38bdf8 !important; }
+    .clients-group .sidebar-flyout-menu .flyout-header { color: #38bdf8 !important; }
+
+    /* 3. Marketing Group */
+    .sidebar-nav li.marketing-group > a.marketing-group-link {
+        border-left: 3.5px solid rgba(244, 114, 182, 0.6) !important;
+        background: linear-gradient(90deg, rgba(244, 114, 182, 0.08) 0%, rgba(244, 114, 182, 0.01) 100%) !important;
+    }
+    .sidebar-nav li.marketing-group > a.marketing-group-link .group-arrow-icon {
+        color: #f472b6 !important;
+        border-color: rgba(244, 114, 182, 0.28) !important;
+        background: rgba(244, 114, 182, 0.1) !important;
+    }
+    .sidebar-nav li.marketing-group > a.marketing-group-link:hover,
+    .sidebar-nav li.marketing-group.flyout-hover > a.marketing-group-link {
+        background: linear-gradient(90deg, rgba(244, 114, 182, 0.2) 0%, rgba(244, 114, 182, 0.05) 100%) !important;
+        border-left-color: #f472b6 !important;
+        color: #ffffff !important;
+    }
+    .sidebar-nav li.marketing-group > a.marketing-group-link.active,
+    .sidebar-nav li.marketing-group.active > a.marketing-group-link {
+        color: #fbbf24 !important;
+        background: #062b4f !important;
+        border-left: 3.5px solid #fbbf24 !important;
+        font-weight: 700 !important;
+    }
+    #wrapper.active .marketing-sub-briefcase { display: none !important; }
+    #wrapper:not(.active) .marketing-sub-briefcase { display: inline-block !important; }
+    .marketing-group .sidebar-flyout-menu { border-left-color: #f472b6 !important; }
+    .marketing-group .sidebar-flyout-menu .flyout-header { color: #f472b6 !important; }
+
+    /* 4. Finance Group */
+    .sidebar-nav li.finance-group > a.finance-group-link {
+        border-left: 3.5px solid rgba(16, 185, 129, 0.6) !important;
+        background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.01) 100%) !important;
+    }
+    .sidebar-nav li.finance-group > a.finance-group-link .group-arrow-icon {
+        color: #10b981 !important;
+        border-color: rgba(16, 185, 129, 0.28) !important;
+        background: rgba(16, 185, 129, 0.1) !important;
+    }
+    .sidebar-nav li.finance-group > a.finance-group-link:hover,
+    .sidebar-nav li.finance-group.flyout-hover > a.finance-group-link {
+        background: linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
+        border-left-color: #10b981 !important;
+        color: #ffffff !important;
+    }
+    .sidebar-nav li.finance-group > a.finance-group-link.active,
+    .sidebar-nav li.finance-group.active > a.finance-group-link {
+        color: #fbbf24 !important;
+        background: #062b4f !important;
+        border-left: 3.5px solid #fbbf24 !important;
+        font-weight: 700 !important;
+    }
+    #wrapper.active .finance-sub-icon { display: none !important; }
+    #wrapper:not(.active) .finance-sub-icon { display: inline-block !important; }
+    .finance-group .sidebar-flyout-menu { border-left-color: #10b981 !important; }
+    .finance-group .sidebar-flyout-menu .flyout-header { color: #10b981 !important; }
+
+    /* 5. Audit Planning Group */
+    .sidebar-nav li.audit-group > a.audit-group-link {
+        border-left: 3.5px solid rgba(168, 85, 247, 0.6) !important;
+        background: linear-gradient(90deg, rgba(168, 85, 247, 0.08) 0%, rgba(168, 85, 247, 0.01) 100%) !important;
+    }
+    .sidebar-nav li.audit-group > a.audit-group-link .group-arrow-icon {
+        color: #a855f7 !important;
+        border-color: rgba(168, 85, 247, 0.28) !important;
+        background: rgba(168, 85, 247, 0.1) !important;
+    }
+    .sidebar-nav li.audit-group > a.audit-group-link:hover,
+    .sidebar-nav li.audit-group.flyout-hover > a.audit-group-link {
+        background: linear-gradient(90deg, rgba(168, 85, 247, 0.2) 0%, rgba(168, 85, 247, 0.05) 100%) !important;
+        border-left-color: #a855f7 !important;
+        color: #ffffff !important;
+    }
+    .sidebar-nav li.audit-group > a.audit-group-link.active,
+    .sidebar-nav li.audit-group.active > a.audit-group-link {
+        color: #fbbf24 !important;
+        background: #062b4f !important;
+        border-left: 3.5px solid #fbbf24 !important;
+        font-weight: 700 !important;
+    }
+    #wrapper.active .audit-sub-icon { display: none !important; }
+    #wrapper:not(.active) .audit-sub-icon { display: inline-block !important; }
+    .audit-group .sidebar-flyout-menu { border-left-color: #a855f7 !important; }
+    .audit-group .sidebar-flyout-menu .flyout-header { color: #a855f7 !important; }
+
+    /* 6. KPI Analysis Group */
+    .sidebar-nav li.kpi-group > a.kpi-group-link {
+        border-left: 3.5px solid rgba(6, 182, 212, 0.6) !important;
+        background: linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, rgba(6, 182, 212, 0.01) 100%) !important;
+    }
+    .sidebar-nav li.kpi-group > a.kpi-group-link .group-arrow-icon {
+        color: #06b6d4 !important;
+        border-color: rgba(6, 182, 212, 0.28) !important;
+        background: rgba(6, 182, 212, 0.1) !important;
+    }
+    .sidebar-nav li.kpi-group > a.kpi-group-link:hover,
+    .sidebar-nav li.kpi-group.flyout-hover > a.kpi-group-link {
+        background: linear-gradient(90deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.05) 100%) !important;
+        border-left-color: #06b6d4 !important;
+        color: #ffffff !important;
+    }
+    .sidebar-nav li.kpi-group > a.kpi-group-link.active,
+    .sidebar-nav li.kpi-group.active > a.kpi-group-link {
+        color: #fbbf24 !important;
+        background: #062b4f !important;
+        border-left: 3.5px solid #fbbf24 !important;
+        font-weight: 700 !important;
+    }
+    #wrapper.active .kpi-sub-icon { display: none !important; }
+    #wrapper:not(.active) .kpi-sub-icon { display: inline-block !important; }
+    .kpi-group .sidebar-flyout-menu { border-left-color: #06b6d4 !important; }
+    .kpi-group .sidebar-flyout-menu .flyout-header { color: #06b6d4 !important; }
+    .kpi-group .sidebar-flyout-menu .flyout-item a.flyout-link:hover { border-left-color: #06b6d4 !important; }
+
+    /* Nested Subflyouts (Sales / Purchase under Finance) */
+    .sidebar-flyout-menu .nested-flyout-group {
+        position: relative;
+    }
+    .sidebar-flyout-menu .nested-flyout-group > a.nested-trigger-link {
+        cursor: pointer !important;
+    }
+    .sidebar-flyout-menu .nested-flyout-group > a.nested-trigger-link .flyout-item-arrow {
+        transition: transform 0.2s ease, color 0.2s ease !important;
+    }
+    .sidebar-flyout-menu .nested-flyout-group:hover > a.nested-trigger-link,
+    .sidebar-flyout-menu .nested-flyout-group.subflyout-open > a.nested-trigger-link {
+        color: #ffffff !important;
+        background: rgba(255, 255, 255, 0.14) !important;
+        padding-left: 19px !important;
+    }
+    .sidebar-flyout-menu .sales-subgroup:hover > a.nested-trigger-link,
+    .sidebar-flyout-menu .sales-subgroup.subflyout-open > a.nested-trigger-link {
+        border-left-color: #38bdf8 !important;
+    }
+    .sidebar-flyout-menu .purchase-subgroup:hover > a.nested-trigger-link,
+    .sidebar-flyout-menu .purchase-subgroup.subflyout-open > a.nested-trigger-link {
+        border-left-color: #f472b6 !important;
+    }
+    .sidebar-flyout-menu .nested-flyout-group:hover > a.nested-trigger-link .flyout-item-arrow,
+    .sidebar-flyout-menu .nested-flyout-group.subflyout-open > a.nested-trigger-link .flyout-item-arrow {
+        color: #ffffff !important;
+        transform: translateX(4px) scale(1.15);
+    }
+    .sidebar-flyout-menu .nested-flyout-group.active > a.nested-trigger-link {
+        font-weight: 700 !important;
+    }
+    .sidebar-flyout-menu .sales-subgroup.active > a.nested-trigger-link {
+        color: #38bdf8 !important;
+        border-left-color: #38bdf8 !important;
+        background: rgba(56, 189, 248, 0.14) !important;
+    }
+    .sidebar-flyout-menu .purchase-subgroup.active > a.nested-trigger-link {
+        color: #f472b6 !important;
+        border-left-color: #f472b6 !important;
+        background: rgba(244, 114, 182, 0.14) !important;
+    }
+
+    /* Subflyout Container (Level 2) */
+    .sidebar-subflyout-menu {
+        position: absolute;
+        top: -6px;
+        left: 100%;
+        display: none;
+        min-width: 220px;
+        max-width: 260px;
+        background: linear-gradient(165deg, #093766 0%, #051e39 100%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 0 10px 10px 0;
+        box-shadow: 8px 12px 35px rgba(0, 0, 0, 0.52), 0 2px 8px rgba(0, 0, 0, 0.25);
+        padding: 6px 0;
+        margin: 0;
+        list-style: none;
+        z-index: 10010;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateX(-6px);
+        transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+    }
+    .sales-subflyout {
+        border-left: 3.5px solid #38bdf8 !important;
+    }
+    .purchase-subflyout {
+        border-left: 3.5px solid #f472b6 !important;
+    }
+    /* Invisible hit bridge between Level 1 and Level 2 */
+    .sidebar-subflyout-menu::before {
+        content: '';
+        position: absolute;
+        top: -20px;
+        bottom: -20px;
+        left: -35px;
+        width: 40px;
+        background: transparent;
+        pointer-events: auto;
+    }
+    .nested-flyout-group:hover > .sidebar-subflyout-menu,
+    .nested-flyout-group.subflyout-open > .sidebar-subflyout-menu,
+    .sidebar-subflyout-menu.show-subflyout {
+        display: block !important;
+        pointer-events: auto !important;
+        opacity: 1 !important;
+        transform: translateX(0) !important;
+    }
+    .sidebar-subflyout-menu .subflyout-header {
+        padding: 7px 16px 6px 16px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 3px;
+        list-style: none;
+        display: flex;
+        align-items: center;
+    }
+    .sales-subflyout .subflyout-header {
+        color: #38bdf8 !important;
+    }
+    .purchase-subflyout .subflyout-header {
+        color: #f472b6 !important;
+    }
+    .sidebar-subflyout-menu .subflyout-item {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .sidebar-subflyout-menu .subflyout-item a.subflyout-link {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: 10px 16px !important;
+        color: #e2e8f0 !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.4px !important;
+        text-transform: uppercase !important;
+        text-decoration: none !important;
+        background: transparent !important;
+        border-left: 3px solid transparent !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+        transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .sidebar-subflyout-menu .subflyout-item:last-child a.subflyout-link {
+        border-bottom: none !important;
+    }
+    .sidebar-subflyout-menu .subflyout-item a.subflyout-link .subflyout-ico {
+        font-size: 13px !important;
+        width: 18px !important;
+        text-align: center !important;
+        margin-right: 10px !important;
+        flex-shrink: 0 !important;
+        transition: transform 0.18s ease;
+    }
+    .sidebar-subflyout-menu .subflyout-item a.subflyout-link .subflyout-text {
+        flex-grow: 1;
+        white-space: nowrap;
+    }
+    .sidebar-subflyout-menu .subflyout-item a.subflyout-link:hover {
+        color: #ffffff !important;
+        background: rgba(255, 255, 255, 0.12) !important;
+        padding-left: 19px !important;
+    }
+    .sales-subflyout .subflyout-item a.subflyout-link:hover {
+        border-left-color: #38bdf8 !important;
+    }
+    .purchase-subflyout .subflyout-item a.subflyout-link:hover {
+        border-left-color: #f472b6 !important;
+    }
+    .sidebar-subflyout-menu .subflyout-item a.subflyout-link:hover .subflyout-ico {
+        transform: scale(1.15);
+    }
+    .sidebar-subflyout-menu .subflyout-item a.subflyout-link.active {
+        color: #10b981 !important;
+        background: rgba(16, 185, 129, 0.18) !important;
+        border-left-color: #10b981 !important;
+        font-weight: 700 !important;
+    }
+
+    /* The right-side flyout menu container */
+    .sidebar-flyout-menu {
+        position: fixed;
+        top: 100px;
+        left: 180px;
+        display: none;
+        min-width: 220px;
+        max-width: 260px;
+        background: linear-gradient(165deg, #093766 0%, #051e39 100%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-left: 3.5px solid #f59e0b;
+        border-radius: 0 10px 10px 0;
+        box-shadow: 6px 10px 30px rgba(0, 0, 0, 0.48), 0 2px 8px rgba(0, 0, 0, 0.2);
+        padding: 6px 0;
+        margin: 0;
+        list-style: none;
+        z-index: 10005;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateX(-6px);
+        transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+    }
+    #wrapper:not(.active) .sidebar-flyout-menu {
+        left: 50px;
+    }
+    .sidebar-flyout-menu::before {
+        content: '';
+        position: absolute;
+        top: -20px;
+        bottom: -20px;
+        left: -40px;
+        width: 45px;
+        background: transparent;
+        pointer-events: auto;
+    }
+    .sidebar-nav li.sidebar-dropdown-group:hover > .sidebar-flyout-menu,
+    .sidebar-nav li.sidebar-dropdown-group.flyout-hover > .sidebar-flyout-menu,
+    .sidebar-flyout-menu.show-flyout {
+        display: block !important;
+        pointer-events: auto !important;
+        opacity: 1 !important;
+        transform: translateX(0) !important;
+    }
+    .sidebar-flyout-menu .flyout-header {
+        padding: 7px 16px 6px 16px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        color: #fbbf24;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 3px;
+        list-style: none;
+        display: flex;
+        align-items: center;
+    }
+    .sidebar-flyout-menu .flyout-item {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .sidebar-flyout-menu .flyout-item a.flyout-link {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: 10px 16px !important;
+        color: #e2e8f0 !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.4px !important;
+        text-transform: uppercase !important;
+        text-decoration: none !important;
+        background: transparent !important;
+        border-left: 3px solid transparent !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+        transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .sidebar-flyout-menu .flyout-item:last-child a.flyout-link {
+        border-bottom: none !important;
+    }
+    .sidebar-flyout-menu .flyout-item a.flyout-link .flyout-ico {
+        font-size: 13px !important;
+        width: 18px !important;
+        text-align: center !important;
+        margin-right: 10px !important;
+        flex-shrink: 0 !important;
+        transition: transform 0.18s ease;
+    }
+    .sidebar-flyout-menu .flyout-item a.flyout-link .flyout-text {
+        flex-grow: 1;
+        white-space: nowrap;
+    }
+    .sidebar-flyout-menu .flyout-item a.flyout-link .flyout-item-arrow {
+        margin-left: auto !important;
+        font-size: 11px !important;
+        color: rgba(255, 255, 255, 0.3) !important;
+        transition: transform 0.18s ease, color 0.18s ease !important;
+    }
+    .sidebar-flyout-menu .flyout-item a.flyout-link:hover {
+        color: #ffffff !important;
+        background: rgba(255, 255, 255, 0.12) !important;
+        border-left-color: #fbbf24 !important;
+        padding-left: 19px !important;
+    }
+    .sidebar-flyout-menu .flyout-item a.flyout-link:hover .flyout-ico {
+        transform: scale(1.15);
+    }
+    .sidebar-flyout-menu .flyout-item a.flyout-link:hover .flyout-item-arrow {
+        color: #ffffff !important;
+        transform: translateX(3px);
+    }
+    .sidebar-flyout-menu .flyout-item a.flyout-link.active {
+        color: #38bdf8 !important;
+        background: rgba(56, 189, 248, 0.18) !important;
+        border-left-color: #38bdf8 !important;
+        font-weight: 700 !important;
+    }
+    .sidebar-flyout-menu .flyout-item a.flyout-link.active .flyout-item-arrow {
+        color: #38bdf8 !important;
+    }
 </style>
 
 <!--<div id="wrapper" class="active">-->
@@ -406,133 +1098,432 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
         <?php if (Utitlity::checkUserPermission('invoice_access')) { ?>
         <li><a href="invoicePage.php" class="animate <?php echo ($pageIdentifier === 'Invoices') ? 'active' : ''; ?>" style="color: #a5b4fc !important;"><span>INVOICES</span><i class="sub_icon fa fa-inr"></i></a></li>
         <?php } ?>
-        <?php } else { ?>
-        <li><a href="myDashboard.php" class="animate <?php echo isset($addMyDashboardClass) ? $addMyDashboardClass : ''; ?>"><span>MY DASHBOARD</span><i class="sub_icon fa fa-tachometer"></i></a></li>
-        <?php if (Utitlity::checkForDirector()) { ?>
-            <li class="mgmt-space-item"><a href="directorSpace.php" class="animate mgmt-space-link <?php echo $addDirectorSpaceClass ?? '' ?>"><span class="mgmt-space-text"><i class="fa fa-star mgmt-star-icon" style="color: #fbbf24; margin-right: 4px; font-size: 10px;"></i> CONTROL MANAGEMENT</span><i
-                        class="sub_icon fa fa-black-tie mgmt-icon"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Admin Dashboard") || aitf_has_access("Management Dashboard") || aitf_has_access("Top Mgmt Dashboard") || aitf_has_access("MGMT Dashboard") || aitf_has_access("Mgmt Dashboard")) { ?>
-        <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>"><span>MGMT DASHBOARD</span><i class="sub_icon fa fa-line-chart"></i></a></li>
-        <?php } ?>
+        <?php } else { 
+        $currentScript = basename($_SERVER['PHP_SELF'] ?? '');
+        $isMyDashboardActive = !empty($addMyDashboardClass) || $currentScript === 'myDashboard.php';
+        $isTaskManagerActive = (isset($pageIdentifier) && $pageIdentifier === 'Task Manager') || $currentScript === 'taskManager.php';
+        $isIafDashboardActive = !empty($iafClass) || $currentScript === 'iaf_dashboard.php';
+        ?>
+        <li class="sidebar-section-divider"><span class="section-title">DASHBOARDS</span></li>
+        <li><a href="myDashboard.php" class="animate <?php echo $isMyDashboardActive ? 'active' : ''; ?>"><span>MY DASHBOARD</span><i class="sub_icon fa fa-tachometer"></i></a></li>
+        <li class="task-manager-disabled">
+            <a href="#" class="animate task-manager-disabled-link <?php echo $isTaskManagerActive ? 'active' : ''; ?>" aria-disabled="true" title="Task Manager is coming soon">
+                <span>TASK MANAGER</span><i class="sub_icon fa fa-tasks"></i>
+            </a>
+            <span class="task-manager-coming-soon"><i class="fa fa-lock" aria-hidden="true"></i> COMING SOON</span>
+        </li>
         <?php if (aitf_has_access("IAF Dashboard")) { ?>
-        <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>"><span>IAF DASHBOARD</span><i class="sub_icon fa fa-globe"></i></a></li>
+        <li><a href="iaf_dashboard.php" class="animate <?php echo $isIafDashboardActive ? 'active' : ''; ?>"><span>IAF DASHBOARD</span><i class="sub_icon fa fa-globe"></i></a></li>
+        <?php } ?>
+        <li class="sidebar-section-divider"><span class="section-title">DEPARTMENTS</span></li>
+        <?php
+        $canAccessControlMgmt = Utitlity::checkForDirector();
+        $canAccessMgmtDashboard = aitf_has_access("Admin Dashboard") || aitf_has_access("Management Dashboard") || aitf_has_access("Top Mgmt Dashboard") || aitf_has_access("MGMT Dashboard") || aitf_has_access("Mgmt Dashboard");
+        $canAccessAddUser = aitf_has_access("Add User");
+        $canAccessRecycle = aitf_has_access("Recycle Cust");
+        $canAccessMasterCreator = aitf_has_access("Master Creator") || Utitlity::checkForDirector();
+        $canAccessTopMgmt = $canAccessControlMgmt || $canAccessMgmtDashboard || $canAccessAddUser || $canAccessRecycle || $canAccessMasterCreator;
+        $isTopMgmtActive = !empty($addDirectorSpaceClass) || !empty($addAdminDashboardClass) || !empty($addUserClass) || !empty($addRecycleClass) || !empty($addMasterClass) || in_array($currentScript, ['directorSpace.php', 'adminDashboard.php', 'addUsers.php', 'clientRecycle.php', 'masterCreator.php']);
+        ?>
+        <?php if ($canAccessTopMgmt) { ?>
+        <li class="sidebar-dropdown-group top-mgmt-group <?php echo $isTopMgmtActive ? 'active' : ''; ?>">
+            <a href="javascript:void(0);" class="animate dropdown-group-link mgmt-group-link <?php echo $isTopMgmtActive ? 'active' : ''; ?>" title="TOP MGMT">
+                <span class="dropdown-group-text">
+                    <i class="fa fa-shield top-mgmt-group-icon" style="color: #fbbf24; margin-right: 4px; font-size: 10px;"></i> TOP MGMT
+                </span>
+                <i class="sub_icon fa fa-angle-right group-arrow-icon"></i>
+                <i class="sub_icon fa fa-shield top-mgmt-sub-icon" style="color: #fbbf24;"></i>
+            </a>
+            <ul class="sidebar-flyout-menu">
+                <li class="flyout-header">
+                    <span><i class="fa fa-shield" style="color: #fbbf24; margin-right: 5px; font-size: 11px;"></i> TOP MANAGEMENT</span>
+                </li>
+                <?php if ($canAccessControlMgmt) { ?>
+                <li class="flyout-item">
+                    <a href="directorSpace.php" class="flyout-link <?php echo $addDirectorSpaceClass ?? ''; ?>">
+                        <i class="fa fa-black-tie flyout-ico" style="color: #fbbf24;"></i>
+                        <span class="flyout-text">CONTROL MANAGEMENT</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessMgmtDashboard) { ?>
+                <li class="flyout-item">
+                    <a href="adminDashboard.php" class="flyout-link <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">
+                        <i class="fa fa-line-chart flyout-ico" style="color: #38bdf8;"></i>
+                        <span class="flyout-text">MGMT DASHBOARD</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessAddUser) { ?>
+                <li class="flyout-item">
+                    <a href="addUsers.php" class="flyout-link <?php echo $addUserClass ?? ''; ?>">
+                        <i class="fa fa-user-plus flyout-ico" style="color: #34d399;"></i>
+                        <span class="flyout-text">ADD USER</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessMasterCreator) { ?>
+                <li class="flyout-item">
+                    <a href="masterCreator.php" class="flyout-link <?php echo $addMasterClass ?? ''; ?>">
+                        <i class="fa fa-wrench flyout-ico" style="color: #38bdf8;"></i>
+                        <span class="flyout-text">MASTER CREATOR</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessRecycle) { ?>
+                <li class="flyout-item">
+                    <a href="clientRecycle.php" class="flyout-link <?php echo $addRecycleClass ?? ''; ?>">
+                        <i class="fa fa-trash-o flyout-ico" style="color: #f87171;"></i>
+                        <span class="flyout-text">RECYCLE BIN</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+            </ul>
+        </li>
         <?php } ?>
 
-        <?php if (aitf_has_access("Application")) { ?>
-            <?php $unreadBadge = isset($GLOBALS['unread_app_count']) ? (int) $GLOBALS['unread_app_count'] : 0; ?>
-            <li>
-                <a href="applicationReceived.php" class="animate app-rec-nav <?php echo $addAppReceivedClass ?>">
-                    <span>APPLICATION
-                    <?php if ($unreadBadge > 0) { ?>
-                        <span
-                            style="margin-left:6px; padding:1px 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:10px; font-weight:700;"><?php echo $unreadBadge; ?></span>
+
+        <?php
+        $canAccessClientList = aitf_has_access('Client List');
+        $canAccessCertIssueList = aitf_has_access('Cert Issue List');
+        $canAccessClientAnalysis = aitf_has_access('Client Analysis');
+        $canAccessClientsGroup = $canAccessClientList || $canAccessCertIssueList || $canAccessClientAnalysis;
+        $isClientsGroupActive = !empty($addClass) || !empty($addcertissueClass) || !empty($clientanalysis) || in_array($currentScript, ['homePage.php', 'auditanalysis.php', 'clientanalysis.php', 'clientHistory.php', 'editClient.php', 'addClient.php', 'clientList.php']);
+        ?>
+        <?php if ($canAccessClientsGroup) { ?>
+        <li class="sidebar-dropdown-group clients-group <?php echo $isClientsGroupActive ? 'active' : ''; ?>">
+            <a href="javascript:void(0);" class="animate dropdown-group-link clients-group-link <?php echo $isClientsGroupActive ? 'active' : ''; ?>" title="CLIENTS">
+                <span class="dropdown-group-text">
+                    <i class="fa fa-building clients-group-icon" style="color: #60a5fa; margin-right: 4px; font-size: 11px;"></i> CLIENTS
+                </span>
+                <i class="sub_icon fa fa-angle-right group-arrow-icon"></i>
+                <i class="sub_icon fa fa-building clients-sub-building" style="color: #60a5fa;"></i>
+            </a>
+            <ul class="sidebar-flyout-menu">
+                <li class="flyout-header">
+                    <span><i class="fa fa-building" style="color: #38bdf8; margin-right: 5px;"></i> CLIENT MANAGEMENT</span>
+                </li>
+                <?php if ($canAccessClientList) { ?>
+                <li class="flyout-item">
+                    <a href="homePage.php" class="flyout-link <?php echo $addClass ?? ''; ?>">
+                        <i class="fa fa-building flyout-ico" style="color: #60a5fa;"></i>
+                        <span class="flyout-text">CLIENTS</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessCertIssueList) { ?>
+                <li class="flyout-item">
+                    <a href="auditanalysis.php" class="flyout-link <?php echo $addcertissueClass ?? ''; ?>">
+                        <i class="fa fa-newspaper-o flyout-ico" style="color: #38bdf8;"></i>
+                        <span class="flyout-text">CERT. ISSUED LIST</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessClientAnalysis) { ?>
+                <li class="flyout-item">
+                    <a href="clientanalysis.php" class="flyout-link <?php echo $clientanalysis ?? ''; ?>">
+                        <i class="fa fa-pie-chart flyout-ico" style="color: #a78bfa;"></i>
+                        <span class="flyout-text">CLIENT ANALYSIS</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+            </ul>
+        </li>
+        <?php } ?>
+        <?php
+        $canAccessMarketingItem = aitf_has_access("Marketing");
+        $canAccessAppReceived = aitf_has_access("Application");
+        $canAccessAgreements = aitf_has_access("Agreements");
+        $canAccessIntimationDue = aitf_has_access("Intimation Due");
+        $canAccessQuotations = aitf_has_access("Quotations");
+        $canAccessMarketingGroup = $canAccessMarketingItem || $canAccessAppReceived || $canAccessAgreements || $canAccessIntimationDue || $canAccessQuotations;
+        $isMarketingGroupActive = !empty($addMarketingClass) || !empty($addAppReceivedClass) || !empty($addagreementClass) || !empty($adddueClass) || !empty($addquotClass) || in_array($currentScript, ['marketingPage.php', 'applicationReceived.php', 'agreement_list.php', 'due_letter.php', 'mkt_calling_data.php', 'mkt_unassigned_data.php', 'mkt_all_data.php', 'mkt_incomplete_info.php', 'mkt_feedback_data.php', 'mkt_settings.php', 'quotation_list.php', 'add_followup.php', 'quotationPage.php']);
+        $mktUnreadBadge = isset($GLOBALS['unread_app_count']) ? (int) $GLOBALS['unread_app_count'] : 0;
+        ?>
+        <?php if ($canAccessMarketingGroup) { ?>
+        <li class="sidebar-dropdown-group marketing-group <?php echo $isMarketingGroupActive ? 'active' : ''; ?>">
+            <a href="javascript:void(0);" class="animate dropdown-group-link marketing-group-link <?php echo $isMarketingGroupActive ? 'active' : ''; ?>" title="MARKETING">
+                <span class="dropdown-group-text">
+                    <i class="fa fa-briefcase marketing-group-icon" style="color: #f472b6; margin-right: 4px; font-size: 11px;"></i> MARKETING
+                    <?php if ($mktUnreadBadge > 0) { ?>
+                        <span style="margin-left:5px; padding:1px 5px; border-radius:999px; background:#ef4444; color:#fff; font-size:9px; font-weight:700;"><?php echo $mktUnreadBadge; ?></span>
                     <?php } ?>
-                    </span>
-                    <i class="sub_icon fa fa-wpforms"></i>
-                </a>
-            </li>
-        <?php } ?>
-        <?php if (aitf_has_access('Client List')) { ?>
-            <li><a href="homePage.php" class="animate <?php echo $addClass ?>"><span>CLIENTS</span><i
-                        class="sub_icon fa fa-building"></i></a></li>
-        <?php } ?>
-         <?php if (aitf_has_access("Marketing")) { ?>
-            <li><a href="marketingPage.php" class="animate <?php echo $addMarketingClass ?>"><span>MARKETING</span><i
-                        class="sub_icon fa fa-briefcase"></i></a></li>
+                </span>
+                <i class="sub_icon fa fa-angle-right group-arrow-icon"></i>
+                <i class="sub_icon fa fa-briefcase marketing-sub-briefcase" style="color: #f472b6;"></i>
+            </a>
+            <ul class="sidebar-flyout-menu">
+                <li class="flyout-header">
+                    <span><i class="fa fa-briefcase" style="color: #f472b6; margin-right: 5px;"></i> MARKETING & DEALS</span>
+                </li>
+                <?php if ($canAccessMarketingItem) { ?>
+                <li class="flyout-item">
+                    <a href="marketingPage.php" class="flyout-link <?php echo $addMarketingClass ?? ''; ?>">
+                        <i class="fa fa-briefcase flyout-ico" style="color: #f472b6;"></i>
+                        <span class="flyout-text">MARKETING PAGE</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessQuotations) { ?>
+                <li class="flyout-item">
+                    <a href="quotationPage.php" class="flyout-link <?php echo $addquotClass ?? ''; ?>">
+                        <i class="fa fa-quote-left flyout-ico" style="color: #a78bfa;"></i>
+                        <span class="flyout-text">QUOTATIONS</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessAppReceived) { ?>
+                <li class="flyout-item">
+                    <a href="applicationReceived.php" class="flyout-link <?php echo $addAppReceivedClass ?? ''; ?>">
+                        <i class="fa fa-wpforms flyout-ico" style="color: #38bdf8;"></i>
+                        <span class="flyout-text">
+                            APPLICATION
+                            <?php if ($mktUnreadBadge > 0) { ?>
+                                <span style="margin-left:5px; padding:1px 5px; border-radius:999px; background:#ef4444; color:#fff; font-size:9px; font-weight:700;"><?php echo $mktUnreadBadge; ?></span>
+                            <?php } ?>
+                        </span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessAgreements) { ?>
+                <li class="flyout-item">
+                    <a href="agreementPage.php" class="flyout-link <?php echo $addagreementClass ?? ''; ?>">
+                        <i class="fa fa-handshake-o flyout-ico" style="color: #34d399;"></i>
+                        <span class="flyout-text">AGREEMENTS</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessIntimationDue) { ?>
+                <li class="flyout-item">
+                    <a href="intimationLetter.php" class="flyout-link <?php echo $adddueClass ?? ''; ?>">
+                        <i class="fa fa-envelope-o flyout-ico" style="color: #fbbf24;"></i>
+                        <span class="flyout-text">INTIMATION DUE</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+            </ul>
+        </li>
         <?php } ?> 
-        <?php if (aitf_has_access("Received Payment")) { ?>
-            <li><a href="receivedPayments.php" class="animate <?php echo $addReceivedPaymentClass ?? '' ?>"><span>RECEIVED PAYMENT</span><i
-                        class="sub_icon fa fa-check-circle"></i></a></li>
+        <?php
+        $canAccessInvoices = aitf_has_access('Invoices');
+        $canAccessReceivedPayment = aitf_has_access('Received Payment');
+        $canAccessPaymentDue = aitf_has_access('Payment Due');
+        $canAccessTds = aitf_has_access('TDS Deducted');
+        $canAccessBills = aitf_has_access('Bills');
+        $canAccessCreditors = aitf_has_access('Creditors');
+
+        $canAccessSales = $canAccessInvoices || $canAccessReceivedPayment || $canAccessPaymentDue || $canAccessTds;
+        $canAccessPurchase = $canAccessBills || $canAccessCreditors;
+        $canAccessFinance = $canAccessSales || $canAccessPurchase;
+
+        $isSalesActive = !empty($addInvoiceClass) || !empty($addReceivedPaymentClass) || !empty($addFinanceClass) || !empty($addtds);
+        $isPurchaseActive = !empty($addBillsClass) || !empty($addSuppliersClass);
+        $isFinanceGroupActive = $isSalesActive || $isPurchaseActive || in_array($currentScript, ['finance_dashboard.php', 'invoicePage.php', 'proforma_invoices.php', 'receivedPayments.php', 'paymentPage.php', 'listOfTds.php', 'bills.php', 'suppliers.php']);
+        ?>
+        <?php if ($canAccessFinance) { ?>
+        <li class="sidebar-dropdown-group finance-group <?php echo $isFinanceGroupActive ? 'active' : ''; ?>">
+            <a href="javascript:void(0);" class="animate dropdown-group-link finance-group-link <?php echo $isFinanceGroupActive ? 'active' : ''; ?>" title="FINANCE MANAGEMENT">
+                <span class="dropdown-group-text">
+                    <i class="fa fa-calculator finance-group-icon" style="color: #10b981; margin-right: 4px; font-size: 11px;"></i> FINANCE MANAGEMENT
+                </span>
+                <i class="sub_icon fa fa-angle-right group-arrow-icon"></i>
+                <i class="sub_icon fa fa-calculator finance-sub-icon" style="color: #10b981;"></i>
+            </a>
+            <ul class="sidebar-flyout-menu finance-flyout">
+                <li class="flyout-header">
+                    <span><i class="fa fa-calculator" style="color: #10b981; margin-right: 5px;"></i> FINANCE MANAGEMENT</span>
+                </li>
+                <?php if ($canAccessSales) { ?>
+                <li class="flyout-item nested-flyout-group sales-subgroup <?php echo $isSalesActive ? 'active' : ''; ?>">
+                    <a href="javascript:void(0);" class="flyout-link nested-trigger-link <?php echo $isSalesActive ? 'active' : ''; ?>" title="SALES">
+                        <i class="fa fa-shopping-cart flyout-ico" style="color: #38bdf8;"></i>
+                        <span class="flyout-text">SALES</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                    <ul class="sidebar-subflyout-menu sales-subflyout">
+                        <li class="subflyout-header">
+                            <span><i class="fa fa-shopping-cart" style="color: #38bdf8; margin-right: 5px;"></i> SALES</span>
+                        </li>
+                        <?php if ($canAccessInvoices) { ?>
+                        <li class="subflyout-item">
+                            <a href="invoicePage.php" class="subflyout-link <?php echo $addInvoiceClass ?? ''; ?>">
+                                <i class="fa fa-inr subflyout-ico" style="color: #38bdf8;"></i>
+                                <span class="subflyout-text">INVOICES</span>
+                            </a>
+                        </li>
+                        <?php } ?>
+                        <?php if ($canAccessReceivedPayment) { ?>
+                        <li class="subflyout-item">
+                            <a href="receivedPayments.php" class="subflyout-link <?php echo $addReceivedPaymentClass ?? ''; ?>">
+                                <i class="fa fa-check-circle subflyout-ico" style="color: #34d399;"></i>
+                                <span class="subflyout-text">RECEIVED PAYMENT</span>
+                            </a>
+                        </li>
+                        <?php } ?>
+                        <?php if ($canAccessPaymentDue) { ?>
+                        <li class="subflyout-item">
+                            <a href="paymentPage.php" class="subflyout-link <?php echo $addFinanceClass ?? ''; ?>">
+                                <i class="fa fa-money subflyout-ico" style="color: #fbbf24;"></i>
+                                <span class="subflyout-text">DUE PAYMENT</span>
+                            </a>
+                        </li>
+                        <?php } ?>
+                        <?php if ($canAccessTds) { ?>
+                        <li class="subflyout-item">
+                            <a href="listOfTds.php" class="subflyout-link <?php echo $addtds ?? ''; ?>">
+                                <i class="fa fa-list subflyout-ico" style="color: #a78bfa;"></i>
+                                <span class="subflyout-text">TDS DEDUCTED</span>
+                            </a>
+                        </li>
+                        <?php } ?>
+                    </ul>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessPurchase) { ?>
+                <li class="flyout-item nested-flyout-group purchase-subgroup <?php echo $isPurchaseActive ? 'active' : ''; ?>">
+                    <a href="javascript:void(0);" class="flyout-link nested-trigger-link <?php echo $isPurchaseActive ? 'active' : ''; ?>" title="PURCHASE">
+                        <i class="fa fa-truck flyout-ico" style="color: #f472b6;"></i>
+                        <span class="flyout-text">PURCHASE</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                    <ul class="sidebar-subflyout-menu purchase-subflyout">
+                        <li class="subflyout-header">
+                            <span><i class="fa fa-truck" style="color: #f472b6; margin-right: 5px;"></i> PURCHASE</span>
+                        </li>
+                        <?php if ($canAccessBills) { ?>
+                        <li class="subflyout-item">
+                            <a href="billsPage.php" class="subflyout-link <?php echo $addBillsClass ?? ''; ?>">
+                                <i class="fa fa-file-text-o subflyout-ico" style="color: #f472b6;"></i>
+                                <span class="subflyout-text">BILLS</span>
+                            </a>
+                        </li>
+                        <?php } ?>
+                        <?php if ($canAccessCreditors) { ?>
+                        <li class="subflyout-item">
+                            <a href="suppliers.php" class="subflyout-link <?php echo $addSuppliersClass ?? ''; ?>">
+                                <i class="fa fa-address-card-o subflyout-ico" style="color: #fbbf24;"></i>
+                                <span class="subflyout-text">SUPPLIERS</span>
+                            </a>
+                        </li>
+                        <?php } ?>
+                    </ul>
+                </li>
+                <?php } ?>
+            </ul>
+        </li>
         <?php } ?>
-        <?php if (aitf_has_access("Payment Due")) { ?>
-            <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>"><span> DUE PAYMENT</span><i
-                        class="sub_icon fa fa-money"></i></a></li>
+        <?php
+        $canAccessAuditList = aitf_has_access("Audit List");
+        $canAccessAuditPlanning = aitf_has_access("Audit Planning");
+        $canAccessAuditData = aitf_has_access("Audit Data");
+        $canAccessAuditGroup = $canAccessAuditList || $canAccessAuditPlanning || $canAccessAuditData;
+        $isAuditGroupActive = !empty($addAuditClass) || !empty($addWorkingClass) || !empty($addAuditorChecklistClass) || in_array($currentScript, ['auditPage.php', 'auditPlanning.php', 'auditorChecklist.php']);
+        ?>
+        <?php if ($canAccessAuditGroup) { ?>
+        <li class="sidebar-dropdown-group audit-group <?php echo $isAuditGroupActive ? 'active' : ''; ?>">
+            <a href="javascript:void(0);" class="animate dropdown-group-link audit-group-link <?php echo $isAuditGroupActive ? 'active' : ''; ?>" title="AUDIT PLANNING">
+                <span class="dropdown-group-text">
+                    <i class="fa fa-calendar-check-o audit-group-icon" style="color: #a855f7; margin-right: 4px; font-size: 11px;"></i> AUDIT PLANNING
+                </span>
+                <i class="sub_icon fa fa-angle-right group-arrow-icon"></i>
+                <i class="sub_icon fa fa-calendar-check-o audit-sub-icon" style="color: #a855f7;"></i>
+            </a>
+            <ul class="sidebar-flyout-menu audit-flyout">
+                <li class="flyout-header">
+                    <span><i class="fa fa-calendar-check-o" style="color: #a855f7; margin-right: 5px;"></i> AUDIT PLANNING</span>
+                </li>
+                <?php if ($canAccessAuditList) { ?>
+                <li class="flyout-item">
+                    <a href="auditPage.php" class="flyout-link <?php echo $addAuditClass ?? ''; ?>">
+                        <i class="fa fa-list-alt flyout-ico" style="color: #38bdf8;"></i>
+                        <span class="flyout-text">AUDIT LIST</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessAuditPlanning) { ?>
+                <li class="flyout-item">
+                    <a href="auditPlanning.php" class="flyout-link <?php echo $addWorkingClass ?? ''; ?>">
+                        <i class="fa fa-calendar-check-o flyout-ico" style="color: #a855f7;"></i>
+                        <span class="flyout-text">AUDIT PLANNING</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessAuditData) { ?>
+                <li class="flyout-item">
+                    <a href="auditorChecklist.php" class="flyout-link <?php echo $addAuditorChecklistClass ?? ''; ?>">
+                        <i class="fa fa-clipboard flyout-ico" style="color: #34d399;"></i>
+                        <span class="flyout-text">AUDIT DATA</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+            </ul>
+        </li>
         <?php } ?>
-        <?php if (aitf_has_access("Audit Planning")) { ?>
-            <li><a href="auditPlanning.php" class="animate <?php echo $addWorkingClass ?>"><span>AUDIT PLANNING</span><i
-                        class="sub_icon fa fa-calendar-check-o"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Master Creator")) { ?>
-            <li><a href="masterCreator.php" class="animate <?php echo $addMasterClass ?? '' ?>"><span>MASTER CREATOR</span><i
-                        class="sub_icon fa fa-wrench"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Guidelines")) { ?>
-            <li class="guidelines-nav-item">
-                <a href="guidelines.php" class="animate guidelines-nav-link <?php echo $addGuidelinesClass ?? '' ?>">
-                    <span><i class="fa fa-book" style="color: #34d399; margin-right: 4px; font-size: 11px;"></i> GUIDELINES</span>
-                    <i class="sub_icon fa fa-book"></i>
-                </a>
-            </li>
-        <?php } ?>
-        <?php if (aitf_has_access("TDS Deducted")) { ?>
-            <li><a href="listOfTds.php" class="animate <?php echo $addtds ?? '' ?>"><span>TDS DEDUCTED</span><i
-                        class="sub_icon fa fa-list"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Intimation Due")) { ?>
-            <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>"><span>INTIMATION DUE</span><i
-                        class="sub_icon fa fa-envelope-o"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access('Invoices')) { ?>
-            <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>"><span>INVOICES</span><i
-                        class="sub_icon fa fa-inr"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access('Bills')) { ?>
-            <li><a href="billsPage.php" class="animate <?php echo isset($addBillsClass) ? $addBillsClass : ''; ?>"><span>BILLS</span><i
-                        class="sub_icon fa fa-file-text-o"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Creditors")) { ?>
-             <li><a href="suppliers.php" class="animate <?php echo isset($addSuppliersClass) ? $addSuppliersClass : ''; ?>"><span>SUPPLIERS</span><i
-                        class="sub_icon fa fa-address-card-o"></i></a></li> 
-        <?php } ?>
-        <?php if (aitf_has_access("Quotations")) { ?>
-            <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>"><span>QUOTATIONS</span><i
-                        class="sub_icon fa fa-quote-left"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Agreements")) { ?>
-            <li><a href="agreementPage.php" class="animate <?php echo $addagreementClass ?>"><span>AGREEMENTS</span><i
-                        class="sub_icon fa fa-handshake-o"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Audit List")) { ?>
-            <li><a href="auditPage.php" class="animate <?php echo $addAuditClass ?>"><span>AUDIT LIST</span><i
-                        class="sub_icon fa fa-list-alt"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Add User")) { ?>
-            <li><a href="addUsers.php" class="animate <?php echo $addUserClass ?>"><span>ADD USER</span><i
-                        class="sub_icon fa fa-user-plus"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Recycle Cust")) { ?>
-            <li><a href="clientRecycle.php" class="animate <?php echo $addRecycleClass ?>"><span>RECYCLE BIN</span><i
-                        class="sub_icon fa fa-trash-o"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Cert Issue List")) { ?>
-            <li><a href="auditanalysis.php" class="animate <?php echo $addcertissueClass ?>"><span>CERT. ISSUED LIST</span><i
-                        class="sub_icon fa fa-newspaper-o"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Audit Performance")) { ?>
-            <li><a href="qualityanalysis.php" class="animate <?php echo $addauditperClass ?>"><span>AUDIT PERFORMANCE</span><i
-                        class="sub_icon fa fa-line-chart"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Client Analysis")) { ?>
-            <li><a href="clientanalysis.php" class="animate <?php echo $clientanalysis ?>"><span>CLIENT ANALYSIS</span><i
-                        class="sub_icon fa fa-pie-chart"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("App Review Objective")) { ?>
-            <li><a href="apprevobjective.php" class="animate <?php echo $apprevobj ?>"><span>APP REV OBJECTIVE</span><i
-                        class="sub_icon fa fa-eye"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Doc Upload Status")) { ?>
-        <li><a href="uploadingStatus.php" class="animate <?php echo $docobj ?>"><span>DOC.UPLOAD STATUS</span><i
-                    class="sub_icon fa fa-cloud-upload"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Audit Data")) { ?>
-            <li><a href="auditorChecklist.php"
-                    class="animate <?php echo isset($addAuditorChecklistClass) ? $addAuditorChecklistClass : ''; ?>"><span>AUDIT-DATA</span><i
-                        class="sub_icon fa fa-clipboard"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Go AI")) { ?>
-            <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>"><span>GoAI</span><i
-                        class="sub_icon fa fa-magic"></i></a></li>
+        <?php
+        $canAccessAuditPerformance = aitf_has_access("Audit Performance");
+        $canAccessAppRevObjective = aitf_has_access("App Review Objective");
+        $canAccessDocUploadStatus = aitf_has_access("Doc Upload Status");
+        $canAccessKpiGroup = aitf_has_access("KPI Analysis") || $canAccessAuditPerformance || $canAccessAppRevObjective || $canAccessDocUploadStatus;
+        $isKpiGroupActive = !empty($addauditperClass) || !empty($apprevobj) || !empty($docobj) || in_array($currentScript, ['qualityanalysis.php', 'apprevobjective.php', 'uploadingStatus.php']);
+        ?>
+        <?php if ($canAccessKpiGroup) { ?>
+        <li class="sidebar-dropdown-group kpi-group <?php echo $isKpiGroupActive ? 'active' : ''; ?>">
+            <a href="javascript:void(0);" class="animate dropdown-group-link kpi-group-link <?php echo $isKpiGroupActive ? 'active' : ''; ?>" title="KPI ANALYSIS">
+                <span class="dropdown-group-text">
+                    <i class="fa fa-bar-chart kpi-group-icon" style="color: #06b6d4; margin-right: 4px; font-size: 11px;"></i> KPI ANALYSIS
+                </span>
+                <i class="sub_icon fa fa-angle-right group-arrow-icon"></i>
+                <i class="sub_icon fa fa-bar-chart kpi-sub-icon" style="color: #06b6d4;"></i>
+            </a>
+            <ul class="sidebar-flyout-menu kpi-flyout">
+                <li class="flyout-header">
+                    <span><i class="fa fa-bar-chart" style="color: #06b6d4; margin-right: 5px;"></i> KPI ANALYSIS</span>
+                </li>
+                <?php if ($canAccessAuditPerformance) { ?>
+                <li class="flyout-item">
+                    <a href="qualityanalysis.php" class="flyout-link <?php echo $addauditperClass ?? ''; ?>">
+                        <i class="fa fa-line-chart flyout-ico" style="color: #38bdf8;"></i>
+                        <span class="flyout-text">AUDIT PERFORMANCE</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessAppRevObjective) { ?>
+                <li class="flyout-item">
+                    <a href="apprevobjective.php" class="flyout-link <?php echo $apprevobj ?? ''; ?>">
+                        <i class="fa fa-eye flyout-ico" style="color: #fbbf24;"></i>
+                        <span class="flyout-text">APP. REVIEW OBJECTIVE</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessDocUploadStatus) { ?>
+                <li class="flyout-item">
+                    <a href="uploadingStatus.php" class="flyout-link <?php echo $docobj ?? ''; ?>">
+                        <i class="fa fa-cloud-upload flyout-ico" style="color: #34d399;"></i>
+                        <span class="flyout-text">DOC UPLOAD STATUS</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+            </ul>
+        </li>
         <?php } ?>
         <?php } // end if role !== 'Auditor' ?>
     </ul>
@@ -647,6 +1638,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <!-- Limited mobile menu for permission-only access users -->
             <ul class="nav navbar-nav visible-xs">
                 <li><a href="myDashboard.php">MY DASHBOARD</a></li>
+                <li><a href="#" class="task-manager-disabled-link" aria-disabled="true" title="Task Manager is coming soon">TASK MANAGER</a></li>
                 <li><a href="auditorDashboard.php"><i class="fa fa-arrow-left"></i> Back to Dashboard</a></li>
                 <li class="active"><a href="invoicePage.php">INVOICES</a></li>
                 <li><a href="guidelines.php" style="color: #10b981; font-weight: 700;"><i class="fa fa-book"></i> GUIDELINES</a></li>
@@ -654,40 +1646,157 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <?php } else { ?>
             <ul class="nav navbar-nav visible-xs">
                 <li><a href="myDashboard.php">MY DASHBOARD</a></li>
-                <?php if (Utitlity::checkForDirector()) { ?>
-                    <li><a href="directorSpace.php">CONTROL MANAGEMENT</a></li>
-                    <li><a href="adminDashboard.php">MGMT DASHBOARD</a></li>
+                <li><a href="#" class="task-manager-disabled-link" aria-disabled="true" title="Task Manager is coming soon">TASK MANAGER</a></li>
+                <?php if ($canAccessTopMgmt) { ?>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="color: #fbbf24; font-weight: 700;">
+                        <i class="fa fa-star" style="color: #fbbf24; margin-right: 5px;"></i> TOP MGMT <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu" style="background: #082d54; border: 1px solid rgba(255,255,255,0.15);">
+                        <?php if ($canAccessControlMgmt) { ?>
+                        <li><a href="directorSpace.php" style="color: #fff;"><i class="fa fa-black-tie" style="color: #fbbf24; margin-right: 6px;"></i> CONTROL MANAGEMENT</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessMgmtDashboard) { ?>
+                        <li><a href="adminDashboard.php" style="color: #fff;"><i class="fa fa-line-chart" style="color: #38bdf8; margin-right: 6px;"></i> MGMT DASHBOARD</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessAddUser) { ?>
+                        <li><a href="addUsers.php" style="color: #fff;"><i class="fa fa-user-plus" style="color: #34d399; margin-right: 6px;"></i> ADD USER</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessRecycle) { ?>
+                        <li><a href="clientRecycle.php" style="color: #fff;"><i class="fa fa-trash-o" style="color: #f87171; margin-right: 6px;"></i> RECYCLE BIN</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessMasterCreator) { ?>
+                        <li><a href="masterCreator.php" style="color: #fff;"><i class="fa fa-cogs" style="color: #e879f9; margin-right: 6px;"></i> MASTER CREATOR</a></li>
+                        <?php } ?>
+                    </ul>
+                </li>
                 <?php } ?>
                 <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
                 <li><a href="iaf_dashboard.php">IAF DASHBOARD</a></li>
                 <?php } ?>
-                <li><a href="homePage.php">CLIENTS</a></li>
-                <li><a href="marketingPage.php">MARKETING</a></li>
-                <?php if (aitf_has_access("Payment Due")) { ?>
-                <li><a href="paymentPage.php">PAYMENT</a></li>
+                <?php if ($canAccessClientsGroup) { ?>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="color: #60a5fa; font-weight: 700;">
+                        <i class="fa fa-building" style="color: #60a5fa; margin-right: 5px;"></i> CLIENTS <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu" style="background: #082d54; border: 1px solid rgba(255,255,255,0.15);">
+                        <?php if ($canAccessClientList) { ?>
+                        <li><a href="homePage.php" style="color: #fff;"><i class="fa fa-building" style="color: #60a5fa; margin-right: 6px;"></i> CLIENTS</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessCertIssueList) { ?>
+                        <li><a href="auditanalysis.php" style="color: #fff;"><i class="fa fa-newspaper-o" style="color: #38bdf8; margin-right: 6px;"></i> CERT. ISSUED LIST</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessClientAnalysis) { ?>
+                        <li><a href="clientanalysis.php" style="color: #fff;"><i class="fa fa-pie-chart" style="color: #a78bfa; margin-right: 6px;"></i> CLIENT ANALYSIS</a></li>
+                        <?php } ?>
+                    </ul>
+                </li>
                 <?php } ?>
-                <li><a href="auditPlanning.php">AUDIT PLANNING</a></li>
-                <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
-                <li><a href="masterCreator.php">MASTER CREATOR</a></li>
+                <?php if ($canAccessMarketingGroup) { ?>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="color: #f472b6; font-weight: 700;">
+                        <i class="fa fa-briefcase" style="color: #f472b6; margin-right: 5px;"></i> MARKETING <b class="caret"></b>
+                        <?php if ($mktUnreadBadge > 0) { ?>
+                            <span style="margin-left:4px; padding:1px 5px; border-radius:999px; background:#ef4444; color:#fff; font-size:9px;"><?php echo $mktUnreadBadge; ?></span>
+                        <?php } ?>
+                    </a>
+                    <ul class="dropdown-menu" style="background: #082d54; border: 1px solid rgba(255,255,255,0.15);">
+                        <?php if ($canAccessMarketingItem) { ?>
+                        <li><a href="marketingPage.php" style="color: #fff;"><i class="fa fa-briefcase" style="color: #f472b6; margin-right: 6px;"></i> MARKETING PAGE</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessQuotations) { ?>
+                        <li><a href="quotationPage.php" style="color: #fff;"><i class="fa fa-quote-left" style="color: #a78bfa; margin-right: 6px;"></i> QUOTATIONS</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessAppReceived) { ?>
+                        <li><a href="applicationReceived.php" style="color: #fff;"><i class="fa fa-wpforms" style="color: #38bdf8; margin-right: 6px;"></i> APPLICATION <?php if ($mktUnreadBadge > 0) { ?><span style="padding:1px 5px; border-radius:999px; background:#ef4444; color:#fff; font-size:9px;"><?php echo $mktUnreadBadge; ?></span><?php } ?></a></li>
+                        <?php } ?>
+                        <?php if ($canAccessAgreements) { ?>
+                        <li><a href="agreementPage.php" style="color: #fff;"><i class="fa fa-handshake-o" style="color: #34d399; margin-right: 6px;"></i> AGREEMENTS</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessIntimationDue) { ?>
+                        <li><a href="intimationLetter.php" style="color: #fff;"><i class="fa fa-envelope-o" style="color: #fbbf24; margin-right: 6px;"></i> INTIMATION DUE</a></li>
+                        <?php } ?>
+                    </ul>
+                </li>
                 <?php } ?>
-                <?php if (aitf_has_access("Guidelines")) { ?>
-                <li><a href="guidelines.php" style="color: #10b981; font-weight: 700;"><i class="fa fa-book"></i> GUIDELINES</a></li>
+                <?php if ($canAccessFinance) { ?>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="color: #10b981; font-weight: 700;">
+                        <i class="fa fa-calculator" style="color: #10b981; margin-right: 5px;"></i> FINANCE MANAGEMENT <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu" style="background: #082d54; border: 1px solid rgba(255,255,255,0.15);">
+                        <?php if ($canAccessSales) { ?>
+                        <li class="dropdown-header" style="color: #38bdf8; font-weight: 700; font-size: 11px; padding: 6px 15px; letter-spacing: 0.6px; text-transform: uppercase;">
+                            <i class="fa fa-shopping-cart" style="margin-right: 4px;"></i> SALES
+                        </li>
+                        <?php if ($canAccessInvoices) { ?>
+                        <li style="padding-left: 8px;"><a href="invoicePage.php" style="color: #fff;"><i class="fa fa-inr" style="color: #38bdf8; margin-right: 6px;"></i> INVOICES</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessReceivedPayment) { ?>
+                        <li style="padding-left: 8px;"><a href="receivedPayments.php" style="color: #fff;"><i class="fa fa-check-circle" style="color: #34d399; margin-right: 6px;"></i> RECEIVED PAYMENT</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessPaymentDue) { ?>
+                        <li style="padding-left: 8px;"><a href="paymentPage.php" style="color: #fff;"><i class="fa fa-money" style="color: #fbbf24; margin-right: 6px;"></i> DUE PAYMENT</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessTds) { ?>
+                        <li style="padding-left: 8px;"><a href="listOfTds.php" style="color: #fff;"><i class="fa fa-list" style="color: #a78bfa; margin-right: 6px;"></i> TDS DEDUCTED</a></li>
+                        <?php } ?>
+                        <?php } ?>
+
+                        <?php if ($canAccessPurchase) { ?>
+                        <?php if ($canAccessSales) { ?>
+                        <li class="divider" style="margin: 5px 0; background: rgba(255,255,255,0.12);"></li>
+                        <?php } ?>
+                        <li class="dropdown-header" style="color: #f472b6; font-weight: 700; font-size: 11px; padding: 6px 15px; letter-spacing: 0.6px; text-transform: uppercase;">
+                            <i class="fa fa-truck" style="margin-right: 4px;"></i> PURCHASE
+                        </li>
+                        <?php if ($canAccessBills) { ?>
+                        <li style="padding-left: 8px;"><a href="billsPage.php" style="color: #fff;"><i class="fa fa-file-text-o" style="color: #f472b6; margin-right: 6px;"></i> BILLS</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessCreditors) { ?>
+                        <li style="padding-left: 8px;"><a href="suppliers.php" style="color: #fff;"><i class="fa fa-address-card-o" style="color: #fbbf24; margin-right: 6px;"></i> SUPPLIERS</a></li>
+                        <?php } ?>
+                        <?php } ?>
+                    </ul>
+                </li>
                 <?php } ?>
-                <?php if (aitf_has_access("TDS Deducted")) { ?>
-                <li><a href="listOfTds.php">TDS DEDUCTED</a></li>
+                <?php if ($canAccessAuditGroup) { ?>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="color: #a855f7; font-weight: 700;">
+                        <i class="fa fa-calendar-check-o" style="color: #a855f7; margin-right: 5px;"></i> AUDIT PLANNING <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu" style="background: #082d54; border: 1px solid rgba(255,255,255,0.15);">
+                        <?php if ($canAccessAuditList) { ?>
+                        <li><a href="auditPage.php" style="color: #fff;"><i class="fa fa-list-alt" style="color: #38bdf8; margin-right: 6px;"></i> AUDIT LIST</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessAuditPlanning) { ?>
+                        <li><a href="auditPlanning.php" style="color: #fff;"><i class="fa fa-calendar-check-o" style="color: #a855f7; margin-right: 6px;"></i> AUDIT PLANNING</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessAuditData) { ?>
+                        <li><a href="auditorChecklist.php" style="color: #fff;"><i class="fa fa-clipboard" style="color: #34d399; margin-right: 6px;"></i> AUDIT DATA</a></li>
+                        <?php } ?>
+                    </ul>
+                </li>
                 <?php } ?>
-                <li><a href="intimationLetter.php">INTIMATION LETTERS</a></li>
+                <?php if ($canAccessKpiGroup) { ?>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="color: #06b6d4; font-weight: 700;">
+                        <i class="fa fa-bar-chart" style="color: #06b6d4; margin-right: 5px;"></i> KPI ANALYSIS <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu" style="background: #082d54; border: 1px solid rgba(255,255,255,0.15);">
+                        <?php if ($canAccessAuditPerformance) { ?>
+                        <li><a href="qualityanalysis.php" style="color: #fff;"><i class="fa fa-line-chart" style="color: #38bdf8; margin-right: 6px;"></i> AUDIT PERFORMANCE</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessAppRevObjective) { ?>
+                        <li><a href="apprevobjective.php" style="color: #fff;"><i class="fa fa-eye" style="color: #fbbf24; margin-right: 6px;"></i> APP. REVIEW OBJECTIVE</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessDocUploadStatus) { ?>
+                        <li><a href="uploadingStatus.php" style="color: #fff;"><i class="fa fa-cloud-upload" style="color: #34d399; margin-right: 6px;"></i> DOC UPLOAD STATUS</a></li>
+                        <?php } ?>
+                    </ul>
+                </li>
+                <?php } ?>
                 <li><a href="clientList.php">CLIENT LIST</a></li>
-                <li><a href="invoicePage.php">INVOICE</a></li>
-                <li><a href="billsPage.php">BILLS</a></li>
-                <li><a href="suppliers.php">SUPPLIERS</a></li>
-                <li><a href="quotationPage.php">QUOTATION</a></li>
-                <li><a href="addUsers.php">ADD USER</a></li>
-                <li><a href="clientRecycle.php">RECYCLE BIN</a></li>
-                <?php if (aitf_has_access("Audit Data")) { ?>
-                <li><a href="auditorChecklist.php">AUDIT-DATA</a></li>
-                <?php } ?>
-                <li><a href="goAi.php">GoAI</a></li>
             </ul>
             <?php } ?>
         </div>
@@ -1949,3 +3058,192 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
 })();
 </script>
 <!-- ===== END PENDING LETTER WARNING POPUP SYSTEM ===== -->
+
+<!-- ===== SIDEBAR FLYOUT DROPDOWN SUBMENU POSITIONING SCRIPT ===== -->
+<script>
+(function() {
+    function initSidebarFlyout() {
+        var $dropdownGroups = $('.sidebar-dropdown-group');
+        if (!$dropdownGroups.length) return;
+
+        $dropdownGroups.each(function() {
+            var $group = $(this);
+            var $flyout = $group.find('.sidebar-flyout-menu');
+            if (!$flyout.length) return;
+
+            var closeTimer = null;
+
+            function positionFlyout() {
+                var groupEl = $group[0];
+                var rect = groupEl.getBoundingClientRect();
+                var top = rect.top;
+                var left = rect.right;
+                var winHeight = $(window).height();
+                var flyoutHeight = $flyout.outerHeight() || 190;
+
+                // Prevent overflowing below window
+                if (top + flyoutHeight > winHeight - 10) {
+                    top = Math.max(10, winHeight - flyoutHeight - 10);
+                }
+
+                $flyout.css({
+                    'top': top + 'px',
+                    'left': (left - 2) + 'px'
+                });
+            }
+
+            function openMenu() {
+                clearTimeout(closeTimer);
+                // Immediately close any other open dropdown groups
+                $dropdownGroups.not($group).each(function() {
+                    $(this).removeClass('flyout-hover').find('.sidebar-flyout-menu').removeClass('show-flyout');
+                });
+                positionFlyout();
+                $group.addClass('flyout-hover');
+                $flyout.addClass('show-flyout');
+            }
+
+            function closeMenu(delay) {
+                clearTimeout(closeTimer);
+                closeTimer = setTimeout(function() {
+                    $group.removeClass('flyout-hover');
+                    $flyout.removeClass('show-flyout');
+                    $flyout.find('.nested-flyout-group').removeClass('subflyout-open');
+                    $flyout.find('.sidebar-subflyout-menu').removeClass('show-subflyout');
+                }, typeof delay === 'number' ? delay : 300);
+            }
+
+            // Group hover events
+            $group.on('mouseenter', openMenu);
+            $group.on('mouseleave', function() {
+                closeMenu(300);
+            });
+
+            // Flyout hover events: hovering flyout directly keeps it open
+            $flyout.on('mouseenter', openMenu);
+            $flyout.on('mouseleave', function() {
+                closeMenu(250);
+            });
+
+            // Nested subflyout handling (Sales / Purchase nested groups)
+            var $nestedGroups = $flyout.find('.nested-flyout-group');
+            if ($nestedGroups.length) {
+                $nestedGroups.each(function() {
+                    var $nestedGroup = $(this);
+                    var $subflyout = $nestedGroup.find('.sidebar-subflyout-menu');
+                    if (!$subflyout.length) return;
+
+                    var subCloseTimer = null;
+
+                    function positionSubflyout() {
+                        var nestedEl = $nestedGroup[0];
+                        var rect = nestedEl.getBoundingClientRect();
+                        var winHeight = $(window).height();
+                        var subHeight = $subflyout.outerHeight() || 180;
+                        if (rect.top + subHeight > winHeight - 10) {
+                            var diff = (rect.top + subHeight) - (winHeight - 10);
+                            $subflyout.css('top', (-6 - diff) + 'px');
+                        } else {
+                            $subflyout.css('top', '-6px');
+                        }
+                    }
+
+                    function openSubMenu() {
+                        clearTimeout(subCloseTimer);
+                        clearTimeout(closeTimer); // keep parent Level 1 open!
+                        // close sibling submenus
+                        $nestedGroups.not($nestedGroup).each(function() {
+                            $(this).removeClass('subflyout-open').find('.sidebar-subflyout-menu').removeClass('show-subflyout');
+                        });
+                        positionSubflyout();
+                        $nestedGroup.addClass('subflyout-open');
+                        $subflyout.addClass('show-subflyout');
+                    }
+
+                    function closeSubMenu(delay) {
+                        clearTimeout(subCloseTimer);
+                        subCloseTimer = setTimeout(function() {
+                            $nestedGroup.removeClass('subflyout-open');
+                            $subflyout.removeClass('show-subflyout');
+                        }, typeof delay === 'number' ? delay : 250);
+                    }
+
+                    $nestedGroup.on('mouseenter', openSubMenu);
+                    $nestedGroup.on('mouseleave', function() {
+                        closeSubMenu(250);
+                    });
+
+                    $subflyout.on('mouseenter', function() {
+                        clearTimeout(subCloseTimer);
+                        clearTimeout(closeTimer); // keep parent Level 1 open!
+                        $nestedGroup.addClass('subflyout-open');
+                        $subflyout.addClass('show-subflyout');
+                    });
+                    $subflyout.on('mouseleave', function() {
+                        closeSubMenu(250);
+                    });
+
+                    // Click toggle on nested item (Sales / Purchase)
+                    $nestedGroup.find('> a.nested-trigger-link').on('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if ($subflyout.hasClass('show-subflyout')) {
+                            closeSubMenu(0);
+                        } else {
+                            openSubMenu();
+                        }
+                    });
+                });
+            }
+
+            // If user deliberately hovers another sidebar item, close faster
+            $('#sidebar > li:not(.sidebar-dropdown-group)').on('mouseenter', function() {
+                closeMenu(80);
+            });
+
+            // Keep aligned if user scrolls the sidebar
+            $('#sidebar-wrapper').on('scroll', function() {
+                if ($flyout.hasClass('show-flyout')) {
+                    positionFlyout();
+                }
+            });
+
+            // Touch / click toggle support
+            $group.find('> a').on('click', function(e) {
+                e.preventDefault();
+                if ($flyout.hasClass('show-flyout')) {
+                    closeMenu(0);
+                } else {
+                    openMenu();
+                }
+            });
+        });
+
+        // Close when clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.sidebar-dropdown-group, .sidebar-flyout-menu, .sidebar-subflyout-menu').length) {
+                $('.sidebar-dropdown-group').removeClass('flyout-hover');
+                $('.sidebar-flyout-menu').removeClass('show-flyout');
+                $('.nested-flyout-group').removeClass('subflyout-open');
+                $('.sidebar-subflyout-menu').removeClass('show-subflyout');
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSidebarFlyout);
+    } else {
+        initSidebarFlyout();
+    }
+})();
+</script>
+<!-- ===== END SIDEBAR FLYOUT SCRIPT ===== -->
+
+<script>
+    document.addEventListener('click', function (event) {
+        var disabledTaskManagerLink = event.target.closest('.task-manager-disabled-link');
+        if (disabledTaskManagerLink) {
+            event.preventDefault();
+        }
+    });
+</script>

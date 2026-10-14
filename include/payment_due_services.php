@@ -58,9 +58,20 @@ function aitf_due_service_rows(array $customer, array $invoices, array $payments
 }
 
 function aitf_fetch_service_dues(PDO $db, array $filters = []) {
+    // Check if payment_reminder_mail_logs table exists to avoid errors on fresh/live DB imports
+    $hasReminderTable = false;
+    try {
+        $tblCheck = $db->query("SHOW TABLES LIKE 'payment_reminder_mail_logs'");
+        $hasReminderTable = ($tblCheck && $tblCheck->rowCount() > 0);
+    } catch (Throwable $e) {}
+
+    $reminderExpr = $hasReminderTable
+        ? "GREATEST(COALESCE(ppc.reminder_count, 0), COALESCE((SELECT COUNT(*) FROM `payment_reminder_mail_logs` prml WHERE prml.customer_id = ci.id), 0))"
+        : "COALESCE(ppc.reminder_count, 0)";
+
     $sql = "SELECT ci.id, ci.customer_name, ci.unique_id, ci.certification_no, ci.audit_status,
         ci.contact_person, ci.contact, ci.email_id, COALESCE(ppc.comment, '') AS comment,
-        COALESCE(ppc.reminder_count, 0) AS reminder_count
+        {$reminderExpr} AS reminder_count
         FROM customer_info ci LEFT JOIN payment_page_comments ppc ON ppc.customer_id=ci.id
         WHERE ci.is_deleted='NO'";
     $params = [];

@@ -69,6 +69,31 @@ if (!function_exists('aitf_auto_sync_schema')) {
             aitf_ensure_guidelines_schema($db);
         }
 
+        // Also ensure tasks schema
+        require_once __DIR__ . '/task_lib.php';
+        if (function_exists('aitf_ensure_tasks_schema')) {
+            aitf_ensure_tasks_schema($db);
+        }
+
+        // Also ensure payment reminder logs schema
+        try {
+            $db->exec("CREATE TABLE IF NOT EXISTS `payment_reminder_mail_logs` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `customer_id` INT NOT NULL,
+                `header_key` VARCHAR(150) NULL,
+                `service_type` VARCHAR(150) NULL,
+                `recipient_email` VARCHAR(255) NOT NULL,
+                `cc_emails` VARCHAR(255) NULL,
+                `subject` VARCHAR(255) NULL,
+                `sent_by` VARCHAR(100) NULL,
+                `attachments_count` INT NOT NULL DEFAULT 0,
+                `attachments_list` TEXT NULL,
+                `sent_at` DATETIME NOT NULL,
+                INDEX `idx_prml_cust` (`customer_id`),
+                INDEX `idx_prml_sent` (`sent_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        } catch (Throwable $e) {}
+
         static $alreadySynced = false;
         if ($alreadySynced) {
             return;
@@ -825,6 +850,12 @@ if (!function_exists('aitf_migrate_legacy_tds_to_payment_columns')) {
                 `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX `idx_ppc_cust` (`customer_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // Ensure Microsoft To-Do style aitf_tasks schema
+            require_once __DIR__ . '/task_lib.php';
+            if (function_exists('aitf_ensure_tasks_schema')) {
+                aitf_ensure_tasks_schema($db);
+            }
         } catch (Throwable $e) {}
     }
 }
