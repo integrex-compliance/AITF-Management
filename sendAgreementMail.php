@@ -34,13 +34,37 @@ $saiiCount = isset($_POST['saiicount']) ? trim((string) $_POST['saiicount']) : '
 $recipientEmail = isset($_POST['email']) ? trim((string) $_POST['email']) : '';
 $additionalEmail = isset($_POST['additional_email']) ? trim((string) $_POST['additional_email']) : '';
 
+if (!function_exists('aitf_clean_client_company_name')) {
+    function aitf_clean_client_company_name($name, $contactPerson = '') {
+        $clean = trim((string)$name);
+        if ($clean === '') return '';
+
+        if (!empty($contactPerson)) {
+            $cp = trim($contactPerson);
+            $clean = preg_replace('/\s*[\(\[-]\s*' . preg_quote($cp, '/') . '\s*[\)\]]?/i', '', $clean);
+            $cpNoTitle = trim(preg_replace('/^(mr\.?|mrs\.?|ms\.?|dr\.?|shri\.?|smt\.?)\s+/i', '', $cp));
+            if (!empty($cpNoTitle)) {
+                $clean = preg_replace('/\s*[\(\[-]\s*(?:mr\.?|mrs\.?|ms\.?|dr\.?|shri\.?|smt\.?)?\s*' . preg_quote($cpNoTitle, '/') . '\s*[\)\]]?/i', '', $clean);
+            }
+        }
+
+        $clean = preg_replace('/\s*\(\s*(?:mr\.?|mrs\.?|ms\.?|dr\.?|shri\.?|smt\.?)\b[^)]*\)/i', '', $clean);
+        $clean = preg_replace('/\s*\(\s*(?:withdrawn?|expired?|cancelled?|cancel|qms)\s*\)/i', '', $clean);
+        $clean = preg_replace('/\s+\b(?:withdrawn?|expired?|cancelled?)\b/i', '', $clean);
+        $clean = preg_replace('/\s*\([^)]*\)\s*$/', '', $clean);
+
+        $clean = trim($clean);
+        return !empty($clean) ? $clean : trim($name);
+    }
+}
+
 if (!$customerId) {
     echo json_encode(['success' => false, 'message' => 'Customer ID is required.']);
     exit;
 }
 
 // 1. Fetch customer information
-$custStmt = $db->prepare("SELECT id, customer_name, email_id, address, unique_id FROM customer_info WHERE id = :id");
+$custStmt = $db->prepare("SELECT id, customer_name, contact_person, email_id, address, unique_id FROM customer_info WHERE id = :id");
 $custStmt->bindParam(':id', $customerId, PDO::PARAM_INT);
 $custStmt->execute();
 $customer = $custStmt->fetch(PDO::FETCH_ASSOC);
@@ -93,7 +117,9 @@ if (!empty($certInfo['mail_sent'])) {
     ]);
     exit;
 }
-$clientName = trim($customer['customer_name'] ?? '');
+$rawClientName = trim($customer['customer_name'] ?? '');
+$contactPerson = trim($customer['contact_person'] ?? '');
+$clientName = aitf_clean_client_company_name($rawClientName, $contactPerson);
 $agreementNo = trim($certInfo['aggrement_no'] ?? ($customer['unique_id'] ?? ''));
 
 // If agreement number is available on agreement but not on customer unique_id, keep them aligned

@@ -16727,6 +16727,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 var certificationId = $btn.attr('data-certfication');
                 var serviceCount = $btn.attr('data-servicecount') || '';
                 var customerName = $btn.attr('data-customername') || '';
+                var cleanCustomerName = customerName.replace(/\s*\([^)]*\).*$/, '').trim() || customerName;
                 var email = $btn.attr('data-email') || '';
                 var agreementNo = $btn.attr('data-agreementno') || '';
                 var mailSent = $btn.attr('data-mailsent');
@@ -16768,7 +16769,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             '<div style="text-align:left;font-size:13px;color:#334155;line-height:1.45;">' +
                                 '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:6px;padding:8px 12px;margin-bottom:10px;">' +
                                     '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">' +
-                                        '<div><strong style="color:#475569;">Company:</strong> <span style="color:#0f172a;font-weight:600;">' + $('<div>').text(customerName).html() + '</span></div>' +
+                                        '<div><strong style="color:#475569;">Company:</strong> <span style="color:#0f172a;font-weight:600;">' + $('<div>').text(cleanCustomerName).html() + '</span></div>' +
                                         (agreementNo ? '<div><span style="background:#e0e7ff;color:#3730a3;font-weight:700;padding:1px 7px;border-radius:4px;font-family:monospace;font-size:11.5px;">' + $('<div>').text(agreementNo).html() + '</span></div>' : '') +
                                     '</div>' +
                                 '</div>' +

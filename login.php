@@ -152,7 +152,10 @@ function aitf_find_matching_clients($db, $identifier) {
     
     // 4. Exact alphanumeric match on customer_name (ignores multiple spaces, dots, dashes, special chars)
     if (strlen($alphanumeric) >= 3) {
-        $stmt = $db->prepare("SELECT * FROM customer_info WHERE is_deleted = 'NO' AND LOWER(REGEXP_REPLACE(customer_name, '[^a-zA-Z0-9]', '')) = :norm ORDER BY (unique_id IS NOT NULL AND unique_id != '') DESC, id DESC");
+        $stmt = $db->prepare("SELECT * FROM customer_info WHERE is_deleted = 'NO' AND (
+            LOWER(REGEXP_REPLACE(customer_name, '[^a-zA-Z0-9]', '')) = :norm
+            OR LOWER(REGEXP_REPLACE(TRIM(REGEXP_REPLACE(customer_name, ' *[(].*', '')), '[^a-zA-Z0-9]', '')) = :norm
+        ) ORDER BY (unique_id IS NOT NULL AND unique_id != '') DESC, id DESC");
         $stmt->execute([':norm' => $alphanumeric]);
         $addClients($stmt->fetchAll(PDO::FETCH_ASSOC));
     }
