@@ -1396,12 +1396,12 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <li class="flyout-item nested-flyout-group purchase-subgroup <?php echo $isPurchaseActive ? 'active' : ''; ?>">
                     <a href="javascript:void(0);" class="flyout-link nested-trigger-link <?php echo $isPurchaseActive ? 'active' : ''; ?>" title="PURCHASE">
                         <i class="fa fa-truck flyout-ico" style="color: #f472b6;"></i>
-                        <span class="flyout-text">PAYABLES</span>
+                        <span class="flyout-text">Purchase/PAYABLES</span>
                         <i class="fa fa-angle-right flyout-item-arrow"></i>
                     </a>
                     <ul class="sidebar-subflyout-menu purchase-subflyout">
                         <li class="subflyout-header">
-                            <span><i class="fa fa-truck" style="color: #f472b6; margin-right: 5px;"></i> PAYABLES</span>
+                            <span><i class="fa fa-truck" style="color: #f472b6; margin-right: 5px;"></i>Purchase/PAYABLES</span>
                         </li>
                         <?php if ($canAccessBills) { ?>
                         <li class="subflyout-item">

@@ -32,6 +32,7 @@ $serviceId = isset($_POST['service']) ? (int) $_POST['service'] : 0;
 $certificationId = isset($_POST['certification']) ? (int) $_POST['certification'] : 0;
 $saiiCount = isset($_POST['saiicount']) ? trim((string) $_POST['saiicount']) : '';
 $recipientEmail = isset($_POST['email']) ? trim((string) $_POST['email']) : '';
+$additionalEmail = isset($_POST['additional_email']) ? trim((string) $_POST['additional_email']) : '';
 
 if (!$customerId) {
     echo json_encode(['success' => false, 'message' => 'Customer ID is required.']);
@@ -126,6 +127,28 @@ if (empty($validEmails)) {
     exit;
 }
 $recipientEmail = implode(', ', $validEmails);
+
+// Process additional email addresses
+$validAdditionalEmails = [];
+if ($additionalEmail !== '') {
+    $addList = preg_split('/[,;]+/', $additionalEmail);
+    foreach ($addList as $addEml) {
+        $addEml = trim($addEml);
+        if ($addEml !== '' && filter_var($addEml, FILTER_VALIDATE_EMAIL)) {
+            $isDuplicate = false;
+            foreach ($validEmails as $vEml) {
+                if (strcasecmp($vEml, $addEml) === 0) {
+                    $isDuplicate = true;
+                    break;
+                }
+            }
+            if (!$isDuplicate && strcasecmp($addEml, 'aitfmcl@gmail.com') !== 0) {
+                $validAdditionalEmails[] = $addEml;
+            }
+        }
+    }
+}
+$additionalEmail = implode(', ', $validAdditionalEmails);
 
 // 3. Generate the CSA PDF
 try {
@@ -271,8 +294,19 @@ try {
         exit;
     }
 
+    // Add additional email recipient(s) if specified
+    if (!empty($validAdditionalEmails)) {
+        foreach ($validAdditionalEmails as $extraEml) {
+            $mailer->AddAddress($extraEml);
+        }
+    }
+
+    // Always CC to aitfmcl@gmail.com as requested
+    $officeCc = 'aitfmcl@gmail.com';
+    $mailer->addCC($officeCc);
+
     $mailConfig = aitfGetInvoiceMailConfig();
-    if (!empty($mailConfig['office_copy'])) {
+    if (!empty($mailConfig['office_copy']) && strcasecmp(trim($mailConfig['office_copy']), $officeCc) !== 0) {
         $mailer->addBCC($mailConfig['office_copy']);
     }
 
@@ -284,6 +318,10 @@ try {
     if ($mailSent) {
         $sentAt = date('Y-m-d H:i:s');
         $sentBy = $_SESSION['username'] ?? 'Staff';
+
+        $allSentToArray = array_merge($validEmails, $validAdditionalEmails);
+        $allSentToStr = implode(', ', $allSentToArray);
+
         try {
             $updCert = $db->prepare("UPDATE certification_aggrement 
                 SET mail_sent = 1, 
@@ -293,7 +331,7 @@ try {
                 WHERE id = :id");
             $updCert->execute([
                 ':sent_at' => $sentAt,
-                ':sent_to' => $recipientEmail,
+                ':sent_to' => $allSentToStr,
                 ':sent_by' => $sentBy,
                 ':id' => $certificationId
             ]);
@@ -305,8 +343,8 @@ try {
             'success' => true,
             'already_sent' => false,
             'sent_at' => date('d.m.Y h:i A', strtotime($sentAt)),
-            'sent_to' => $recipientEmail,
-            'message' => 'Certification Service Agreement has been successfully sent to ' . htmlspecialchars($recipientEmail) . '.'
+            'sent_to' => $allSentToStr,
+            'message' => 'Certification Service Agreement has been successfully sent to ' . htmlspecialchars($allSentToStr) . ' (CC: ' . htmlspecialchars($officeCc) . ').'
         ]);
         exit;
     }

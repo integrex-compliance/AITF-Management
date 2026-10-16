@@ -1921,6 +1921,41 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             color: #cbd5e1 !important;
         }
 
+        /* Compact modal for Send Certification Agreement */
+        .swal2-popup.aitf-agreement-send-popup {
+            padding: 16px 20px 18px 20px !important;
+            border-radius: 14px !important;
+            max-width: 490px !important;
+            width: 95% !important;
+            max-height: 88vh !important;
+            overflow-y: auto !important;
+            box-sizing: border-box !important;
+        }
+        .swal2-popup.aitf-agreement-send-popup .swal2-title {
+            padding: 0 !important;
+            margin: 0 0 10px 0 !important;
+            font-size: 17px !important;
+            line-height: 1.3 !important;
+        }
+        .swal2-popup.aitf-agreement-send-popup .swal2-html-container {
+            margin: 0 !important;
+            padding: 0 !important;
+            font-size: 13px !important;
+            line-height: 1.45 !important;
+            overflow: visible !important;
+        }
+        .swal2-popup.aitf-agreement-send-popup .swal2-actions {
+            margin-top: 14px !important;
+            margin-bottom: 0 !important;
+            gap: 10px !important;
+        }
+        .swal2-popup.aitf-agreement-send-popup .swal2-actions .swal2-confirm,
+        .swal2-popup.aitf-agreement-send-popup .swal2-actions .swal2-cancel {
+            padding: 8px 18px !important;
+            font-size: 13px !important;
+            border-radius: 7px !important;
+        }
+
         .demoPadder {
             padding-top: 15px;
         }
@@ -16725,20 +16760,30 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                 if (typeof Swal !== 'undefined' && Swal.fire) {
                     Swal.fire({
-                        title: '<div style="display:flex;align-items:center;justify-content:center;gap:10px;font-size:20px;font-weight:700;color:#0F2742;"><i class="fa fa-envelope" style="color:#2563eb;"></i> Send Agreement</div>',
+                        customClass: {
+                            popup: 'aitf-agreement-send-popup'
+                        },
+                        title: '<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;color:#0F2742;margin:0;"><i class="fa fa-envelope" style="color:#2563eb;font-size:18px;"></i> Send Agreement</div>',
                         html: 
-                            '<div style="text-align:left;font-size:14px;color:#334155;line-height:1.6;margin-top:10px;">' +
-                                '<p style="margin-bottom:12px;font-size:14.5px;">Are you sure you want to send the <strong>Certification Service Agreement</strong> to <strong style="color:#2563eb;">' + $('<div>').text(email || customerName).html() + '</strong>?</p>' +
-                                '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:6px;padding:12px 16px;margin-bottom:14px;">' +
-                                    '<div style="margin-bottom:6px;"><strong>Company:</strong> <span style="color:#0f172a;font-weight:600;">' + $('<div>').text(customerName).html() + '</span></div>' +
-                                    (agreementNo ? '<div style="margin-bottom:6px;"><strong>Agreement No:</strong> <span style="background:#e0e7ff;color:#3730a3;font-weight:bold;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:13px;">' + $('<div>').text(agreementNo).html() + '</span></div>' : '') +
-                                    '<div><strong>Client Email:</strong> <span style="color:#2563eb;font-weight:600;">' + $('<div>').text(email || 'Not specified').html() + '</span></div>' +
-                                '\x3c/div>' +
-                                '<div style="margin-top:10px;">' +
-                                    '<label style="display:block;font-size:12.5px;font-weight:600;color:#475569;margin-bottom:5px;">Recipient Email Address:</label>' +
-                                    '<input type="text" id="aitf_cert_mail_input" class="form-control" value="' + $('<div>').text(email).html() + '" placeholder="e.g. client@company.com" style="border-radius:6px;font-size:13.5px;padding:8px 12px;border:1px solid #cbd5e1;width:100%;box-sizing:border-box;">' +
-                                '\x3c/div>' +
-                                '<div style="font-size:12px;color:#64748b;margin-top:8px;"><i class="fa fa-info-circle"></i> The agreement PDF and client portal credentials will be attached and emailed.</div>' +
+                            '<div style="text-align:left;font-size:13px;color:#334155;line-height:1.45;">' +
+                                '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:6px;padding:8px 12px;margin-bottom:10px;">' +
+                                    '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">' +
+                                        '<div><strong style="color:#475569;">Company:</strong> <span style="color:#0f172a;font-weight:600;">' + $('<div>').text(customerName).html() + '</span></div>' +
+                                        (agreementNo ? '<div><span style="background:#e0e7ff;color:#3730a3;font-weight:700;padding:1px 7px;border-radius:4px;font-family:monospace;font-size:11.5px;">' + $('<div>').text(agreementNo).html() + '</span></div>' : '') +
+                                    '</div>' +
+                                '</div>' +
+                                '<div style="margin-bottom:8px;">' +
+                                    '<label style="display:block;font-size:12px;font-weight:600;color:#334155;margin-bottom:3px;"><i class="fa fa-envelope-o" style="color:#2563eb;margin-right:4px;"></i> Recipient Email Address: <span style="color:#dc2626;">*</span></label>' +
+                                    '<input type="email" id="aitf_cert_mail_input" class="form-control" value="' + $('<div>').text(email).html() + '" placeholder="e.g. client@company.com" style="border-radius:5px;font-size:13px;padding:6px 10px;height:34px;border:1px solid #cbd5e1;width:100%;box-sizing:border-box;">' +
+                                '</div>' +
+                                '<div style="margin-bottom:8px;">' +
+                                    '<label style="display:block;font-size:12px;font-weight:600;color:#334155;margin-bottom:3px;"><i class="fa fa-user-plus" style="color:#16a34a;margin-right:4px;"></i> Add Mail Account (Additional Recipient):</label>' +
+                                    '<input type="text" id="aitf_cert_additional_email" class="form-control" placeholder="e.g. accounts@company.com" style="border-radius:5px;font-size:13px;padding:6px 10px;height:34px;border:1px solid #cbd5e1;width:100%;box-sizing:border-box;">' +
+                                '</div>' +
+                                '<div style="display:flex;align-items:center;justify-content:space-between;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:5px;padding:6px 10px;font-size:11.5px;color:#475569;margin-top:6px;">' +
+                                    '<span><i class="fa fa-paperclip" style="color:#64748b;margin-right:3px;"></i> PDF & login attached</span>' +
+                                    '<span style="background:#e0e7ff;color:#1e3a8a;padding:2px 8px;border-radius:4px;font-weight:600;font-size:11.5px;"><i class="fa fa-clone" style="color:#2563eb;margin-right:3px;"></i> CC: aitfmcl@gmail.com</span>' +
+                                '</div>' +
                             '</div>',
                         showCancelButton: true,
                         confirmButtonText: '<i class="fa fa-paper-plane" style="margin-right:5px;"></i> Yes, Send Agreement',
@@ -16749,36 +16794,71 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         focusConfirm: false,
                         preConfirm: function () {
                             var mailVal = $.trim($('#aitf_cert_mail_input').val());
+                            var addMailVal = $.trim($('#aitf_cert_additional_email').val());
+
                             if (!mailVal) {
                                 Swal.showValidationMessage('Please enter recipient email address.');
                                 return false;
                             }
+
                             var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                            var items = mailVal.split(/[,;]+/);
-                            var hasValid = false;
-                            for (var i = 0; i < items.length; i++) {
-                                if (emailRegex.test($.trim(items[i]))) {
-                                    hasValid = true;
-                                    break;
+                            var primItems = mailVal.split(/[,;]+/);
+                            var hasValidPrim = false;
+                            for (var i = 0; i < primItems.length; i++) {
+                                var em = $.trim(primItems[i]);
+                                if (em && emailRegex.test(em)) {
+                                    hasValidPrim = true;
+                                } else if (em) {
+                                    Swal.showValidationMessage('Invalid recipient email address: ' + $('<div>').text(em).html());
+                                    return false;
                                 }
                             }
-                            if (!hasValid) {
-                                Swal.showValidationMessage('Please enter a valid email address.');
+                            if (!hasValidPrim) {
+                                Swal.showValidationMessage('Please enter a valid recipient email address.');
                                 return false;
                             }
-                            return mailVal;
+
+                            if (addMailVal) {
+                                var addItems = addMailVal.split(/[,;]+/);
+                                var hasValidAdd = false;
+                                for (var j = 0; j < addItems.length; j++) {
+                                    var aem = $.trim(addItems[j]);
+                                    if (aem && emailRegex.test(aem)) {
+                                        hasValidAdd = true;
+                                    } else if (aem) {
+                                        Swal.showValidationMessage('Invalid additional email address: ' + $('<div>').text(aem).html());
+                                        return false;
+                                    }
+                                }
+                                if (!hasValidAdd) {
+                                    Swal.showValidationMessage('Please enter a valid additional email address or leave it empty.');
+                                    return false;
+                                }
+                            }
+
+                            return {
+                                recipient: mailVal,
+                                additional: addMailVal
+                            };
                         }
                     }).then(function (result) {
                         if (result.isConfirmed) {
-                            var finalEmail = result.value;
+                            var finalEmail = result.value.recipient;
+                            var additionalEmail = result.value.additional || '';
 
                             if (typeof Swal !== 'undefined' && Swal.close) {
                                 Swal.close();
                             }
+                            var progressDetail = 'Generating Certification Agreement PDF and sending email to ' + finalEmail;
+                            if (additionalEmail) {
+                                progressDetail += ' and ' + additionalEmail;
+                            }
+                            progressDetail += ' (CC: aitfmcl@gmail.com)...';
+
                             if (typeof ShowProgressAnimation === 'function') {
                                 ShowProgressAnimation(
                                     'Sending Agreement...',
-                                    'Generating Certification Agreement PDF and sending email to ' + finalEmail + '...'
+                                    progressDetail
                                 );
                             }
 
@@ -16793,7 +16873,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     service: serviceId,
                                     certification: certificationId,
                                     saiicount: serviceCount,
-                                    email: finalEmail
+                                    email: finalEmail,
+                                    additional_email: additionalEmail
                                 },
                                 complete: function () {
                                     $btn.prop('disabled', false).removeClass('disabled');
@@ -16868,7 +16949,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }
                     });
                 } else {
-                    if (confirm('Are you sure you want to send agreement to ' + (email || customerName) + '?')) {
+                    var promptEmail = prompt('Enter recipient email address:', email || '');
+                    if (promptEmail && promptEmail.trim() !== '') {
+                        var promptAdd = prompt('Add another email account (optional, leave blank if none):', '');
                         $.ajax({
                             url: 'sendAgreementMail.php',
                             type: 'POST',
@@ -16878,7 +16961,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 service: serviceId,
                                 certification: certificationId,
                                 saiicount: serviceCount,
-                                email: email
+                                email: promptEmail.trim(),
+                                additional_email: (promptAdd || '').trim()
                             },
                             success: function (response) {
                                 if (response && (response.success || response.already_sent)) {
