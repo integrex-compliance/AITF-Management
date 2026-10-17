@@ -4,23 +4,53 @@ tinymce/
 PHPMailer/
 varkleyglobal project/
 notification/
+logs/
+test_logs/
+tests/
+test/
+
 # Files to ignore
 .project
 .buildpath
 .ftpquota
 
-# Additional common ignores
-*.log
-debug.php
-dubug.php
-*.crdownload
-/config/mail_config.php
+# Sensitive configuration & local credentials
 dbConnect.php
 .env
+/config/mail_config.php
+
+# Logs & temp downloads
+*.log
+*.crdownload
+
+# AI, scratch, and IDE configs
 repomix-output.xml
 .agents/
 .kiro/
 .claude/
 ai_project_notes.md
 README.md
-test_logs/
+
+# Test scripts and temporary/scratch debug files (NEVER commit or push to live)
+test.php
+test_*.php
+test_*.html
+test_*.txt
+testdb*.php
+*_test.php
+*.test.php
+*_test.cjs
+*.test.cjs
+*_test.js
+*.test.js
+debug*.php
+dubug*.php
+temp*.php
+temp_*.php
+run*.php
+fix_*.php
+samplemail*.php
+curl_test.*
+output_test.*
+error_test.*
+*_backup.php

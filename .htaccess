@@ -1,8 +1,30 @@
 RewriteEngine On
 
-<Files ".env">
+<FilesMatch "\.(env|log|md|sql|ps1|sh|bat|bak|old|git.*)$">
+    Require all denied
+</FilesMatch>
+
+# Block direct HTTP access to internal mail helper (PHP include/require still works)
+<Files "testemail.php">
     Require all denied
 </Files>
+
+# ----------------------------------------------------
+# Security: Block all direct access to test endpoints, directories, and scratch scripts
+# ----------------------------------------------------
+RewriteRule ^tests?(?:/.*|\.php)?$ - [F,L,NC]
+RewriteRule ^test_.* - [F,L,NC]
+RewriteRule ^testdb.* - [F,L,NC]
+RewriteRule ^debug.* - [F,L,NC]
+RewriteRule ^phpmailer.*Test\.php$ - [F,L,NC]
+RewriteRule ^curl_test.* - [F,L,NC]
+RewriteRule ^samplemail.* - [F,L,NC]
+RewriteRule ^run[0-9]*\.php$ - [F,L,NC]
+RewriteRule ^fix_.*\.php$ - [F,L,NC]
+RewriteRule ^generate_.*mail\.php$ - [F,L,NC]
+RewriteRule ^sync_old_data\.php$ - [F,L,NC]
+RewriteRule ^populate_service_data\.php$ - [F,L,NC]
+
 
 <IfModule mod_php7.c>
     php_value session.gc_maxlifetime 3600
