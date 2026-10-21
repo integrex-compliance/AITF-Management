@@ -6480,6 +6480,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             text-overflow: ellipsis;
                             white-space: nowrap;
                         }
+                        .invoice-service-details-table thead th {
+                            white-space: normal;
+                            vertical-align: middle;
+                        }
                         .invoice-service-details-table .table-edit-control input,
                         .service-details-table .table-edit-control input,
                         .service-details-table .table-edit-control select {
@@ -6911,9 +6915,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             <table class="table table-bordered table-hover table-sortable service_details invoice-service-details-table" <?php if ($blockIdx === 0) echo 'id="invoice_service_details"'; ?>>
                                                 <thead>
                                                     <tr>
-                                                        <th width="40%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>
-                                                        <th width="28%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>
-                                                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>
+                                                        <th width="34%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>
+                                                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>
+                                                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Taxable Amt.</small></th>
+                                                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -6939,6 +6944,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 </td>
                                                                 <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
                                                                     <div class="table-edit-control"><label></label>
+                                                                        <input type="text" data_row_id="" class="invoiceTaxableAmount" name="invoiceTaxableAmount" value="<?php echo number_format((float)($invoiceinfo['net_price'] ?? 0), 2, '.', ''); ?>" readonly="" title="Original taxable amount from invoice" />
+                                                                    </div>
+                                                                </td>
+                                                                <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
+                                                                    <div class="table-edit-control"><label></label>
                                                                         <input type="text" data_row_id="" class="invoiceAmount" name="invoiceAmount" value="<?php echo $invoiceinfo['final_amount'] ?>" readonly="" />
                                                                     </div>
                                                                 </td>
@@ -6958,6 +6968,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             </td>
                                                             <td style="padding: 0px;">
                                                                 <div class="table-edit-control"><label></label>
+                                                                    <input type="text" class="invoiceTaxableAmount" name="invoiceTaxableAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" />
+                                                                </div>
+                                                            </td>
+                                                            <td style="padding: 0px;">
+                                                                <div class="table-edit-control"><label></label>
                                                                     <input type="text" class="invoiceAmount" name="invoiceAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" />
                                                                 </div>
                                                             </td>
@@ -6966,7 +6981,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 </tbody>
                                                 <tfoot>
                                                     <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">
-                                                        <td colspan="2" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;">
+                                                        <td colspan="3" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;">
                                                             <small style="font-weight: 700; font-size: 11px;">Invoicing Gross Total (<span class="blockInvoiceCount"><?php echo count($serviceInvoices); ?></span>):</small>
                                                         </td>
                                                         <td style="padding: 0px; vertical-align: middle;">
@@ -23014,20 +23029,22 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '            <div class="row">';
             html += '                <table class="table table-bordered table-hover table-sortable service_details invoice-service-details-table">';
             html += '                    <thead><tr>';
-            html += '                        <th width="40%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>';
-            html += '                        <th width="28%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>';
-            html += '                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>';
+            html += '                        <th width="34%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>';
+            html += '                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>';
+            html += '                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Taxable Amt.</small></th>';
+            html += '                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>';
             html += '                    </tr></thead>';
             html += '                    <tbody>';
             html += '                        <tr class="cb_subsection">';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceNo" name="invoiceNo" value="-" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceDate" name="invoiceDate" value="-" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceTaxableAmount" name="invoiceTaxableAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceAmount" name="invoiceAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
             html += '                        </tr>';
             html += '                    </tbody>';
             html += '                    <tfoot>';
             html += '                        <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">';
-            html += '                            <td colspan="2" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;"><small style="font-weight: 700; font-size: 11px;">Invoicing Gross Total (<span class="blockInvoiceCount">0</span>):</small></td>';
+            html += '                            <td colspan="3" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;"><small style="font-weight: 700; font-size: 11px;">Invoicing Gross Total (<span class="blockInvoiceCount">0</span>):</small></td>';
             html += '                            <td style="padding: 0px; vertical-align: middle;"><div class="table-edit-control"><input type="text" class="totalInvoiceTableSum" value="0.00" style="font-weight: bold; color: #0f172a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Invoicing Amount for ' + svcName + '" /></div></td>';
             html += '                        </tr>';
             html += '                    </tfoot>';
