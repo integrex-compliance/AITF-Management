@@ -1,8 +1,24 @@
 <?php
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
+require_once __DIR__ . '/dbConnect.php';
+require_once __DIR__ . '/include/daily_auth_helper.php';
+
+// Smart 24-hr daily login redirect:
+// If an authenticated user (Director, Staff, Auditor, Client) enters the site or types "aitf" in their browser,
+// they are automatically redirected to their dashboard so they don't have to manually log in again.
+// Public visitors ("bhar ka user") have NO active session and will NEVER be redirected.
+if (aitf_is_user_authenticated()) {
+    if (!isset($_GET['view']) && !isset($_GET['website']) && !isset($_GET['stay']) && !isset($_GET['public'])) {
+        $dashboardUrl = aitf_get_user_dashboard_url($_SESSION['role'] ?? '');
+        header("Location: " . $dashboardUrl);
+        exit;
+    }
+}
+
 $pageTitle = "AITF - Assessment & Institute for Technical Forum";
 $pageDescription = "AITF is a premier institute for ISO certification, Quality Management, Environmental Management, and Occupational Health & Safety. Apply online for ISO certification.";
 $canonicalUrl = "https://www.aitf.co.in/";
-session_start();
 ?>
 <!DOCTYPE html>
 <html lang="en">

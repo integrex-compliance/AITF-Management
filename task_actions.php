@@ -25,7 +25,7 @@ if ($loggedInUserId <= 0 && empty($loggedInUsername)) {
 }
 
 $canManage = aitf_can_manage_tasks($loggedInRole);
-$action = trim((string)($_REQUEST['action'] ?? ''));
+$action = trim((string)($_REQUEST['action'] ?? ($_GET['action'] ?? ($_POST['action'] ?? ''))));
 
 switch ($action) {
 
@@ -37,9 +37,9 @@ switch ($action) {
         $status = trim((string)($_GET['status'] ?? 'all'));
         $search = trim((string)($_GET['search'] ?? ''));
 
-        // If target user is someone else and current user is NOT manager, deny viewing others' tasks
-        if ($targetUserId !== $loggedInUserId && !$canManage) {
-            echo json_encode(['success' => false, 'error' => 'Permission denied to view other users tasks.']);
+        // Check permission: self, top management, or explicitly permitted
+        if (!aitf_can_user_view_task_dashboard($db, $loggedInUserId, $targetUserId, $loggedInRole)) {
+            echo json_encode(['success' => false, 'error' => 'Permission denied to view this user\'s tasks.']);
             exit;
         }
 
@@ -71,23 +71,10 @@ switch ($action) {
         exit;
 
     // -------------------------------------------------------------
-    // 2. Create and assign a task (ONLY Management, Admin, Finance)
+    // -------------------------------------------------------------
+    // 2. Create and assign a task (Management, Admin, Finance, or Self)
     // -------------------------------------------------------------
     case 'create_task':
-        if (!$canManage) {
-            echo json_encode([
-                'success' => false,
-                'error' => 'Only Management, Admin, and Finance roles have permission to assign tasks.'
-            ]);
-            exit;
-        }
-
-        $title = trim((string)($_POST['title'] ?? ''));
-        if ($title === '') {
-            echo json_encode(['success' => false, 'error' => 'Task title is required.']);
-            exit;
-        }
-
         $assignedToId = (int)($_POST['assigned_to_user_id'] ?? 0);
         $assignedToKey = trim((string)($_POST['assigned_to_user_key'] ?? ''));
 
@@ -97,7 +84,21 @@ switch ($action) {
         }
 
         if ($assignedToId <= 0) {
-            echo json_encode(['success' => false, 'error' => 'Please select a valid user to assign the task to.']);
+            $assignedToId = $loggedInUserId;
+        }
+
+        // Permission: Management can assign to anyone; staff can create tasks for themselves
+        if (!$canManage && $assignedToId !== $loggedInUserId) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'You do not have permission to assign tasks to other users.'
+            ]);
+            exit;
+        }
+
+        $title = trim((string)($_POST['title'] ?? ''));
+        if ($title === '') {
+            echo json_encode(['success' => false, 'error' => 'Task title is required.']);
             exit;
         }
 
@@ -117,6 +118,9 @@ switch ($action) {
                 if ($aud = $audStmt->fetch(PDO::FETCH_ASSOC)) {
                     $assignedToName = $aud['auditor_name'];
                     $assignedToRole = 'Auditor';
+                } else {
+                    $assignedToName = $loggedInUsername ?: 'Staff';
+                    $assignedToRole = $loggedInRole ?: 'Staff';
                 }
             }
         }
@@ -138,14 +142,15 @@ switch ($action) {
             'assigned_by_name' => $loggedInUsername,
             'assigned_by_role' => $loggedInRole,
             'due_date' => $dueDate,
-            'is_important' => !empty($_POST['is_important']) ? 1 : 0
+            'is_important' => !empty($_POST['is_important']) ? 1 : 0,
+            'reminder_time' => trim((string)($_POST['reminder_time'] ?? ''))
         ]);
 
         echo json_encode($res);
         exit;
 
     // -------------------------------------------------------------
-    // 3. Mark task completed / uncompleted (ONLY Assigned User!)
+    // 3. Mark task completed / uncompleted (Assigned User or Management)
     // -------------------------------------------------------------
     case 'toggle_status':
         $taskId = (int)($_POST['task_id'] ?? 0);
@@ -154,8 +159,8 @@ switch ($action) {
             exit;
         }
 
-        // Enforce: only assigned user can toggle status!
-        $res = aitf_toggle_task_status($db, $taskId, $loggedInUserId);
+        // Assigned user or Management can toggle status
+        $res = aitf_toggle_task_status($db, $taskId, $loggedInUserId, $loggedInRole);
         echo json_encode($res);
         exit;
 
@@ -202,6 +207,80 @@ switch ($action) {
         }
 
         echo json_encode(['success' => true, 'users' => $users]);
+        exit;
+
+    // -------------------------------------------------------------
+    // 7. Save Dashboard Permissions (Top Management only)
+    // -------------------------------------------------------------
+    case 'save_dashboard_permissions':
+        if (!aitf_is_top_mgmt_task_user($loggedInRole)) {
+            echo json_encode(['success' => false, 'error' => 'Permission denied. Only Top Management can configure dashboard permissions.']);
+            exit;
+        }
+
+        $viewerUserId = (int)($_POST['viewer_user_id'] ?? 0);
+        $targetUserIds = isset($_POST['target_user_ids']) && is_array($_POST['target_user_ids']) ? $_POST['target_user_ids'] : [];
+
+        if ($viewerUserId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Please select a valid user.']);
+            exit;
+        }
+
+        $res = aitf_save_user_dashboard_permissions($db, $viewerUserId, $targetUserIds, $loggedInUserId);
+        echo json_encode($res);
+        exit;
+
+    // -------------------------------------------------------------
+    // 8. Get User Dashboard Permissions (Top Management only)
+    // -------------------------------------------------------------
+    case 'get_user_dashboard_permissions':
+        if (!aitf_is_top_mgmt_task_user($loggedInRole)) {
+            echo json_encode(['success' => false, 'error' => 'Permission denied.']);
+            exit;
+        }
+
+        $viewerUserId = (int)($_GET['viewer_user_id'] ?? 0);
+        if ($viewerUserId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Invalid user ID.']);
+            exit;
+        }
+
+        aitf_ensure_task_permissions_schema($db);
+        $targetIds = [];
+        try {
+            $stmt = $db->prepare("SELECT target_user_id FROM `aitf_task_dashboard_permissions` WHERE `viewer_user_id` = :vid");
+            $stmt->execute([':vid' => $viewerUserId]);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $targetIds[] = (int)$row['target_user_id'];
+            }
+        } catch (Throwable $e) {}
+
+        echo json_encode(['success' => true, 'target_user_ids' => $targetIds]);
+        exit;
+
+    // -------------------------------------------------------------
+    // 9. Revoke User Dashboard Permissions (Top Management only)
+    // -------------------------------------------------------------
+    case 'revoke_user_dashboard_permissions':
+        if (!aitf_is_top_mgmt_task_user($loggedInRole)) {
+            echo json_encode(['success' => false, 'error' => 'Permission denied.']);
+            exit;
+        }
+
+        $viewerUserId = (int)($_POST['viewer_user_id'] ?? 0);
+        if ($viewerUserId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Invalid user ID.']);
+            exit;
+        }
+
+        aitf_ensure_task_permissions_schema($db);
+        try {
+            $del = $db->prepare("DELETE FROM `aitf_task_dashboard_permissions` WHERE `viewer_user_id` = :vid");
+            $del->execute([':vid' => $viewerUserId]);
+            echo json_encode(['success' => true]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
         exit;
 
     default:

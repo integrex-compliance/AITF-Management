@@ -1245,7 +1245,7 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
             <div class="career-container">
                 <div class="career-section-header">
                     <span class="career-pill primary"><i class="fa-solid fa-sparkles"></i> Professional Environment</span>
-                    <h2>Build Your Auditing Career with AITF</h2>
+                    <h2>Build Your Assessment Career with AITF</h2>
                     <p>Gain structured training, work alongside qualified lead auditors, and assess international standards to establish compliance and safety for society.</p>
                 </div>
 

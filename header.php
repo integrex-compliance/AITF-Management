@@ -26,6 +26,7 @@ include 'schedule1servelance.php';
 include 'schedule2servelance.php';
 include 'utility.php';
 require_once __DIR__ . '/include/rbac_matrix.php';
+require_once __DIR__ . '/include/task_lib.php';
 require_once __DIR__ . '/include/customer_recycle_helper.php';
 require_once __DIR__ . '/include/schema_auto_sync.php';
 if (isset($db) && $db) {
@@ -230,59 +231,6 @@ echo '<script>
         color: #ffffff !important;
     }
 
-    /* Temporarily disabled Task Manager */
-    .sidebar-nav li.task-manager-disabled {
-        position: relative;
-    }
-    .sidebar-nav li.task-manager-disabled > a {
-        cursor: not-allowed !important;
-    }
-    .sidebar-nav li.task-manager-disabled > a:hover {
-        background: linear-gradient(90deg, rgba(30, 41, 59, 0.72), rgba(15, 23, 42, 0.45)) !important;
-        border-left-color: #64748b !important;
-    }
-    .task-manager-coming-soon {
-        position: absolute;
-        top: 50%;
-        right: 8px;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 4px 7px;
-        border: 1px solid rgba(148, 163, 184, 0.45);
-        border-radius: 5px;
-        background: linear-gradient(135deg, #334155, #1e293b);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
-        color: #e2e8f0;
-        font-size: 8px;
-        font-weight: 700;
-        letter-spacing: 0.35px;
-        line-height: 1;
-        opacity: 0;
-        pointer-events: none;
-        transform: translate(5px, -50%) scale(0.92);
-        transition: opacity 0.18s ease, transform 0.18s ease;
-        z-index: 2;
-    }
-    .task-manager-coming-soon i {
-        color: #fbbf24;
-        font-size: 10px;
-    }
-    .sidebar-nav li.task-manager-disabled:hover .task-manager-coming-soon,
-    .sidebar-nav li.task-manager-disabled:focus-within .task-manager-coming-soon {
-        opacity: 1;
-        transform: translate(0, -50%) scale(1);
-    }
-    #wrapper.active .sidebar-nav li.task-manager-disabled:hover .task-manager-coming-soon,
-    #wrapper.active .sidebar-nav li.task-manager-disabled:focus-within .task-manager-coming-soon {
-        right: -112px;
-    }
-    .sidebar-nav li.task-manager-disabled > a[aria-disabled="true"] {
-        pointer-events: auto;
-    }
-    .task-manager-disabled-link {
-        cursor: not-allowed !important;
-    }
 
     /* Dropdown Groups: Distinct Group Appearance with Colored Accents & Pill Arrow */
     .sidebar-nav li.sidebar-dropdown-group {
@@ -1101,21 +1049,9 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
         <?php } else { 
         $currentScript = basename($_SERVER['PHP_SELF'] ?? '');
         $isMyDashboardActive = !empty($addMyDashboardClass) || $currentScript === 'myDashboard.php';
-        $isTaskManagerActive = (isset($pageIdentifier) && $pageIdentifier === 'Task Manager') || $currentScript === 'taskManager.php';
+        $isTaskManagerActive = (isset($pageIdentifier) && in_array($pageIdentifier, ['Task Manager', 'Task Dashboard'], true)) || $currentScript === 'taskManager.php';
         $isIafDashboardActive = !empty($iafClass) || $currentScript === 'iaf_dashboard.php';
         ?>
-        <li class="sidebar-section-divider"><span class="section-title">DASHBOARDS</span></li>
-        <li><a href="myDashboard.php" class="animate <?php echo $isMyDashboardActive ? 'active' : ''; ?>"><span>MY DASHBOARD</span><i class="sub_icon fa fa-tachometer"></i></a></li>
-        <li class="task-manager-disabled">
-            <a href="#" class="animate task-manager-disabled-link <?php echo $isTaskManagerActive ? 'active' : ''; ?>" aria-disabled="true" title="Task Manager is coming soon">
-                <span>TASK MANAGER</span><i class="sub_icon fa fa-tasks"></i>
-            </a>
-            <span class="task-manager-coming-soon"><i class="fa fa-lock" aria-hidden="true"></i> COMING SOON</span>
-        </li>
-        <?php if (aitf_has_access("IAF Dashboard")) { ?>
-        <li><a href="iaf_dashboard.php" class="animate <?php echo $isIafDashboardActive ? 'active' : ''; ?>"><span>IAF DASHBOARD</span><i class="sub_icon fa fa-globe"></i></a></li>
-        <?php } ?>
-        <li class="sidebar-section-divider"><span class="section-title">DEPARTMENTS</span></li>
         <?php
         $canAccessControlMgmt = Utitlity::checkForDirector();
         $canAccessMgmtDashboard = aitf_has_access("Admin Dashboard") || aitf_has_access("Management Dashboard") || aitf_has_access("Top Mgmt Dashboard") || aitf_has_access("MGMT Dashboard") || aitf_has_access("Mgmt Dashboard");
@@ -1123,6 +1059,22 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
         $canAccessRecycle = aitf_has_access("Recycle Cust");
         $canAccessMasterCreator = aitf_has_access("Master Creator") || Utitlity::checkForDirector();
         $canAccessTopMgmt = $canAccessControlMgmt || $canAccessMgmtDashboard || $canAccessAddUser || $canAccessRecycle || $canAccessMasterCreator;
+        $canAccessTaskManager = $canAccessTopMgmt || (function_exists('aitf_is_top_mgmt_task_user') && aitf_is_top_mgmt_task_user()) || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role());
+        ?>
+        <li class="sidebar-section-divider"><span class="section-title">DASHBOARDS</span></li>
+        <li><a href="myDashboard.php" class="animate <?php echo $isMyDashboardActive ? 'active' : ''; ?>"><span>MY DASHBOARD</span><i class="sub_icon fa fa-tachometer"></i></a></li>
+        <?php if ($canAccessTaskManager) { ?>
+        <li>
+            <a href="taskManager.php" class="animate <?php echo $isTaskManagerActive ? 'active' : ''; ?>" title="HRMS">
+                <span>HRMS</span><i class="sub_icon fa fa-tasks"></i>
+            </a>
+        </li>
+        <?php } ?>
+        <?php if (aitf_has_access("IAF Dashboard")) { ?>
+        <li><a href="iaf_dashboard.php" class="animate <?php echo $isIafDashboardActive ? 'active' : ''; ?>"><span>IAF DASHBOARD</span><i class="sub_icon fa fa-globe"></i></a></li>
+        <?php } ?>
+        <li class="sidebar-section-divider"><span class="section-title">DEPARTMENTS</span></li>
+        <?php
         $isTopMgmtActive = !empty($addDirectorSpaceClass) || !empty($addAdminDashboardClass) || !empty($addUserClass) || !empty($addRecycleClass) || !empty($addMasterClass) || in_array($currentScript, ['directorSpace.php', 'adminDashboard.php', 'addUsers.php', 'clientRecycle.php', 'masterCreator.php']);
         ?>
         <?php if ($canAccessTopMgmt) { ?>
@@ -1619,6 +1571,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                             <i class="fa fa-chevron-down dropdown-arrow" aria-hidden="true"></i>
                         </a>
                         <ul class="dropdown-menu modern-dropdown-menu" role="menu">
+                            <li><a href="index.php?view=website" target="_blank"><i class="fa fa-globe"></i> Visit Website</a></li>
                             <li><a class="passwordChange" href="#" data-id="<?php echo $_SESSION['id']; ?>"><i
                                         class="fa fa-key"></i> Change Password</a></li>
                         </ul>
@@ -1638,7 +1591,6 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <!-- Limited mobile menu for permission-only access users -->
             <ul class="nav navbar-nav visible-xs">
                 <li><a href="myDashboard.php">MY DASHBOARD</a></li>
-                <li><a href="#" class="task-manager-disabled-link" aria-disabled="true" title="Task Manager is coming soon">TASK MANAGER</a></li>
                 <li><a href="auditorDashboard.php"><i class="fa fa-arrow-left"></i> Back to Dashboard</a></li>
                 <li class="active"><a href="invoicePage.php">INVOICES</a></li>
                 <li><a href="guidelines.php" style="color: #10b981; font-weight: 700;"><i class="fa fa-book"></i> GUIDELINES</a></li>
@@ -1646,7 +1598,9 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <?php } else { ?>
             <ul class="nav navbar-nav visible-xs">
                 <li><a href="myDashboard.php">MY DASHBOARD</a></li>
-                <li><a href="#" class="task-manager-disabled-link" aria-disabled="true" title="Task Manager is coming soon">TASK MANAGER</a></li>
+                <?php if ($canAccessTopMgmt || (function_exists('aitf_is_top_mgmt_task_user') && aitf_is_top_mgmt_task_user())) { ?>
+                <li><a href="taskManager.php">TASK DASHBOARD</a></li>
+                <?php } ?>
                 <?php if ($canAccessTopMgmt) { ?>
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="color: #fbbf24; font-weight: 700;">
@@ -2406,76 +2360,180 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
 
     /* Responsive Design */
     @media (max-width: 991px) {
+        .modern-navbar {
+            height: 64px !important;
+            min-height: 64px !important;
+        }
+
         .navbar-container {
-            margin-left: 0;
+            margin-left: 0 !important;
+            padding: 0 !important;
+            height: 100% !important;
         }
 
         .navbar-content {
-            flex-wrap: wrap;
-            height: auto;
-            padding: 12px 20px;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            height: 64px !important;
+            padding: 0 12px !important;
+            gap: 8px !important;
+            flex-wrap: nowrap !important;
+            width: 100% !important;
         }
 
         .navbar-toggle {
-            display: block;
-        }
-
-        .navbar-left {
-            order: 2;
-            width: 100%;
-            justify-content: center;
-            margin: 12px 0 0 0;
+            display: none !important;
         }
 
         .navbar-center {
-            order: 1;
-            width: 100%;
-            max-width: 100%;
-            margin: 0;
+            order: 1 !important;
+            flex: 1 !important;
+            min-width: 0 !important;
+            width: auto !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+
+        .navbar-left {
+            order: 2 !important;
+            width: auto !important;
+            height: auto !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            flex-shrink: 0 !important;
+        }
+
+        .search-wrapper {
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+
+        .modern-search {
+            height: 40px !important;
+            font-size: 13px !important;
         }
 
         .navbar-right {
-            order: 3;
-            width: 100%;
-            justify-content: space-between;
-            margin-top: 12px;
+            order: 3 !important;
+            width: auto !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            flex-shrink: 0 !important;
         }
-    }
-
-    @media (max-width: 768px) {
 
         .modern-add-btn span,
         .modern-logout-card span {
-            display: none;
+            display: none !important;
         }
 
         .modern-add-btn {
-            padding: 10px 12px;
-            min-width: 44px;
+            height: 40px !important;
+            padding: 0 10px !important;
+            min-width: 40px !important;
+            border-radius: 10px !important;
+            gap: 4px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .modern-add-btn i.fa-plus {
+            font-size: 14px !important;
+        }
+
+        .modern-add-btn i.fa-chevron-down {
+            font-size: 9.5px !important;
+        }
+
+        .modern-card-btn {
+            height: 40px !important;
+            padding: 0 8px !important;
+            border-radius: 10px !important;
+        }
+
+        #themeToggle {
+            width: 40px !important;
+            height: 40px !important;
+            padding: 0 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
 
         .modern-profile-card {
-            min-width: auto;
-            max-width: 140px;
+            min-width: auto !important;
+            max-width: auto !important;
+            padding: 2px 6px !important;
+            gap: 4px !important;
+            height: 40px !important;
         }
 
-        .user-name {
-            max-width: 70px;
+        .user-info,
+        .dropdown-arrow {
+            display: none !important;
+        }
+
+        .user-avatar {
+            width: 32px !important;
+            height: 32px !important;
+            font-size: 13px !important;
+        }
+
+        .modern-logout-card {
+            padding: 0 10px !important;
+            height: 40px !important;
+            min-width: 40px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
     }
 
     @media (max-width: 480px) {
-        .navbar-container {
-            padding: 0 16px;
+        .modern-navbar {
+            height: 58px !important;
+            min-height: 58px !important;
+        }
+
+        .navbar-content {
+            height: 58px !important;
+            padding: 0 8px !important;
+            gap: 5px !important;
+        }
+
+        .modern-add-btn {
+            height: 38px !important;
+            min-width: 38px !important;
+            padding: 0 8px !important;
+        }
+
+        .modern-search {
+            height: 38px !important;
+            font-size: 12px !important;
+            padding-left: 32px !important;
+        }
+
+        .search-wrapper .search-icon {
+            font-size: 12px !important;
+            left: 10px !important;
+        }
+
+        .modern-card-btn,
+        #themeToggle,
+        .modern-profile-card,
+        .modern-logout-card {
+            height: 38px !important;
         }
 
         .navbar-right {
-            gap: 8px;
-        }
-
-        .modern-icon-btn {
-            width: 38px;
-            height: 38px;
+            gap: 4px !important;
         }
     }
 </style>

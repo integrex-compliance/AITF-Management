@@ -50,8 +50,8 @@ function fetchAgreementReportData($db, $fromDate, $toDate, $clientName) {
     $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
         || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
         || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
-    $isOfficeStaff = in_array($invRole, array('Office Staff-A', 'Office Staff-B'), true)
-        || in_array(strtolower(str_replace(array(' ', '-'), '', $invRole)), array('officestaffa', 'officestaffb'), true);
+    $isOfficeStaff = in_array($invRole, array('Office Staff-A', 'Office Staff-B', 'BDM'), true)
+        || in_array(strtolower(str_replace(array(' ', '-'), '', $invRole)), array('officestaffa', 'officestaffb', 'bdm'), true);
     $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
 
     if ($fromDate !== '') {

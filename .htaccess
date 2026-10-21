@@ -27,8 +27,8 @@ RewriteRule ^populate_service_data\.php$ - [F,L,NC]
 
 
 <IfModule mod_php7.c>
-    php_value session.gc_maxlifetime 3600
-    php_value session.cookie_lifetime 3600
+    php_value session.gc_maxlifetime 86400
+    php_value session.cookie_lifetime 86400
     php_flag session.cookie_httponly On
 </IfModule>
 

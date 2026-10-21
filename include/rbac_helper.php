@@ -26,7 +26,8 @@ if (!function_exists('aitf_allowed_roles')) {
             'Office Staff-A',
             'Office Staff-B',
             'Marketing Head',
-            'Marketing Executive'
+            'Marketing Executive',
+            'BDM'
         );
     }
 }

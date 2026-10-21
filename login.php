@@ -8,6 +8,8 @@ require_once __DIR__ . '/include/rbac_helper.php';
 $auditorHelperPath = __DIR__ . '/include/auditor_portal_helper.php';
 if (file_exists($auditorHelperPath)) { require_once $auditorHelperPath; }
 
+require_once __DIR__ . '/include/daily_auth_helper.php';
+
 function aitf_redirect_and_exit($location)
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
@@ -15,6 +17,13 @@ function aitf_redirect_and_exit($location)
     }
     header("Location: " . $location);
     exit;
+}
+
+// Smart 24-hr daily login redirect:
+// If the user already has an active session for today, redirect straight to their dashboard.
+if (aitf_is_user_authenticated()) {
+    $dashboardUrl = aitf_get_user_dashboard_url($_SESSION['role'] ?? '');
+    aitf_redirect_and_exit($dashboardUrl);
 }
 
 if (isset($_POST["name"]) && !empty($_POST["name"]) && isset($_POST["cno"]) && !empty($_POST["cno"])) {
@@ -53,6 +62,7 @@ if (isset($_POST["name"]) && !empty($_POST["name"]) && isset($_POST["cno"]) && !
             $_SESSION['id'] = $customerinfo['id'];
             $_SESSION['role'] = "External";
             aitf_mark_session_authenticated();
+            aitf_create_daily_session_token($db, $customerinfo['id'], 'External', 'External User', $normCertNo);
             aitf_redirect_and_exit("certifiedClient.php");
         } else {
             $_SESSION['validation_error'] = "invalid_client_warning";
@@ -365,6 +375,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $_SESSION['abbrevation'] = 'MD';
                 aitf_mark_session_authenticated();
                 aitf_record_login_activity($db, ['user_id'=>0, 'user_name'=>'Managing Director', 'email_id'=>$identifier, 'role'=>'Director', 'e_id'=>'DIRECTOR']);
+                aitf_create_daily_session_token($db, 0, 'Director', 'Managing Director', $identifier);
                 $loginSuccess = true;
                 $redirectUrl = 'myDashboard.php';
             }
@@ -397,6 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     }
                 }
                 
+                aitf_create_daily_session_token($db, $row['user_id'], $row['role'], $row['user_name'], $identifier);
                 $redirectUrl = 'myDashboard.php';
                 $loginSuccess = true;
             }
@@ -413,6 +425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $_SESSION['abbrevation'] = $row['abbrevation'] ?? '';
                 aitf_mark_session_authenticated();
                 aitf_record_login_activity($db, ['user_id'=>$row['auditors_id'], 'user_name'=>$row['auditor_name'], 'email_id'=>$row['login_email'], 'role'=>'Auditor', 'e_id'=>'AUDITOR']);
+                aitf_create_daily_session_token($db, $row['auditors_id'], 'Auditor', $row['auditor_name'], $identifier);
                 $loginSuccess = true;
                 $redirectUrl = 'myDashboard.php';
             }
@@ -465,6 +478,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     'role' => 'client',
                     'e_id' => $matchedClient['unique_id'] ?? ''
                 ]);
+                aitf_create_daily_session_token($db, $matchedClient['id'], 'client', $matchedClient['customer_name'], $matchedClient['unique_id'] ?? $identifier);
                 $loginSuccess = true;
                 $redirectUrl = 'clientportal.php';
             }

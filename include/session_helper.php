@@ -4,8 +4,8 @@ require_once __DIR__ . '/env_helper.php';
 if (!function_exists('aitf_session_lifetime')) {
     function aitf_session_lifetime()
     {
-        $lifetime = (int)aitf_env('AITF_SESSION_LIFETIME_SECONDS', 3600);
-        return $lifetime > 0 ? $lifetime : 3600;
+        $lifetime = (int)aitf_env('AITF_SESSION_LIFETIME_SECONDS', 86400);
+        return $lifetime > 0 ? $lifetime : 86400;
     }
 }
 
@@ -61,7 +61,16 @@ if (!function_exists('aitf_start_session')) {
         }
 
         if (empty($_SESSION['username'])) {
-            return true;
+            // If persistent 24-hr token exists and DB connection is already available, restore session
+            if (!empty($_COOKIE['aitf_daily_session_token']) && isset($GLOBALS['db']) && $GLOBALS['db'] instanceof PDO) {
+                require_once __DIR__ . '/daily_auth_helper.php';
+                if (function_exists('aitf_try_daily_token_login')) {
+                    aitf_try_daily_token_login($GLOBALS['db']);
+                }
+            }
+            if (empty($_SESSION['username'])) {
+                return true;
+            }
         }
 
         $now = time();
@@ -72,9 +81,12 @@ if (!function_exists('aitf_start_session')) {
         if (($now - $lastActivity) >= $lifetime) {
             $_SESSION = [];
             session_regenerate_id(true);
-            $_SESSION['login_notice'] = 'Your session expired after one hour. Please log in again.';
+            $_SESSION['login_notice'] = 'Your session expired after 24 hours. Please log in again.';
             $_SESSION['session_expired'] = true;
             aitf_refresh_session_cookie();
+            if (function_exists('aitf_clear_daily_token_cookie')) {
+                aitf_clear_daily_token_cookie();
+            }
             return false;
         }
 
@@ -91,7 +103,9 @@ if (!function_exists('aitf_mark_session_authenticated')) {
             aitf_start_session();
         }
 
-        session_regenerate_id(true);
+        if (!headers_sent() && session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
         $_SESSION['aitf_last_activity'] = time();
         unset($_SESSION['login_error'], $_SESSION['login_notice'], $_SESSION['session_expired']);
         aitf_refresh_session_cookie();
@@ -117,6 +131,9 @@ if (!function_exists('aitf_destroy_session')) {
                 $params['secure'],
                 $params['httponly']
             );
+        }
+        if (function_exists('aitf_clear_daily_token_cookie')) {
+            aitf_clear_daily_token_cookie();
         }
         session_destroy();
     }

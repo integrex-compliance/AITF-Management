@@ -27,10 +27,34 @@
         || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()))
         || in_array(strtolower(trim($actualLoggedInRole)), ['director', 'top mgmt', 'mgmt', 'main admin', 'admin', 'finance'], true);
 
-    // 3. Fetch all system users for Management Switcher (Strictly only users created via Add User / 'user' table)
+    // Strictly check if actual logged-in user has 'Top Mgmt' role
+    $isTopMgmt = (strcasecmp(trim($actualLoggedInRole), 'Top Mgmt') === 0)
+        || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($actualLoggedInRole));
+
+    // 3. Fetch all system users for Management Switcher & Task Assignment (Strictly only users created via Add User / 'user' table)
     $allSystemUsers = [];
-    if ($isManagementUser && function_exists('aitf_get_all_system_users') && isset($db) && $db) {
+    $switcherUsers = [];
+    if (($isManagementUser || $isTopMgmt) && function_exists('aitf_get_all_system_users') && isset($db) && $db) {
         $allSystemUsers = aitf_get_all_system_users($db, false);
+
+        // Build clean deduplicated user list showing ONLY unique names, excluding self
+        $seenSwitcherNames = [];
+        foreach ($allSystemUsers as $su) {
+            if ($su['user_type'] === 'user' && (int)$su['user_id'] === $actualLoggedInUserId) {
+                continue;
+            }
+            $cleanName = trim($su['name']);
+            $nameNorm = strtolower($cleanName);
+            if (isset($seenSwitcherNames[$nameNorm])) {
+                continue;
+            }
+            $seenSwitcherNames[$nameNorm] = true;
+            $su['clean_name'] = $cleanName;
+            $switcherUsers[] = $su;
+        }
+        usort($switcherUsers, function($a, $b) {
+            return strcasecmp($a['clean_name'], $b['clean_name']);
+        });
     }
 
     // 4. Fetch default logged-in user details with robust error handling
@@ -457,6 +481,27 @@
             -webkit-overflow-scrolling: touch !important;
             white-space: nowrap !important;
             width: 100% !important;
+        }
+
+        .dash-tabs-bar:has(.dash-tab-btn.active[data-target="#pane-task-mgmt"]),
+        .dash-tabs-bar.tabs-attached-bottom {
+            margin-bottom: 0 !important;
+            border-bottom-left-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+        }
+
+        #pane-task-mgmt .todo-app-wrapper {
+            margin-top: -1px !important;
+            border-top-left-radius: 0 !important;
+            border-top-right-radius: 0 !important;
+            border-radius: 0 0 12px 12px !important;
+        }
+
+        .dash-tabs-scroller {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
         }
 
         .dash-tabs-bar::-webkit-scrollbar {
@@ -1269,36 +1314,7 @@
             margin: 0 auto;
         }
 
-        @media (max-width: 768px) {
-            .mc-hero-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-                padding: 16px;
-            }
-            .profile-header-area {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-                gap: 14px;
-                padding: 20px 16px;
-            }
-            .profile-identity-info {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            .profile-meta-tags {
-                justify-content: center;
-            }
-            .profile-details-strip {
-                grid-template-columns: 1fr;
-                padding: 16px;
-            }
-            .profile-records-container {
-                padding: 16px;
-            }
-        }
+
 
         /* 
            NEW THEME (MATCHING MASTER CREATOR)
@@ -1713,6 +1729,1153 @@
         html.theme-dark .dash-placeholder-desc {
             color: var(--hpd-text-dim) !important;
         }
+
+        /* Dark Mode Theme Support for Task Manager Component */
+        html.theme-dark .todo-app-wrapper {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-text) !important;
+        }
+        html.theme-dark .todo-header {
+            border-bottom-color: var(--hpd-border) !important;
+        }
+        html.theme-dark .todo-title-group h3 {
+            color: #f8fafc !important;
+        }
+        html.theme-dark .todo-title-group .todo-subtitle {
+            color: var(--hpd-text-dim) !important;
+        }
+        html.theme-dark .todo-search-box input {
+            background: var(--hpd-surface-2) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-text) !important;
+        }
+        html.theme-dark .todo-filter-btn {
+            background: var(--hpd-surface-2) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-text-dim) !important;
+        }
+        html.theme-dark .todo-card {
+            background: var(--hpd-surface-2) !important;
+            border-color: var(--hpd-border) !important;
+        }
+        html.theme-dark .todo-card:hover {
+            background: #192233 !important;
+            border-color: var(--hpd-border-2) !important;
+        }
+        html.theme-dark .todo-card.is-expanded {
+            background: #162032 !important;
+            border-color: var(--hpd-border-2) !important;
+        }
+        html.theme-dark .todo-expand-chevron {
+            color: var(--hpd-text-dim) !important;
+        }
+        html.theme-dark .todo-task-title {
+            color: #f1f5f9 !important;
+        }
+        html.theme-dark .todo-meta-row {
+            color: var(--hpd-text-dim) !important;
+            border-top-color: var(--hpd-border) !important;
+        }
+        html.theme-dark .todo-meta-row strong {
+            color: var(--hpd-text) !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-assigned-date {
+            background: #172554 !important;
+            border-color: #1e40af !important;
+            color: #93c5fd !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-assigned-date strong {
+            color: #bfdbfe !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-assigned-by {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            color: #cbd5e1 !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-assigned-by strong {
+            color: #f8fafc !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-due-date {
+            background: #052e16 !important;
+            border-color: #166534 !important;
+            color: #86efac !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-due-date strong {
+            color: #bbf7d0 !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-due-date.is-overdue {
+            background: #450a0a !important;
+            border-color: #991b1b !important;
+            color: #fca5a5 !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-due-date.is-overdue strong {
+            color: #fecaca !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-priority {
+            background: #451a03 !important;
+            border-color: #92400e !important;
+            color: #fde68a !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-priority strong {
+            color: #fef08a !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-completed-date {
+            background: #064e3b !important;
+            border-color: #047857 !important;
+            color: #a7f3d0 !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-completed-date strong {
+            color: #d1fae5 !important;
+        }
+        html.theme-dark .todo-check-circle {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border-2) !important;
+        }
+        html.theme-dark .todo-completed-section {
+            border-top-color: var(--hpd-border) !important;
+        }
+        html.theme-dark .todo-completed-header {
+            color: var(--hpd-text-dim) !important;
+        }
+        html.theme-dark .todo-completed-count {
+            background: var(--hpd-surface-2) !important;
+            color: var(--hpd-text) !important;
+        }
+
+        /* Default Switcher Display (Desktop PC view remains 100% untouched) */
+        .dash-switcher-desktop-wrap {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+        .dash-switcher-mobile-wrap {
+            display: none !important;
+        }
+
+        /* ================================================================== */
+        /* FULL-FLEDGED MOBILE RESPONSIVE DESIGN (<= 768px)                   */
+        /* PC/Desktop view (> 768px) remains 100% untouched                  */
+        /* ================================================================== */
+        @media screen and (max-width: 768px) {
+            /* 1. Global Page Layout & Insets */
+            body, #wrapper {
+                overflow-x: hidden !important;
+            }
+
+            #wrapper.active {
+                padding-left: 0 !important;
+            }
+
+            .modern-navbar {
+                height: 60px !important;
+                min-height: 60px !important;
+            }
+            .navbar-container {
+                margin-left: 0 !important;
+                padding: 0 !important;
+                height: 100% !important;
+            }
+            .navbar-content {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                height: 60px !important;
+                padding: 0 10px !important;
+                gap: 6px !important;
+                flex-wrap: nowrap !important;
+                width: 100% !important;
+            }
+            .navbar-toggle {
+                display: none !important;
+            }
+            .navbar-center {
+                order: 1 !important;
+                flex: 1 !important;
+                min-width: 0 !important;
+                width: auto !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+            .navbar-left {
+                order: 2 !important;
+                width: auto !important;
+                height: auto !important;
+                margin: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                flex-shrink: 0 !important;
+            }
+            .navbar-right {
+                order: 3 !important;
+                width: auto !important;
+                margin: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+                flex-shrink: 0 !important;
+            }
+            .modern-add-btn {
+                height: 38px !important;
+                padding: 0 10px !important;
+                min-width: 40px !important;
+                border-radius: 10px !important;
+                gap: 4px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+            .modern-add-btn span {
+                display: none !important;
+            }
+
+            #page-content-wrapper {
+                margin-top: 66px !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                width: 100% !important;
+                overflow-x: hidden !important;
+            }
+
+            .page-content,
+            .page-content.inset {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                padding-top: 8px !important;
+                padding-bottom: 24px !important;
+            }
+
+            .my-dash-container {
+                max-width: 100% !important;
+                padding: 0 !important;
+                overflow-x: hidden !important;
+            }
+
+            /* 2. Responsive Tabs Bar & User Switcher */
+            .dash-tabs-bar {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+                padding: 6px !important;
+                margin-bottom: 14px !important;
+                border-radius: 10px !important;
+                overflow: visible !important;
+                white-space: normal !important;
+            }
+
+            .dash-tabs-bar:has(.dash-tab-btn.active[data-target="#pane-task-mgmt"]),
+            .dash-tabs-bar.tabs-attached-bottom {
+                margin-bottom: 0 !important;
+                border-bottom-left-radius: 0 !important;
+                border-bottom-right-radius: 0 !important;
+            }
+
+            .dash-tabs-scroller {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                gap: 6px !important;
+                width: 100% !important;
+                padding-bottom: 3px !important;
+                scrollbar-width: none !important;
+            }
+
+            .dash-tabs-scroller::-webkit-scrollbar {
+                display: none !important;
+                height: 0 !important;
+            }
+
+            .dash-tab-btn {
+                padding: 8px 13px !important;
+                font-size: 12px !important;
+                border-radius: 6px !important;
+                flex-shrink: 0 !important;
+                gap: 6px !important;
+            }
+
+            .dash-tab-btn i {
+                font-size: 12px !important;
+            }
+
+            .dash-user-switcher-container {
+                width: 100% !important;
+                margin-left: 0 !important;
+                padding: 7px 2px 2px 2px !important;
+                border-top: 1px solid #e2e8f0 !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+            }
+
+            html.theme-dark .dash-user-switcher-container {
+                border-top-color: var(--hpd-border) !important;
+            }
+
+            /* Hide desktop switcher on mobile */
+            .dash-switcher-desktop-wrap {
+                display: none !important;
+            }
+
+            /* Show mobile custom switcher */
+            .dash-switcher-mobile-wrap {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                position: relative !important;
+            }
+
+            .dash-mobile-switcher-container {
+                position: relative !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .dash-mobile-btn-row {
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                width: 100% !important;
+            }
+
+            .dash-mobile-switcher-btn {
+                flex: 1 !important;
+                min-width: 0 !important;
+                height: 38px !important;
+                padding: 0 12px !important;
+                background: #ffffff !important;
+                border: 1.5px solid #cbd5e1 !important;
+                border-radius: 8px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 8px !important;
+                cursor: pointer !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+                transition: all 0.15s ease !important;
+                outline: none !important;
+                box-sizing: border-box !important;
+            }
+
+            .dash-mobile-switcher-btn.is-active-view {
+                background: #eff6ff !important;
+                border-color: #2563eb !important;
+            }
+
+            .dash-mobile-btn-left {
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                min-width: 0 !important;
+                flex: 1 !important;
+                overflow: hidden !important;
+            }
+
+            .mobile-user-icon {
+                font-size: 13px !important;
+                color: #64748b !important;
+                flex-shrink: 0 !important;
+            }
+
+            .dash-mobile-switcher-btn.is-active-view .mobile-user-icon {
+                color: #2563eb !important;
+            }
+
+            .mobile-btn-text {
+                font-size: 12.5px !important;
+                font-weight: 600 !important;
+                color: #0f172a !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+
+            .dash-mobile-switcher-btn.is-active-view .mobile-btn-text {
+                color: #1e40af !important;
+            }
+
+            .dash-mobile-arrow {
+                font-size: 11px !important;
+                color: #64748b !important;
+                flex-shrink: 0 !important;
+                transition: transform 0.2s ease !important;
+            }
+
+            .dash-mobile-switcher-btn.is-open .dash-mobile-arrow {
+                transform: rotate(180deg) !important;
+            }
+
+            .dash-mobile-reset-btn {
+                height: 38px !important;
+                padding: 0 12px !important;
+                font-size: 12px !important;
+                font-weight: 600 !important;
+                border-radius: 8px !important;
+                background: #fee2e2 !important;
+                border: 1px solid #fecaca !important;
+                color: #b91c1c !important;
+                text-decoration: none !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 5px !important;
+                flex-shrink: 0 !important;
+            }
+
+            /* Custom Mobile Dropdown Menu (Strictly contained within mobile viewport) */
+            .dash-mobile-dropdown-menu {
+                display: none;
+                position: absolute !important;
+                top: calc(100% + 6px) !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                background: #ffffff !important;
+                border: 1px solid #cbd5e1 !important;
+                border-radius: 12px !important;
+                box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(0,0,0,0.06) !important;
+                z-index: 1050 !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important;
+            }
+
+            .dash-mobile-dropdown-header {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                padding: 9px 12px !important;
+                background: #f8fafc !important;
+                border-bottom: 1px solid #e2e8f0 !important;
+            }
+
+            .mobile-dropdown-title {
+                font-size: 12px !important;
+                font-weight: 700 !important;
+                color: #334155 !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.4px !important;
+            }
+
+            .dash-mobile-dropdown-close {
+                width: 24px !important;
+                height: 24px !important;
+                border-radius: 50% !important;
+                border: none !important;
+                background: #e2e8f0 !important;
+                color: #64748b !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                cursor: pointer !important;
+                font-size: 11px !important;
+                padding: 0 !important;
+            }
+
+            .dash-mobile-search-bar {
+                position: relative !important;
+                padding: 8px 10px !important;
+                background: #ffffff !important;
+                border-bottom: 1px solid #f1f5f9 !important;
+            }
+
+            .dash-mobile-search-bar i {
+                position: absolute !important;
+                left: 20px !important;
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                font-size: 12px !important;
+                color: #94a3b8 !important;
+            }
+
+            .dash-mobile-search-input {
+                width: 100% !important;
+                height: 32px !important;
+                border-radius: 6px !important;
+                border: 1px solid #cbd5e1 !important;
+                padding: 4px 10px 4px 28px !important;
+                font-size: 12px !important;
+                outline: none !important;
+                background: #f8fafc !important;
+                box-sizing: border-box !important;
+            }
+
+            .dash-mobile-search-input:focus {
+                border-color: #2563eb !important;
+                background: #ffffff !important;
+            }
+
+            .dash-mobile-user-list {
+                max-height: 260px !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .dash-mobile-user-item {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                padding: 9px 12px !important;
+                border-bottom: 1px solid #f8fafc !important;
+                text-decoration: none !important;
+                color: inherit !important;
+                transition: background 0.12s ease !important;
+            }
+
+            .dash-mobile-user-item:hover,
+            .dash-mobile-user-item:active {
+                background: #f1f5f9 !important;
+                text-decoration: none !important;
+            }
+
+            .dash-mobile-user-item.is-selected {
+                background: #eff6ff !important;
+            }
+
+            .mobile-item-profile {
+                display: flex !important;
+                align-items: center !important;
+                gap: 9px !important;
+                min-width: 0 !important;
+                flex: 1 !important;
+            }
+
+            .mobile-item-avatar {
+                width: 30px !important;
+                height: 30px !important;
+                border-radius: 50% !important;
+                background: #e0e7ff !important;
+                color: #3730a3 !important;
+                font-size: 11px !important;
+                font-weight: 700 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                flex-shrink: 0 !important;
+            }
+
+            .mobile-item-avatar.avatar-personal {
+                background: #dbeafe !important;
+                color: #1e40af !important;
+            }
+
+            .mobile-item-details {
+                min-width: 0 !important;
+                flex: 1 !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            .mobile-item-name {
+                font-size: 13px !important;
+                font-weight: 600 !important;
+                color: #1e293b !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+
+            .dash-mobile-user-item.is-selected .mobile-item-name {
+                color: #1d4ed8 !important;
+                font-weight: 700 !important;
+            }
+
+            .mobile-item-sub {
+                font-size: 11px !important;
+                color: #64748b !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+
+            .mobile-item-check {
+                color: #2563eb !important;
+                font-size: 14px !important;
+                margin-left: 6px !important;
+                flex-shrink: 0 !important;
+            }
+
+            /* Dark Mode Support for Mobile Switcher */
+            html.theme-dark .dash-mobile-switcher-btn {
+                background: var(--hpd-surface-2) !important;
+                border-color: var(--hpd-border) !important;
+            }
+            html.theme-dark .dash-mobile-switcher-btn.is-active-view {
+                background: rgba(37, 99, 235, 0.15) !important;
+                border-color: #3b82f6 !important;
+            }
+            html.theme-dark .mobile-btn-text {
+                color: var(--hpd-text) !important;
+            }
+            html.theme-dark .dash-mobile-switcher-btn.is-active-view .mobile-btn-text {
+                color: #60a5fa !important;
+            }
+            html.theme-dark .dash-mobile-dropdown-menu {
+                background: var(--hpd-surface) !important;
+                border-color: var(--hpd-border) !important;
+            }
+            html.theme-dark .dash-mobile-dropdown-header {
+                background: var(--hpd-surface-2) !important;
+                border-bottom-color: var(--hpd-border) !important;
+            }
+            html.theme-dark .mobile-dropdown-title {
+                color: var(--hpd-text) !important;
+            }
+            html.theme-dark .dash-mobile-dropdown-close {
+                background: var(--hpd-surface-3) !important;
+                color: var(--hpd-muted) !important;
+            }
+            html.theme-dark .dash-mobile-search-bar {
+                background: var(--hpd-surface) !important;
+                border-bottom-color: var(--hpd-border) !important;
+            }
+            html.theme-dark .dash-mobile-search-input {
+                background: var(--hpd-surface-2) !important;
+                border-color: var(--hpd-border) !important;
+                color: var(--hpd-text) !important;
+            }
+            html.theme-dark .dash-mobile-user-item {
+                border-bottom-color: var(--hpd-border) !important;
+            }
+            html.theme-dark .dash-mobile-user-item:hover,
+            html.theme-dark .dash-mobile-user-item:active {
+                background: var(--hpd-surface-2) !important;
+            }
+            html.theme-dark .dash-mobile-user-item.is-selected {
+                background: rgba(37, 99, 235, 0.15) !important;
+            }
+            html.theme-dark .mobile-item-name {
+                color: var(--hpd-text) !important;
+            }
+            html.theme-dark .dash-mobile-user-item.is-selected .mobile-item-name {
+                color: #60a5fa !important;
+            }
+            html.theme-dark .mobile-item-sub {
+                color: var(--hpd-muted) !important;
+            }
+
+            .dash-switcher-reset-btn {
+                height: 38px !important;
+                padding: 0 12px !important;
+                font-size: 12px !important;
+                flex-shrink: 0 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            /* 3. Management Alert Banner */
+            .dash-viewing-alert {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+                padding: 12px 14px !important;
+                margin-bottom: 14px !important;
+                border-radius: 9px !important;
+            }
+
+            .dash-viewing-alert > div:first-child {
+                display: flex !important;
+                align-items: flex-start !important;
+                gap: 10px !important;
+            }
+
+            .dash-viewing-alert > div:last-child {
+                width: 100% !important;
+            }
+
+            .dash-viewing-alert .btn {
+                width: 100% !important;
+                justify-content: center !important;
+                padding: 8px 14px !important;
+                font-size: 12px !important;
+            }
+
+            /* 4. Section Card Headers & Pills */
+            .qms_complete_btn {
+                padding: 10px 14px !important;
+                border-radius: 10px 10px 0 0 !important;
+                font-size: 12px !important;
+                letter-spacing: 0.3px !important;
+            }
+
+            .qms_complete_btn > div {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 8px !important;
+                width: 100% !important;
+            }
+
+            .header-role-pill {
+                font-size: 10px !important;
+                padding: 2px 7px !important;
+                border-radius: 12px !important;
+                white-space: nowrap !important;
+                flex-shrink: 0 !important;
+            }
+
+            .master-profile-well {
+                border-radius: 0 0 10px 10px !important;
+                margin-bottom: 16px !important;
+            }
+
+            /* 5. Profile Header Top Aura & Badges */
+            .profile-header-area {
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+                gap: 12px !important;
+                padding: 16px 12px !important;
+            }
+
+            .profile-avatar-circle {
+                width: 70px !important;
+                height: 70px !important;
+                font-size: 24px !important;
+                border-width: 3px !important;
+            }
+
+            .profile-avatar-status {
+                width: 15px !important;
+                height: 15px !important;
+                bottom: 2px !important;
+                right: 2px !important;
+                border-width: 2.5px !important;
+            }
+
+            .profile-identity-info {
+                width: 100% !important;
+                min-width: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+            }
+
+            .profile-user-name {
+                font-size: 18px !important;
+                margin-bottom: 3px !important;
+                line-height: 1.3 !important;
+            }
+
+            .profile-hero-sub {
+                font-size: 12px !important;
+                margin-bottom: 8px !important;
+                line-height: 1.4 !important;
+            }
+
+            .profile-badges-row {
+                justify-content: center !important;
+                gap: 6px !important;
+                width: 100% !important;
+                margin-top: 4px !important;
+            }
+
+            .profile-sq-badge {
+                padding: 4px 10px !important;
+                font-size: 11px !important;
+                border-radius: 6px !important;
+                gap: 5px !important;
+            }
+
+            .profile-sq-badge i {
+                font-size: 11px !important;
+            }
+
+            /* 6. Basic Details Strip */
+            .profile-details-strip {
+                padding: 10px !important;
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
+            }
+
+            .mc-detail-card {
+                padding: 9px 12px !important;
+                gap: 10px !important;
+                border-radius: 8px !important;
+            }
+
+            .mc-stat-icon {
+                width: 28px !important;
+                height: 28px !important;
+                font-size: 12px !important;
+            }
+
+            .detail-lbl {
+                font-size: 9.5px !important;
+            }
+
+            .detail-val {
+                font-size: 12.5px !important;
+                word-break: break-all !important;
+                overflow-wrap: anywhere !important;
+            }
+
+            /* 7. Side-by-Side Records Containers on Mobile */
+            .profile-records-row {
+                margin: 10px 0 0 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            .profile-records-col {
+                width: 100% !important;
+                flex: 0 0 100% !important;
+                max-width: 100% !important;
+                padding: 0 8px !important;
+                margin-bottom: 12px !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            .profile-work-desc-wrap {
+                margin: 0 8px 14px 8px !important;
+                clear: both !important;
+            }
+
+            .profile-records-container {
+                padding: 12px 10px !important;
+                border-radius: 10px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .records-section-title {
+                padding: 8px 10px !important;
+                margin-bottom: 10px !important;
+                gap: 8px !important;
+                border-radius: 8px !important;
+            }
+
+            .records-title-icon-wrap {
+                width: 26px !important;
+                height: 26px !important;
+                font-size: 12px !important;
+                border-radius: 6px !important;
+            }
+
+            .records-title-heading {
+                font-size: 12px !important;
+                line-height: 1.25 !important;
+            }
+
+            .records-title-sub {
+                font-size: 10px !important;
+                line-height: 1.2 !important;
+            }
+
+            .records-badge-count {
+                font-size: 10px !important;
+                padding: 2px 7px !important;
+                border-radius: 10px !important;
+            }
+
+            .record-category-card {
+                margin-bottom: 10px !important;
+                border-radius: 7px !important;
+            }
+
+            .record-category-header {
+                padding: 8px 10px !important;
+                font-size: 12px !important;
+                gap: 6px !important;
+                border-radius: 6px 6px 0 0 !important;
+            }
+
+            .record-category-card .records-clean-list {
+                padding: 8px 8px !important;
+                gap: 6px !important;
+                border-radius: 0 0 6px 6px !important;
+            }
+
+            .record-clean-item {
+                padding: 7px 9px !important;
+                gap: 8px !important;
+                border-radius: 6px !important;
+            }
+
+            .record-clean-num {
+                font-size: 10px !important;
+                padding: 2px 5px !important;
+                min-width: 18px !important;
+                text-align: center !important;
+                border-radius: 4px !important;
+            }
+
+            .record-clean-icon {
+                font-size: 11px !important;
+                margin-top: 3px !important;
+            }
+
+            .record-clean-text {
+                font-size: 12px !important;
+                line-height: 1.4 !important;
+            }
+
+            .records-empty-placeholder {
+                padding: 16px 10px !important;
+                font-size: 12px !important;
+                gap: 6px !important;
+            }
+
+            /* 8. Attendance Tab Mobile Styling */
+            .attendance-well {
+                padding: 16px 12px !important;
+            }
+
+            .dash-placeholder-box {
+                padding: 28px 12px !important;
+                border-radius: 8px !important;
+            }
+
+            .dash-placeholder-icon {
+                width: 44px !important;
+                height: 44px !important;
+                font-size: 18px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .dash-placeholder-title {
+                font-size: 14.5px !important;
+            }
+
+            .dash-placeholder-desc {
+                font-size: 12px !important;
+                line-height: 1.45 !important;
+            }
+
+            /* 9. Task Management Tab Mobile Styling */
+            .todo-app-wrapper {
+                padding: 8px 12px 12px 12px !important;
+                border-radius: 0 0 10px 10px !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                margin-top: -1px !important;
+            }
+
+            .todo-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 10px !important;
+                padding-bottom: 12px !important;
+                margin-bottom: 14px !important;
+            }
+
+            .todo-title-group h3 {
+                font-size: 17px !important;
+            }
+
+            .todo-header > div:last-child {
+                width: 100% !important;
+            }
+
+            .btn-dash-add-task-dummy {
+                width: 100% !important;
+                justify-content: center !important;
+                padding: 8px 14px !important;
+            }
+
+            .todo-toolbar {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+                margin-bottom: 12px !important;
+            }
+
+            .todo-search-box {
+                min-width: 100% !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+
+            .todo-filter-btns {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                width: 100% !important;
+                gap: 5px !important;
+                padding-bottom: 4px !important;
+                scrollbar-width: none !important;
+            }
+
+            .todo-filter-btns::-webkit-scrollbar {
+                display: none !important;
+            }
+
+            .todo-filter-btn {
+                font-size: 11px !important;
+                padding: 5px 10px !important;
+                white-space: nowrap !important;
+                flex-shrink: 0 !important;
+            }
+
+            .todo-card {
+                padding: 10px 12px !important;
+                gap: 10px !important;
+                border-radius: 8px !important;
+            }
+
+            .todo-task-title {
+                font-size: 13px !important;
+                line-height: 1.35 !important;
+            }
+
+            .todo-meta-row {
+                gap: 8px !important;
+                font-size: 11px !important;
+                margin-top: 4px !important;
+            }
+
+            .todo-meta-item {
+                font-size: 11px !important;
+            }
+
+            .todo-meta-tag {
+                font-size: 10px !important;
+                padding: 1px 6px !important;
+            }
+
+            .todo-completed-section {
+                margin-top: 14px !important;
+                padding-top: 12px !important;
+            }
+
+            .todo-completed-header {
+                font-size: 12px !important;
+                padding: 6px 8px !important;
+            }
+
+            /* 10. Work Guidelines Tab Mobile Styling */
+            .guidelines-well {
+                padding: 12px 10px !important;
+            }
+
+            .guidelines-top-bar {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+                margin-bottom: 12px !important;
+            }
+
+            .guidelines-search-wrap {
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+
+            #guidelinesSearchInput {
+                height: 38px !important;
+                font-size: 12.5px !important;
+            }
+
+            .guideline-entry-card {
+                padding: 12px 10px !important;
+                border-radius: 10px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .guideline-card-head {
+                gap: 8px !important;
+            }
+
+            .guideline-title-wrap {
+                min-width: 0 !important;
+                flex: 1 1 100% !important;
+                align-items: flex-start !important;
+                gap: 10px !important;
+            }
+
+            .guideline-card-icon {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 14px !important;
+                border-radius: 8px !important;
+            }
+
+            .guideline-title-wrap h4 {
+                font-size: 13.5px !important;
+                line-height: 1.35 !important;
+            }
+
+            .guideline-meta-row {
+                font-size: 11px !important;
+                gap: 6px !important;
+            }
+
+            .guideline-clean-badge {
+                font-size: 10px !important;
+                padding: 2px 7px !important;
+            }
+
+            .guideline-desc-box {
+                margin-top: 10px !important;
+                padding: 8px 10px !important;
+                font-size: 12px !important;
+                line-height: 1.45 !important;
+            }
+
+            .guideline-attachments-wrap {
+                padding-top: 8px !important;
+                margin-top: 8px !important;
+                gap: 6px !important;
+            }
+
+            .guideline-file-chip {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                padding: 6px 10px !important;
+            }
+
+            .file-chip-name {
+                max-width: calc(100vw - 160px) !important;
+                font-size: 11.5px !important;
+            }
+
+            .file-chip-size {
+                font-size: 10.5px !important;
+            }
+        }
+
+        /* Extra Compact Adjustments for Ultra-narrow Phones (<= 480px) */
+        @media screen and (max-width: 480px) {
+            .page-content,
+            .page-content.inset {
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+                padding-top: 6px !important;
+            }
+
+            .profile-records-col {
+                padding: 0 4px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .profile-work-desc-wrap {
+                margin: 0 4px 12px 4px !important;
+            }
+
+            .profile-records-container {
+                padding: 10px 8px !important;
+            }
+
+            .file-chip-name {
+                max-width: calc(100vw - 130px) !important;
+            }
+
+            .profile-user-name {
+                font-size: 17px !important;
+            }
+        }
     </style>
 
     <div id="page-content-wrapper">
@@ -1720,66 +2883,168 @@
             <div class="container-fluid my-dash-container">
                 
                 <?php
-                $dashTaskUid = (int)($userRow['user_id'] ?? $actualLoggedInUserId);
-                $dashPendingTaskCount = 0;
-                if ($dashTaskUid > 0 && isset($db) && $db) {
-                    try {
-                        $tCountStmt = $db->prepare("SELECT COUNT(*) FROM `aitf_tasks` WHERE `assigned_to_user_id` = :uid AND `status` = 'pending' AND `is_deleted` = 0");
-                        $tCountStmt->execute([':uid' => $dashTaskUid]);
-                        $dashPendingTaskCount = (int)$tCountStmt->fetchColumn();
-                    } catch (Throwable $e) {}
-                }
+                $targetDashboardUid = (int)($userRow['user_id'] ?? $actualLoggedInUserId);
+                $targetDashboardName = $userName;
+                $targetDashboardRole = $userRole;
                 ?>
                 <!-- 1. Tabs Bar -->
                 <div class="dash-tabs-bar" role="tablist">
-                    <button type="button" class="dash-tab-btn active" data-target="#pane-profile">
-                        <i class="fa fa-user-circle"></i> Profile
-                    </button>
-                    <button type="button" class="dash-tab-btn" data-target="#pane-attendance">
-                        <i class="fa fa-calendar-check-o"></i> Attendance
-                    </button>
-                    <button type="button" class="dash-tab-btn" data-target="#pane-task-mgmt">
-                        <i class="fa fa-tasks"></i> Task Management
-                    </button>
-                    <button type="button" class="dash-tab-btn" data-target="#pane-guidelines">
-                        <i class="fa fa-book"></i> Work Guidelines
-                    </button>
-                    <?php if ($isAuditorUser && !$isViewingOther): ?>
-                    <a href="auditorDashboard.php" class="dash-tab-btn" style="<?php echo !$isManagementUser ? 'margin-left: auto;' : ''; ?> background: linear-gradient(135deg, #0d4d8b 0%, #2563eb 100%); color: #ffffff !important; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(13, 77, 139, 0.25);">
-                        <i class="fa fa-clipboard-check"></i> Auditor Dashboard <i class="fa fa-external-link" style="font-size: 10.5px;"></i>
-                    </a>
-                    <?php endif; ?>
+                    <div class="dash-tabs-scroller">
+                        <button type="button" class="dash-tab-btn active" data-target="#pane-profile">
+                            <i class="fa fa-user-circle"></i> Profile
+                        </button>
+                        <button type="button" class="dash-tab-btn" data-target="#pane-attendance">
+                            <i class="fa fa-calendar-check-o"></i> Attendance
+                        </button>
+                        <button type="button" class="dash-tab-btn" data-target="#pane-task-mgmt">
+                            <i class="fa fa-tasks"></i> Task Management
+                        </button>
+                        <button type="button" class="dash-tab-btn" data-target="#pane-guidelines">
+                            <i class="fa fa-book"></i> Work Guidelines
+                        </button>
+                        <?php if ($isAuditorUser && !$isViewingOther): ?>
+                        <a href="auditorDashboard.php" class="dash-tab-btn" style="<?php echo (!$isManagementUser && !$isTopMgmt) ? 'margin-left: auto;' : ''; ?> background: linear-gradient(135deg, #0d4d8b 0%, #2563eb 100%); color: #ffffff !important; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(13, 77, 139, 0.25);">
+                            <i class="fa fa-clipboard-check"></i> Auditor Dashboard <i class="fa fa-external-link" style="font-size: 10.5px;"></i>
+                        </a>
+                        <?php endif; ?>
+                    </div>
 
                     <?php if ($isManagementUser): ?>
                     <!-- View Other Dashboard Section (For Management Role) -->
                     <div class="dash-user-switcher-container" style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 2px 4px 2px 14px;">
-                        <span class="dash-user-switcher-label" style="font-size: 12px; font-weight: 700; color: #475569; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
-                            <i class="fa fa-users" style="color: #0d4d8b; font-size: 13px;"></i> View Other Dashboard:
-                        </span>
-                        <div style="position: relative; min-width: 230px;">
-                            <select id="dashUserSwitcherSelect" class="form-control" style="height: 34px; font-size: 12.5px; border-radius: 8px; border: 1.5px solid <?php echo $isViewingOther ? '#2563eb' : '#cbd5e1'; ?>; background: <?php echo $isViewingOther ? '#eff6ff' : '#ffffff'; ?>; color: <?php echo $isViewingOther ? '#1e40af' : '#0f172a'; ?>; padding: 4px 26px 4px 10px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                                <option value="" <?php echo !$isViewingOther ? 'selected' : ''; ?>>👤 My Dashboard (Self)</option>
-                                <?php if (!empty($allSystemUsers)): ?>
-                                    <optgroup label="All Users (<?php echo count($allSystemUsers); ?>)">
-                                        <?php foreach ($allSystemUsers as $su): 
+                        
+                        <!-- 1. PC / Desktop View Switcher (Strictly intact for > 768px) -->
+                        <div class="dash-switcher-desktop-wrap" style="display: flex; align-items: center; gap: 8px;">
+                            <div style="position: relative; min-width: 235px;">
+                                <select id="dashUserSwitcherSelect" class="form-control" style="height: 36px; font-size: 13px; border-radius: 8px; border: 1.5px solid <?php echo $isViewingOther ? '#2563eb' : '#cbd5e1'; ?>; background: <?php echo $isViewingOther ? '#eff6ff' : '#ffffff'; ?>; color: <?php echo $isViewingOther ? '#1e40af' : '#0f172a'; ?>; padding: 4px 28px 4px 12px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                    <?php if (!$isViewingOther): ?>
+                                        <option value="__placeholder__" selected disabled hidden>👥 View Other's Dashboard</option>
+                                        <option value="">👤 My Dashboard</option>
+                                    <?php else: ?>
+                                        <option value="">👤 My Dashboard</option>
+                                    <?php endif; ?>
+                                    <?php if (!empty($switcherUsers)): ?>
+                                        <?php foreach ($switcherUsers as $su): 
                                             $suKey = $su['key'];
                                             $isSel = ($isViewingOther && $currentViewKey === $suKey);
-                                            $isMe = ($su['user_type'] === 'user' && (int)$su['user_id'] === $actualLoggedInUserId);
                                         ?>
                                         <option value="<?php echo htmlspecialchars($suKey); ?>" <?php echo $isSel ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($su['name']); ?> (<?php echo htmlspecialchars($su['role']); ?>)<?php echo $isMe ? ' - [You]' : ''; ?>
+                                            <?php echo htmlspecialchars($su['clean_name']); ?>
                                         </option>
                                         <?php endforeach; ?>
-                                    </optgroup>
-                                <?php endif; ?>
-                            </select>
-                            <i class="fa fa-chevron-down" style="position: absolute; right: 10px; top: 11px; font-size: 10px; color: <?php echo $isViewingOther ? '#2563eb' : '#94a3b8'; ?>; pointer-events: none;"></i>
+                                    <?php endif; ?>
+                                </select>
+                                <i class="fa fa-chevron-down" style="position: absolute; right: 11px; top: 12px; font-size: 11px; color: <?php echo $isViewingOther ? '#2563eb' : '#64748b'; ?>; pointer-events: none;"></i>
+                            </div>
+                            <?php if ($isViewingOther): ?>
+                            <a href="myDashboard.php" class="dash-switcher-reset-btn" title="Back to my own dashboard" style="display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 12px; font-size: 12px; font-weight: 600; border-radius: 8px; background: #fee2e2; border: 1px solid #fecaca; color: #b91c1c; text-decoration: none; transition: all 0.15s ease;">
+                                <i class="fa fa-times"></i> Reset
+                            </a>
+                            <?php endif; ?>
                         </div>
-                        <?php if ($isViewingOther): ?>
-                        <a href="myDashboard.php" class="dash-switcher-reset-btn" title="Back to my own dashboard" style="display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; font-size: 12px; font-weight: 600; border-radius: 8px; background: #fee2e2; border: 1px solid #fecaca; color: #b91c1c; text-decoration: none; transition: all 0.15s ease;">
-                            <i class="fa fa-times"></i> Reset
-                        </a>
-                        <?php endif; ?>
+
+                        <!-- 2. Mobile View Switcher (<= 768px, 100% inside mobile viewport) -->
+                        <div class="dash-switcher-mobile-wrap">
+                            <div class="dash-mobile-switcher-container">
+                                <div class="dash-mobile-btn-row">
+                                    <button type="button" id="dashMobileSwitcherToggle" class="dash-mobile-switcher-btn <?php echo $isViewingOther ? 'is-active-view' : ''; ?>">
+                                        <div class="dash-mobile-btn-left">
+                                            <?php if ($isViewingOther): ?>
+                                                <i class="fa fa-user-circle mobile-user-icon"></i>
+                                                <span class="mobile-btn-text"><?php echo htmlspecialchars($viewingTargetName ?: 'Viewing Other'); ?></span>
+                                            <?php else: ?>
+                                                <i class="fa fa-users mobile-user-icon"></i>
+                                                <span class="mobile-btn-text">View Other's Dashboard</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <i class="fa fa-chevron-down dash-mobile-arrow"></i>
+                                    </button>
+                                    <?php if ($isViewingOther): ?>
+                                    <a href="myDashboard.php" class="dash-switcher-reset-btn dash-mobile-reset-btn" title="Back to my own dashboard">
+                                        <i class="fa fa-times"></i> Reset
+                                    </a>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Mobile Dropdown List (Strictly contained in mobile view) -->
+                                <div id="dashMobileSwitcherDropdown" class="dash-mobile-dropdown-menu">
+                                    <div class="dash-mobile-dropdown-header">
+                                        <span class="mobile-dropdown-title"><i class="fa fa-users"></i> Switch Dashboard</span>
+                                        <button type="button" class="dash-mobile-dropdown-close" id="dashMobileDropdownCloseBtn" aria-label="Close">
+                                            <i class="fa fa-times"></i>
+                                        </button>
+                                    </div>
+
+                                    <?php if (!empty($switcherUsers) && count($switcherUsers) > 4): ?>
+                                    <div class="dash-mobile-search-bar">
+                                        <i class="fa fa-search"></i>
+                                        <input type="text" id="dashMobileUserSearch" class="dash-mobile-search-input" placeholder="Search user..." autocomplete="off">
+                                    </div>
+                                    <?php endif; ?>
+
+                                    <div class="dash-mobile-user-list">
+                                        <!-- Personal / My Dashboard Option -->
+                                        <a href="myDashboard.php" class="dash-mobile-user-item <?php echo !$isViewingOther ? 'is-selected' : ''; ?>" data-name="my dashboard">
+                                            <div class="mobile-item-profile">
+                                                <div class="mobile-item-avatar avatar-personal">
+                                                    <i class="fa fa-user"></i>
+                                                </div>
+                                                <div class="mobile-item-details">
+                                                    <div class="mobile-item-name">My Dashboard</div>
+                                                    <div class="mobile-item-sub">Return to your personal view</div>
+                                                </div>
+                                            </div>
+                                            <?php if (!$isViewingOther): ?>
+                                                <div class="mobile-item-check"><i class="fa fa-check-circle"></i></div>
+                                            <?php endif; ?>
+                                        </a>
+
+                                        <?php if (!empty($switcherUsers)): ?>
+                                            <?php foreach ($switcherUsers as $su): 
+                                                $suKey = $su['key'];
+                                                $isSel = ($isViewingOther && $currentViewKey === $suKey);
+                                                $cleanName = $su['clean_name'];
+                                                $suEmail = $su['email_id'] ?? ($su['email'] ?? '');
+                                                $suRole = $su['role'] ?? '';
+                                                // Dynamic initial
+                                                $subParts = preg_split('/\s+/', trim($cleanName));
+                                                $suInitial = '';
+                                                if (count($subParts) >= 2) {
+                                                    $suInitial = mb_strtoupper(mb_substr($subParts[0], 0, 1) . mb_substr(end($subParts), 0, 1));
+                                                } else {
+                                                    $suInitial = mb_strtoupper(mb_substr($cleanName, 0, 2));
+                                                }
+                                            ?>
+                                            <a href="myDashboard.php?view_user=<?php echo urlencode($suKey); ?>" class="dash-mobile-user-item <?php echo $isSel ? 'is-selected' : ''; ?>" data-name="<?php echo htmlspecialchars(strtolower($cleanName . ' ' . $suEmail)); ?>">
+                                                <div class="mobile-item-profile">
+                                                    <div class="mobile-item-avatar">
+                                                        <?php echo htmlspecialchars($suInitial); ?>
+                                                    </div>
+                                                    <div class="mobile-item-details">
+                                                        <div class="mobile-item-name"><?php echo htmlspecialchars($cleanName); ?></div>
+                                                        <?php if (!empty($suEmail)): ?>
+                                                            <div class="mobile-item-sub"><?php echo htmlspecialchars($suEmail); ?></div>
+                                                        <?php elseif (!empty($suRole)): ?>
+                                                            <div class="mobile-item-sub"><?php echo htmlspecialchars($suRole); ?></div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                                <?php if ($isSel): ?>
+                                                    <div class="mobile-item-check"><i class="fa fa-check-circle"></i></div>
+                                                <?php endif; ?>
+                                            </a>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+
+                                        <div id="dashMobileNoUserFound" style="display: none; padding: 22px 14px; text-align: center; color: #94a3b8; font-size: 12.5px;">
+                                            <i class="fa fa-search" style="font-size: 18px; margin-bottom: 6px; display: block;"></i>
+                                            No user found matching search
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                     <?php endif; ?>
                 </div>
@@ -1925,8 +3190,8 @@
                             </div>
 
                             <!-- Applicable Records & Resource Issue Record Side-by-Side Row -->
-                            <div class="row" style="margin: 16px 8px 0 8px; display: flex; flex-wrap: wrap;">
-                                <div class="col-sm-6" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
+                            <div class="row profile-records-row" style="margin: 16px 8px 0 8px; display: flex; flex-wrap: wrap;">
+                                <div class="col-sm-6 profile-records-col" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
                                     <!-- 1. APPLICABLE RECORDS (BLUE / SAPPHIRE THEME) -->
                                     <div class="profile-records-container records-theme-blue" style="width: 100%; flex: 1;">
                                         <div class="records-section-title">
@@ -1991,7 +3256,7 @@
                                     </div>
                                 </div>
 
-                                <div class="col-sm-6" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
+                                <div class="col-sm-6 profile-records-col" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
                                     <!-- 2. RESOURCE ISSUE RECORD (WARM AMBER / ORANGE THEME) -->
                                     <div class="profile-records-container records-theme-amber" style="width: 100%; flex: 1;">
                                         <div class="records-section-title">
@@ -2058,7 +3323,7 @@
                             </div>
 
                             <!-- 3. WORK DESCRIPTION (EMERALD GREEN THEME) -->
-                            <div style="margin: 0 16px 20px 16px; clear: both;">
+                            <div class="profile-work-desc-wrap" style="margin: 0 16px 20px 16px; clear: both;">
                                 <div class="profile-records-container records-theme-emerald">
                                     <div class="records-section-title">
                                         <div class="records-title-main">
@@ -2126,46 +3391,21 @@
                     </div>
                     <!-- 2. Attendance Tab Pane -->
                     <div class="dash-tab-pane" id="pane-attendance">
-                        <div class="qms_complete_btn header-theme-attendance">
-                            <i class="fa fa-calendar-check-o"></i> Attendance
-                        </div>
-                        <div class="well master-profile-well" style="padding: 24px;">
-                            <div class="dash-placeholder-box">
-                                <div class="dash-placeholder-icon" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">
-                                    <i class="fa fa-clock-o"></i>
-                                </div>
-                                <h4 class="dash-placeholder-title">Coming Soon</h4>
-                                <p class="dash-placeholder-desc">
-                                    Attendance feature is currently under development and will be available soon.
-                                </p>
-                            </div>
-                        </div>
+                        <?php
+                        $targetAttendanceUid = (int)($userRow['user_id'] ?? $actualLoggedInUserId);
+                        $targetAttendanceName = $userName;
+                        $targetAttendanceRole = $userRole;
+                        include __DIR__ . '/include/attendance_calendar_component.php';
+                        ?>
                     </div>
 
                     <!-- 3. Task Management Tab Pane -->
                     <div class="dash-tab-pane" id="pane-task-mgmt">
-                        <div class="qms_complete_btn header-theme-tasks">
-                            <i class="fa fa-tasks"></i> Task Management
-                        </div>
-                        <div class="well master-profile-well" style="padding: 24px;">
-                            <div class="dash-placeholder-box">
-                                <div class="dash-placeholder-icon" style="background: rgba(37, 99, 235, 0.12); color: #2563eb;">
-                                    <i class="fa fa-tasks"></i>
-                                </div>
-                                <h4 class="dash-placeholder-title">Coming Soon</h4>
-                                <p class="dash-placeholder-desc">
-                                    Task Management feature is currently under development and will be available soon.
-                                </p>
-                            </div>
-                        </div>
                         <?php
-                        /*
-                        // Under development - will be enabled once fully complete:
                         $targetDashboardUid = (int)($userRow['user_id'] ?? $actualLoggedInUserId);
                         $targetDashboardName = $userName;
                         $targetDashboardRole = $userRole;
                         include __DIR__ . '/include/task_manager_component.php';
-                        */
                         ?>
                     </div>
 
@@ -2191,8 +3431,8 @@
                                 </span>
                             </div>
                         </div>
-                        <div class="well master-profile-well" style="padding: 20px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                        <div class="well master-profile-well guidelines-well" style="padding: 20px;">
+                            <div class="guidelines-top-bar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <span style="font-size: 13px; color: #64748b; font-weight: 500;">
                                         <i class="fa fa-info-circle" style="color: #0d4d8b; margin-right: 4px;"></i>
@@ -2200,7 +3440,7 @@
                                     </span>
                                 </div>
                                 <?php if (!empty($guidelinesList)): ?>
-                                <div style="position: relative; width: 100%; max-width: 260px;">
+                                <div class="guidelines-search-wrap" style="position: relative; width: 100%; max-width: 260px;">
                                     <input type="text" id="guidelinesSearchInput" class="form-control" placeholder="Search guidelines..." style="height: 34px; font-size: 12.5px; border-radius: 8px; padding-left: 32px; border: 1px solid #cbd5e1; background: #ffffff;">
                                     <i class="fa fa-search" style="position: absolute; left: 11px; top: 10px; color: #94a3b8; font-size: 12px;"></i>
                                 </div>
@@ -2231,8 +3471,8 @@
                                         $searchHaystack = strtolower(($gl['title'] ?? '') . ' ' . $glDesc . ' ' . $glBy);
                                     ?>
                                     <div class="guideline-entry-card guideline-filter-item" data-search="<?php echo htmlspecialchars($searchHaystack); ?>">
-                                        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
-                                            <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px;">
+                                        <div class="guideline-card-head" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+                                            <div class="guideline-title-wrap" style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px;">
                                                 <div class="guideline-card-icon">
                                                     <i class="fa fa-file-text-o"></i>
                                                 </div>
@@ -2240,7 +3480,7 @@
                                                     <h4 style="margin: 0; font-size: 14.5px; font-weight: 700; color: #0f172a; line-height: 1.35;">
                                                         <?php echo htmlspecialchars($gl['title']); ?>
                                                     </h4>
-                                                    <div style="font-size: 11.5px; color: #64748b; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                                    <div class="guideline-meta-row" style="font-size: 11.5px; color: #64748b; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                                         <span><i class="fa fa-user-circle-o" style="color: #94a3b8;"></i> By: <strong style="color: #334155;"><?php echo htmlspecialchars($glBy); ?></strong></span>
                                                         <span style="color: #cbd5e1;">•</span>
                                                         <span><i class="fa fa-clock-o" style="color: #94a3b8;"></i> <?php echo $glDate; ?></span>
@@ -2296,17 +3536,33 @@
     </div>
 </div>
 
+
+
 <script>
 $(document).ready(function() {
     $('.dash-tab-btn').on('click', function(e) {
-        e.preventDefault();
         var target = $(this).data('target');
+        if (!target) return;
+        e.preventDefault();
         
         $('.dash-tab-btn').removeClass('active');
         $(this).addClass('active');
         
         $('.dash-tab-pane').removeClass('active').hide();
         $(target).addClass('active').fadeIn(150);
+
+        if (target === '#pane-task-mgmt') {
+            $('.dash-tabs-bar').addClass('tabs-attached-bottom');
+        } else {
+            $('.dash-tabs-bar').removeClass('tabs-attached-bottom');
+        }
+
+        // Smooth scroll tab into view on mobile
+        if (window.innerWidth <= 768 && this.scrollIntoView) {
+            try {
+                this.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            } catch (err) {}
+        }
     });
 
     // Auto-activate tab from hash if present
@@ -2317,6 +3573,13 @@ $(document).ready(function() {
         $('.dash-tab-btn[data-target="#pane-guidelines"]').click();
     } else if (hash === '#tasks' || hash === '#task-mgmt' || hash === '#pane-task-mgmt' || hash === '#task') {
         $('.dash-tab-btn[data-target="#pane-task-mgmt"]').click();
+    } else if (hash === '#attendance' || hash === '#pane-attendance') {
+        $('.dash-tab-btn[data-target="#pane-attendance"]').click();
+    }
+
+    // Set initial tabs attached state
+    if ($('.dash-tab-btn.active').data('target') === '#pane-task-mgmt') {
+        $('.dash-tabs-bar').addClass('tabs-attached-bottom');
     }
 
     // Live filter for work guidelines
@@ -2339,9 +3602,10 @@ $(document).ready(function() {
         }
     });
 
-    // Management Dashboard Switcher Change Event
+    // Management Dashboard Switcher Change Event (Desktop PC view)
     $('#dashUserSwitcherSelect').on('change', function() {
         var selectedVal = $(this).val();
+        if (selectedVal === '__placeholder__') return;
         var activeTab = $('.dash-tab-btn.active').data('target') || '';
         var targetUrl = 'myDashboard.php';
         if (selectedVal) {
@@ -2352,5 +3616,85 @@ $(document).ready(function() {
         }
         window.location.href = targetUrl;
     });
+
+    // Mobile Switcher Dropdown Toggle
+    $(document).on('click', '#dashMobileSwitcherToggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $btn = $(this);
+        var $menu = $('#dashMobileSwitcherDropdown');
+        if ($menu.is(':visible')) {
+            $menu.fadeOut(120);
+            $btn.removeClass('is-open');
+        } else {
+            $menu.fadeIn(150);
+            $btn.addClass('is-open');
+            setTimeout(function() {
+                $('#dashMobileUserSearch').focus();
+            }, 60);
+        }
+    });
+
+    // Mobile Switcher Close Button
+    $(document).on('click', '#dashMobileDropdownCloseBtn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $('#dashMobileSwitcherDropdown').fadeOut(120);
+        $('#dashMobileSwitcherToggle').removeClass('is-open');
+    });
+
+    // Close Dropdown when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.dash-switcher-mobile-wrap').length) {
+            if ($('#dashMobileSwitcherDropdown').is(':visible')) {
+                $('#dashMobileSwitcherDropdown').fadeOut(120);
+                $('#dashMobileSwitcherToggle').removeClass('is-open');
+            }
+        }
+    });
+
+    // User selection in Mobile Dropdown
+    $(document).on('click', '.dash-mobile-user-item', function(e) {
+        e.preventDefault();
+        var href = $(this).attr('href');
+        if (!href) return;
+        var activeTab = $('.dash-tab-btn.active').data('target') || '';
+        if (activeTab) {
+            href += activeTab;
+        }
+        window.location.href = href;
+    });
+
+    // Live search filter in Mobile Dropdown
+    $(document).on('input', '#dashMobileUserSearch', function() {
+        var q = $(this).val().toLowerCase().trim();
+        var matches = 0;
+        $('.dash-mobile-user-item').each(function() {
+            var name = $(this).attr('data-name') || '';
+            if (!q || name.indexOf(q) !== -1) {
+                $(this).show();
+                matches++;
+            } else {
+                $(this).hide();
+            }
+        });
+        if (matches === 0 && q !== '') {
+            $('#dashMobileNoUserFound').show();
+        } else {
+            $('#dashMobileNoUserFound').hide();
+        }
+    });
+
+    $(document).on('click', '.dash-switcher-reset-btn', function(e) {
+        e.preventDefault();
+        var activeTab = $('.dash-tab-btn.active').data('target') || '';
+        window.location.href = 'myDashboard.php' + activeTab;
+    });
+
+    // Static non-working Add Task Button (No action, no testing messages)
+    $(document).on('click', '.btn-dash-add-task-dummy', function(e) {
+        e.preventDefault();
+    });
+
 });
 </script>

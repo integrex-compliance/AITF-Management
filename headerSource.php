@@ -1,3 +1,10 @@
+<?php
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
+require_once __DIR__ . '/include/daily_auth_helper.php';
+$aitfHeaderIsAuth = aitf_is_user_authenticated();
+$aitfHeaderDashboard = aitf_get_user_dashboard_url($_SESSION['role'] ?? '');
+?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>-->
@@ -1675,7 +1682,11 @@
                     <div><a class="nav-link" href="news">News</a></div>
                     <div><a class="nav-link" href="about-us">About Us</a></div>
                     <div><a class="nav-link" href="contact-us">Contact Us</a></div>
-                    <div><a class="nav-link login-btn" href="login"> Login</a></div>
+                    <?php if (!empty($aitfHeaderIsAuth)): ?>
+                        <div><a class="nav-link login-btn" href="<?= htmlspecialchars($aitfHeaderDashboard) ?>" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;" title="Go to Dashboard"> Dashboard</a></div>
+                    <?php else: ?>
+                        <div><a class="nav-link login-btn" href="login"> Login</a></div>
+                    <?php endif; ?>
                 </div>
             </div>
     </nav>
@@ -1744,9 +1755,15 @@
                             </a>
                         </li>
                         <li>
-                            <a class="mobile-nav-item mobile-login-btn" href="login">
-                                <span>Login</span>
-                            </a>
+                            <?php if (!empty($aitfHeaderIsAuth)): ?>
+                                <a class="mobile-nav-item mobile-login-btn" href="<?= htmlspecialchars($aitfHeaderDashboard) ?>" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;">
+                                    <span>Dashboard</span>
+                                </a>
+                            <?php else: ?>
+                                <a class="mobile-nav-item mobile-login-btn" href="login">
+                                    <span>Login</span>
+                                </a>
+                            <?php endif; ?>
                         </li>
                     </ul>
                 </section>

@@ -309,9 +309,10 @@ if (!function_exists('aitf_create_task')) {
 if (!function_exists('aitf_toggle_task_status')) {
     /**
      * Toggles task completion status.
-     * STRICT PERMISSION: Only the user to whom the task is assigned is allowed to mark it as completed!
+     * Toggles task completion status.
+     * Permission: Assigned user or Management can toggle status.
      */
-    function aitf_toggle_task_status($db, $taskId, $currentUserId)
+    function aitf_toggle_task_status($db, $taskId, $currentUserId, $currentUserRole = '')
     {
         aitf_ensure_tasks_schema($db);
         $taskId = (int)$taskId;
@@ -330,12 +331,13 @@ if (!function_exists('aitf_toggle_task_status')) {
                 return ['success' => false, 'error' => 'Task not found or has been removed.'];
             }
 
-            // ENFORCE REQUIREMENT: Only the assigned user can mark as completed / incomplete!
+            // ENFORCE REQUIREMENT: Assigned user or management can toggle task status
             $assignedUserId = (int)$task['assigned_to_user_id'];
-            if ($assignedUserId !== $currentUserId) {
+            $canManage = aitf_can_manage_tasks($currentUserRole ?: ($_SESSION['role'] ?? ''));
+            if ($assignedUserId !== $currentUserId && !$canManage) {
                 return [
                     'success' => false,
-                    'error' => 'Only ' . htmlspecialchars($task['assigned_to_name']) . ' (assigned user) can mark this task as completed.'
+                    'error' => 'Only ' . htmlspecialchars($task['assigned_to_name']) . ' (assigned user) or Management can update this task status.'
                 ];
             }
 
@@ -436,6 +438,246 @@ if (!function_exists('aitf_delete_task')) {
 
             return ['success' => true];
         } catch (Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+}
+
+if (!function_exists('aitf_ensure_task_permissions_schema')) {
+    /**
+     * Ensures the aitf_task_dashboard_permissions table exists.
+     */
+    function aitf_ensure_task_permissions_schema($db)
+    {
+        if (!$db) {
+            return;
+        }
+        static $permSchemaEnsured = false;
+        if ($permSchemaEnsured) {
+            return;
+        }
+
+        try {
+            $sql = "CREATE TABLE IF NOT EXISTS `aitf_task_dashboard_permissions` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `viewer_user_id` INT NOT NULL,
+                `viewer_user_name` VARCHAR(150) NULL,
+                `target_user_id` INT NOT NULL,
+                `target_user_name` VARCHAR(150) NULL,
+                `granted_by_user_id` INT NULL,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `uk_viewer_target` (`viewer_user_id`, `target_user_id`),
+                INDEX `idx_viewer` (`viewer_user_id`),
+                INDEX `idx_target` (`target_user_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+            $db->exec($sql);
+            $permSchemaEnsured = true;
+        } catch (Throwable $e) {
+            error_log("Failed to ensure aitf_task_dashboard_permissions schema: " . $e->getMessage());
+        }
+    }
+}
+
+if (!function_exists('aitf_is_top_mgmt_task_user')) {
+    /**
+     * Checks if user has top management / administrative privileges for tasks.
+     */
+    function aitf_is_top_mgmt_task_user($role = null)
+    {
+        if ($role === null) {
+            $role = $_SESSION['role'] ?? '';
+        }
+        $r = strtolower(trim((string)$role));
+        $topRoles = ['top mgmt', 'top management', 'mgmt', 'management', 'director', 'main admin', 'admin'];
+        if (in_array($r, $topRoles, true)) {
+            return true;
+        }
+        if (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($role)) {
+            return true;
+        }
+        if (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin())) {
+            return true;
+        }
+        return false;
+    }
+}
+
+if (!function_exists('aitf_can_user_view_task_dashboard')) {
+    /**
+     * Checks if a viewer user has permission to view a target user's task dashboard.
+     * 1. Self is always allowed.
+     * 2. Top Management / Admin can view all users.
+     * 3. Configured permissions in aitf_task_dashboard_permissions.
+     */
+    function aitf_can_user_view_task_dashboard($db, $viewerUserId, $targetUserId, $viewerRole = '')
+    {
+        $viewerUserId = (int)$viewerUserId;
+        $targetUserId = (int)$targetUserId;
+
+        if ($viewerUserId <= 0 || $targetUserId <= 0) {
+            return false;
+        }
+
+        // Self-access is always permitted
+        if ($viewerUserId === $targetUserId) {
+            return true;
+        }
+
+        // Top Management can view all dashboards
+        if (aitf_is_top_mgmt_task_user($viewerRole)) {
+            return true;
+        }
+
+        aitf_ensure_task_permissions_schema($db);
+
+        try {
+            $stmt = $db->prepare("SELECT 1 FROM `aitf_task_dashboard_permissions` 
+                                  WHERE `viewer_user_id` = :vid AND `target_user_id` = :tid LIMIT 1");
+            $stmt->execute([':vid' => $viewerUserId, ':tid' => $targetUserId]);
+            return (bool)$stmt->fetchColumn();
+        } catch (Throwable $e) {
+            error_log("Error checking dashboard view permission: " . $e->getMessage());
+            return false;
+        }
+    }
+}
+
+if (!function_exists('aitf_get_user_allowed_dashboard_uids')) {
+    /**
+     * Returns array of target_user_ids that viewer user can access.
+     * If viewer is Top Mgmt, returns 'all'.
+     */
+    function aitf_get_user_allowed_dashboard_uids($db, $viewerUserId, $viewerRole = '')
+    {
+        $viewerUserId = (int)$viewerUserId;
+        if (aitf_is_top_mgmt_task_user($viewerRole)) {
+            return 'all';
+        }
+
+        $allowed = [$viewerUserId];
+        aitf_ensure_task_permissions_schema($db);
+
+        try {
+            $stmt = $db->prepare("SELECT target_user_id FROM `aitf_task_dashboard_permissions` WHERE `viewer_user_id` = :vid");
+            $stmt->execute([':vid' => $viewerUserId]);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $tid = (int)$row['target_user_id'];
+                if ($tid > 0 && !in_array($tid, $allowed, true)) {
+                    $allowed[] = $tid;
+                }
+            }
+        } catch (Throwable $e) {
+            error_log("Error fetching allowed dashboard uids: " . $e->getMessage());
+        }
+
+        return $allowed;
+    }
+}
+
+if (!function_exists('aitf_get_all_dashboard_permissions_grouped')) {
+    /**
+     * Returns list of all permission grants grouped by viewer_user_id.
+     */
+    function aitf_get_all_dashboard_permissions_grouped($db)
+    {
+        aitf_ensure_task_permissions_schema($db);
+        $res = [];
+
+        try {
+            $stmt = $db->query("SELECT p.*, u.user_name as cur_viewer_name, u.role as cur_viewer_role, 
+                                       t.user_name as cur_target_name, t.role as cur_target_role
+                                FROM `aitf_task_dashboard_permissions` p
+                                LEFT JOIN `user` u ON u.user_id = p.viewer_user_id
+                                LEFT JOIN `user` t ON t.user_id = p.target_user_id
+                                ORDER BY u.user_name ASC, t.user_name ASC");
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $vid = (int)$row['viewer_user_id'];
+                if (!isset($res[$vid])) {
+                    $res[$vid] = [
+                        'viewer_user_id' => $vid,
+                        'viewer_name' => !empty($row['cur_viewer_name']) ? $row['cur_viewer_name'] : ($row['viewer_user_name'] ?? 'User #' . $vid),
+                        'viewer_role' => $row['cur_viewer_role'] ?? 'Staff',
+                        'targets' => []
+                    ];
+                }
+                $tid = (int)$row['target_user_id'];
+                $res[$vid]['targets'][] = [
+                    'target_user_id' => $tid,
+                    'target_name' => !empty($row['cur_target_name']) ? $row['cur_target_name'] : ($row['target_user_name'] ?? 'User #' . $tid),
+                    'target_role' => $row['cur_target_role'] ?? 'Staff',
+                    'created_at' => $row['created_at']
+                ];
+            }
+        } catch (Throwable $e) {
+            error_log("Error fetching grouped dashboard permissions: " . $e->getMessage());
+        }
+
+        return array_values($res);
+    }
+}
+
+if (!function_exists('aitf_save_user_dashboard_permissions')) {
+    /**
+     * Saves which target user dashboards a viewer user can access.
+     */
+    function aitf_save_user_dashboard_permissions($db, $viewerUserId, array $targetUserIds, $grantedByUserId = 0)
+    {
+        aitf_ensure_task_permissions_schema($db);
+        $viewerUserId = (int)$viewerUserId;
+        if ($viewerUserId <= 0) {
+            return ['success' => false, 'error' => 'Invalid viewer user.'];
+        }
+
+        // Get viewer user name
+        $viewerName = '';
+        try {
+            $uStmt = $db->prepare("SELECT user_name FROM `user` WHERE `user_id` = :uid LIMIT 1");
+            $uStmt->execute([':uid' => $viewerUserId]);
+            $viewerName = (string)$uStmt->fetchColumn();
+        } catch (Throwable $e) {}
+
+        try {
+            $db->beginTransaction();
+
+            $del = $db->prepare("DELETE FROM `aitf_task_dashboard_permissions` WHERE `viewer_user_id` = :vid");
+            $del->execute([':vid' => $viewerUserId]);
+
+            $ins = $db->prepare("INSERT INTO `aitf_task_dashboard_permissions` 
+                                  (`viewer_user_id`, `viewer_user_name`, `target_user_id`, `target_user_name`, `granted_by_user_id`)
+                                  VALUES (:vid, :vname, :tid, :tname, :gb)");
+
+            $count = 0;
+            foreach ($targetUserIds as $tid) {
+                $tid = (int)$tid;
+                if ($tid <= 0 || $tid === $viewerUserId) {
+                    continue; // Skip invalid or self
+                }
+
+                $targetName = '';
+                try {
+                    $tStmt = $db->prepare("SELECT user_name FROM `user` WHERE `user_id` = :uid LIMIT 1");
+                    $tStmt->execute([':uid' => $tid]);
+                    $targetName = (string)$tStmt->fetchColumn();
+                } catch (Throwable $e) {}
+
+                $ins->execute([
+                    ':vid' => $viewerUserId,
+                    ':vname' => $viewerName ?: 'User #' . $viewerUserId,
+                    ':tid' => $tid,
+                    ':tname' => $targetName ?: 'User #' . $tid,
+                    ':gb' => $grantedByUserId
+                ]);
+                $count++;
+            }
+
+            $db->commit();
+            return ['success' => true, 'count' => $count, 'viewer_name' => $viewerName];
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log("Failed to save user dashboard permissions: " . $e->getMessage());
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }

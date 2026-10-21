@@ -18,8 +18,8 @@ $hp_role = trim($_SESSION['role'] ?? '');
 $isMarketingHead = in_array($hp_role, array('Marketing Head', 'Marketing Executive'), true)
     || strtolower(str_replace(' ', '', $hp_role)) === 'marketinghead'
     || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
-$isOfficeStaff = in_array($hp_role, array('Office Staff-A', 'Office Staff-B'), true)
-    || in_array(strtolower(str_replace(array(' ', '-'), '', $hp_role)), array('officestaffa', 'officestaffb'), true);
+$isOfficeStaff = in_array($hp_role, array('Office Staff-A', 'Office Staff-B', 'BDM'), true)
+    || in_array(strtolower(str_replace(array(' ', '-'), '', $hp_role)), array('officestaffa', 'officestaffb', 'bdm'), true);
 
 $fromDate = $_POST['fromDate'] ?? '';
 $toDate = $_POST['toDate'] ?? '';

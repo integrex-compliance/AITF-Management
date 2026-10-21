@@ -20,7 +20,7 @@
     $hp_role = $_SESSION['role'] ?? '';
 $customerListBase = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES'";
 
-if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
+if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B', 'BDM'), true)) {
     // C✔✔ - Active Past One Month+ Running Access
     $customerList = $customerListBase . " AND ci.audit_status = 'Active' AND ac.certification_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01') ORDER BY ac.certification_date DESC";
 } elseif (in_array(trim($hp_role), array('Marketing Head', 'Marketing Executive'), true)) {
