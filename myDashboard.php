@@ -25,10 +25,24 @@
     $isManagementUser = $canManageTasks
         || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($actualLoggedInRole))
         || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()))
-        || in_array(strtolower(trim($actualLoggedInRole)), ['director', 'top mgmt', 'mgmt', 'main admin', 'admin', 'finance'], true);
+        || in_array(strtolower(trim($actualLoggedInRole)), ['director', 'top mgmt', 'mgmt', 'main admin', 'admin', 'finance', 'bdm'], true);
 
     // Strictly check if actual logged-in user has 'Top Mgmt' role
     $isTopMgmt = (strcasecmp(trim($actualLoggedInRole), 'Top Mgmt') === 0)
+        || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($actualLoggedInRole))
+        || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()));
+
+    // Helper to check if a user role is Top Management
+    if (!function_exists('aitf_is_role_top_mgmt')) {
+        function aitf_is_role_top_mgmt($roleName) {
+            $r = strtolower(trim((string)$roleName));
+            return in_array($r, ['top mgmt', 'mgmt', 'director', 'main admin'], true);
+        }
+    }
+
+    // Strictly check if actual logged-in user has Management / Admin / Finance / BDM privileges to edit profile sections & email
+    $canEditProfileSections = in_array(strtolower(trim($actualLoggedInRole)), ['top mgmt', 'mgmt', 'director', 'admin', 'main admin', 'finance', 'bdm'], true)
+        || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()))
         || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($actualLoggedInRole));
 
     // 3. Fetch all system users for Management Switcher & Task Assignment (Strictly only users created via Add User / 'user' table)
@@ -41,6 +55,10 @@
         $seenSwitcherNames = [];
         foreach ($allSystemUsers as $su) {
             if ($su['user_type'] === 'user' && (int)$su['user_id'] === $actualLoggedInUserId) {
+                continue;
+            }
+            // Admin, Finance, and BDM can see everyone EXCEPT Top Management
+            if (!$isTopMgmt && aitf_is_role_top_mgmt($su['role'] ?? '')) {
                 continue;
             }
             $cleanName = trim($su['name']);
@@ -176,6 +194,14 @@
             }
 
             if ($targetUserRow) {
+                // Admin, Finance, and BDM can see everyone EXCEPT Top Management
+                $targetRole = trim((string)($targetUserRow['role'] ?? ''));
+                if (!$isTopMgmt && aitf_is_role_top_mgmt($targetRole)) {
+                    $targetUserRow = null;
+                }
+            }
+
+            if ($targetUserRow) {
                 // If it's not the same user as actual logged-in user, switch the active dashboard
                 $isSameUser = false;
                 if (!empty($targetUserRow['user_id']) && $actualLoggedInUserId > 0 && (int)$targetUserRow['user_id'] === $actualLoggedInUserId) {
@@ -209,6 +235,11 @@
     $userStatus = trim((string)($userRow['account_status'] ?? 'active'));
     $userAbbr = trim((string)($userRow['abbreviation'] ?? ''));
     $isAuditorUser = $isAuditorUser || ($userRole === 'Auditor');
+
+    // If viewing another user, non-Top-Mgmt roles cannot edit Top Mgmt
+    if ($isViewingOther && !$isTopMgmt && aitf_is_role_top_mgmt($userRole)) {
+        $canEditProfileSections = false;
+    }
 
     // Dynamic Initials generation AB )
     $initials = '';
@@ -1271,6 +1302,426 @@
             border-radius: 10px;
         }
 
+        /* Profile Records Edit / Add Action Buttons & Modal */
+        .records-title-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .btn-records-edit-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 6px;
+            color: #ffffff !important;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.18s ease;
+            text-decoration: none !important;
+            line-height: 1.4;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            outline: none !important;
+        }
+
+                .btn-records-toggle-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 6px;
+            color: #ffffff !important;
+            font-size: 11px;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.2s ease;
+            outline: none !important;
+            padding: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            line-height: 1;
+        }
+
+        .btn-records-toggle-action:hover {
+            background: rgba(255, 255, 255, 0.42);
+            border-color: #ffffff;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+            transform: translateY(-1px);
+        }
+
+        .records-section-title {
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.15s ease;
+        }
+
+        .records-section-title:hover {
+            opacity: 0.96;
+        }
+
+        .toggle-chevron {
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-block;
+        }
+
+        .profile-records-container.is-collapsed .toggle-chevron {
+            transform: rotate(180deg);
+        }
+
+        .profile-records-container.is-collapsed {
+            min-height: 0 !important;
+            padding-bottom: 12px !important;
+        }
+
+        .profile-records-container.is-collapsed .records-section-title {
+            margin-bottom: 0 !important;
+        }
+
+        .records-section-body {
+            transition: all 0.2s ease;
+        }
+
+        .record-category-header {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease;
+        }
+
+        .record-category-header:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .category-chevron {
+            transition: transform 0.2s ease;
+        }
+
+        .btn-records-edit-action:hover {
+            background: rgba(255, 255, 255, 0.38);
+            border-color: #ffffff;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+            transform: translateY(-1px);
+        }
+
+        .btn-records-edit-action i {
+            font-size: 11px;
+        }
+
+        .records-empty-clickable {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .records-empty-clickable:hover {
+            background: #ffffff;
+            border-color: #2563eb;
+            color: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+        }
+
+        .mc-detail-card-email {
+            position: relative;
+        }
+
+        .btn-profile-edit-email {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+            margin-left: 6px;
+            outline: none !important;
+        }
+
+        .btn-profile-edit-email:hover {
+            background: #0d4d8b;
+            border-color: #0d4d8b;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
+            transform: translateY(-1px);
+        }
+
+        /* Profile Modal Styles */
+        .dash-profile-modal-content {
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        }
+
+        .dash-profile-modal-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 22px;
+            position: relative;
+        }
+
+        .dash-modal-title-wrap h4 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 800;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dash-modal-user-meta {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .dash-modal-role-pill {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .dash-modal-security-pill {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .dash-modal-tabs-bar {
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 18px 0 18px;
+        }
+
+        .dash-modal-tabs {
+            border-bottom: none !important;
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+
+        .dash-modal-tabs > li > a {
+            border-radius: 8px 8px 0 0 !important;
+            border: 1px solid transparent !important;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569 !important;
+            padding: 9px 15px;
+            background: transparent;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            white-space: nowrap;
+        }
+
+        .dash-modal-tabs > li.active > a,
+        .dash-modal-tabs > li.active > a:hover,
+        .dash-modal-tabs > li.active > a:focus {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #e2e8f0 #e2e8f0 transparent !important;
+            font-weight: 700 !important;
+            box-shadow: 0 -2px 6px rgba(0,0,0,0.03);
+        }
+
+        .dash-profile-modal-body {
+            padding: 20px 22px;
+            max-height: calc(85vh - 200px);
+            overflow-y: auto;
+            background: #ffffff;
+        }
+
+        .dash-modal-tab-desc {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tab-desc-text {
+            font-size: 12.5px;
+            color: #475569;
+            line-height: 1.45;
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .dash-modal-entries-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .dash-section-card {
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 14px 16px 12px 16px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+                .dash-section-single-card {
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-top: 4px;
+            margin-bottom: 8px;
+        }
+
+        .dash-single-hdr-input {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 9px 12px !important;
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            background: #ffffff !important;
+            margin-bottom: 14px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .dash-single-desc-textarea {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 10px 12px !important;
+            font-size: 13px !important;
+            resize: vertical !important;
+            min-height: 140px !important;
+            background: #ffffff !important;
+            line-height: 1.55 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .dash-section-card:hover {
+            border-color: #94a3b8;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        .dash-section-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .dash-card-num-badge {
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-remove-section-card {
+            color: #ef4444;
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            border-radius: 5px;
+            padding: 3px 8px;
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-remove-section-card:hover {
+            background: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+        }
+
+        .dash-card-hdr-input {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 8px 12px !important;
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            background: #ffffff !important;
+            margin-bottom: 10px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .dash-card-desc-textarea {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 10px 12px !important;
+            font-size: 13px !important;
+            resize: vertical !important;
+            min-height: 80px !important;
+            background: #ffffff !important;
+            line-height: 1.5 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .dash-modal-tab-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
+            margin-top: 12px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .dash-profile-modal-footer {
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            padding: 14px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
         .dash-tab-pane {
             display: none;
         }
@@ -1702,6 +2153,106 @@
             border-color: var(--hpd-border-2) !important;
             background: var(--hpd-surface-2) !important;
             color: var(--hpd-text-dim) !important;
+        }
+
+        html.theme-dark .records-empty-clickable:hover {
+            background: #111a2e !important;
+            border-color: #3b82f6 !important;
+            color: #93c5fd !important;
+        }
+
+        html.theme-dark .btn-profile-edit-email {
+            background: var(--hpd-surface-3, #1e293b) !important;
+            border-color: var(--hpd-border, #334155) !important;
+            color: var(--hpd-text, #e2e8f0) !important;
+        }
+
+        html.theme-dark .btn-profile-edit-email:hover {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+            color: #ffffff !important;
+        }
+
+        html.theme-dark .dash-profile-modal-content {
+            background: #0f172a !important;
+            border-color: #334155 !important;
+            color: #f1f5f9 !important;
+        }
+
+        html.theme-dark .dash-profile-modal-header {
+            background: #1e293b !important;
+            border-bottom-color: #334155 !important;
+        }
+
+        html.theme-dark .dash-modal-title-wrap h4 {
+            color: #f8fafc !important;
+        }
+
+        html.theme-dark .dash-modal-user-meta {
+            color: #94a3b8 !important;
+        }
+
+        html.theme-dark .dash-modal-tabs-bar {
+            background: #0b1120 !important;
+            border-bottom-color: #334155 !important;
+        }
+
+        html.theme-dark .dash-modal-tabs > li > a {
+            color: #94a3b8 !important;
+        }
+
+        html.theme-dark .dash-modal-tabs > li.active > a {
+            background: #0f172a !important;
+            color: #f8fafc !important;
+            border-color: #334155 #334155 transparent !important;
+        }
+
+        html.theme-dark .dash-profile-modal-body {
+            background: #0f172a !important;
+            color: #e2e8f0 !important;
+        }
+
+        html.theme-dark .dash-modal-tab-desc {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        html.theme-dark .tab-desc-text {
+            color: #cbd5e1 !important;
+        }
+
+                html.theme-dark .dash-section-single-card {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        html.theme-dark .dash-single-hdr-input,
+        html.theme-dark .dash-single-desc-textarea {
+            background: #0f172a !important;
+            border-color: #475569 !important;
+            color: #f8fafc !important;
+        }
+
+        html.theme-dark .dash-section-card {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        html.theme-dark .dash-card-hdr-input,
+        html.theme-dark .dash-card-desc-textarea {
+            background: #0f172a !important;
+            border-color: #475569 !important;
+            color: #f8fafc !important;
+        }
+
+        html.theme-dark .email-edit-card {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        html.theme-dark .dash-profile-modal-footer {
+            background: #1e293b !important;
+            border-top-color: #334155 !important;
         }
 
         html.theme-dark .profile-hero-sub {
@@ -3142,12 +3693,17 @@
 
                             <!-- Basic Details Strip matching MasterCreator stat pills -->
                             <div class="profile-details-strip">
-                                <div class="mc-detail-card">
+                                <div class="mc-detail-card mc-detail-card-email">
                                     <span class="mc-stat-icon icon-blue"><i class="fa fa-envelope-o"></i></span>
                                     <div class="detail-info">
                                         <div class="detail-lbl">Email Address</div>
-                                        <div class="detail-val"><?php echo $userEmail !== '' ? htmlspecialchars($userEmail) : '-'; ?></div>
+                                        <div class="detail-val" id="profileEmailDisplay"><?php echo $userEmail !== '' ? htmlspecialchars($userEmail) : '-'; ?></div>
                                     </div>
+                                    <?php if ($canEditProfileSections): ?>
+                                    <button type="button" class="btn-profile-edit-email btn-trigger-profile-modal" data-target-tab="email" title="Edit Email Address">
+                                        <i class="fa fa-pencil"></i>
+                                    </button>
+                                    <?php endif; ?>
                                 </div>
 
                                 <div class="mc-detail-card">
@@ -3193,8 +3749,8 @@
                             <div class="row profile-records-row" style="margin: 16px 8px 0 8px; display: flex; flex-wrap: wrap;">
                                 <div class="col-sm-6 profile-records-col" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
                                     <!-- 1. APPLICABLE RECORDS (BLUE / SAPPHIRE THEME) -->
-                                    <div class="profile-records-container records-theme-blue" style="width: 100%; flex: 1;">
-                                        <div class="records-section-title">
+                                    <div class="profile-records-container records-theme-blue" data-card-section="applicable_records" style="width: 100%; flex: 1;">
+                                        <div class="records-section-title" data-toggle-card="applicable_records" title="Click to collapse / expand">
                                             <div class="records-title-main">
                                                 <div class="records-title-icon-wrap">
                                                     <i class="fa fa-folder-open"></i>
@@ -3204,62 +3760,84 @@
                                                     <span class="records-title-sub">Reporting documents &amp; location records</span>
                                                 </div>
                                             </div>
-                                            <?php if (!empty($recordGroups)): ?>
-                                                <span class="records-badge-count"><?php echo count($recordGroups); ?> Group<?php echo count($recordGroups) > 1 ? 's' : ''; ?></span>
-                                            <?php endif; ?>
+                                            <div class="records-title-actions">
+                                                <?php if (!empty($recordGroups)): ?>
+                                                    <span class="records-badge-count"><?php echo count($recordGroups); ?> Group<?php echo count($recordGroups) > 1 ? 's' : ''; ?></span>
+                                                <?php endif; ?>
+                                                <?php if ($canEditProfileSections): ?>
+                                                    <button type="button" class="btn-records-edit-action btn-trigger-profile-modal" data-target-tab="applicable_records" title="Add / Edit Applicable Records &amp; Documents">
+                                                        <i class="fa fa-pencil-square-o"></i> <span>Add / Edit</span>
+                                                    </button>
+                                                <?php endif; ?>
+                                                <button type="button" class="btn-records-toggle-action" data-toggle-card="applicable_records" title="Collapse / Expand Section">
+                                                    <i class="fa fa-chevron-up toggle-chevron"></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <?php if (!empty($recordGroups)): ?>
-                                            <?php foreach ($recordGroups as $grp): ?>
-                                                <?php if (!empty($grp['header'])): ?>
-                                                    <div class="record-category-card">
-                                                        <div class="record-category-header">
-                                                            <div style="display: flex; align-items: center; gap: 8px;">
-                                                                <i class="fa fa-folder-open-o"></i>
-                                                                <span><?php echo htmlspecialchars($grp['header']); ?></span>
+                                        <div class="records-section-body" id="recordsBodyAppRec">
+                                            <?php if (!empty($recordGroups)): ?>
+                                                <?php foreach ($recordGroups as $grp): ?>
+                                                    <?php if (!empty($grp['header'])): ?>
+                                                        <div class="record-category-card">
+                                                            <div class="record-category-header" title="Click to collapse / expand items">
+                                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                                    <i class="fa fa-folder-open-o"></i>
+                                                                    <span><?php echo htmlspecialchars($grp['header']); ?></span>
+                                                                </div>
+                                                                <div style="display: flex; align-items: center; gap: 6px;">
+                                                                    <?php if (!empty($grp['items'])): ?>
+                                                                        <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
+                                                                    <?php endif; ?>
+                                                                    <i class="fa fa-chevron-up category-chevron" style="font-size: 10px; opacity: 0.7;"></i>
+                                                                </div>
                                                             </div>
                                                             <?php if (!empty($grp['items'])): ?>
-                                                                <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
+                                                                <div class="records-clean-list">
+                                                                    <?php foreach ($grp['items'] as $index => $item): ?>
+                                                                        <div class="record-clean-item">
+                                                                            <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                                            <i class="fa fa-file-text-o record-clean-icon"></i>
+                                                                            <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                                                        </div>
+                                                                    <?php endforeach; ?>
+                                                                </div>
+                                                            <?php else: ?>
+                                                                <div class="records-empty-placeholder" style="padding: 10px 14px;">No items specified under this header</div>
                                                             <?php endif; ?>
                                                         </div>
-                                                        <?php if (!empty($grp['items'])): ?>
-                                                            <div class="records-clean-list">
-                                                                <?php foreach ($grp['items'] as $index => $item): ?>
-                                                                    <div class="record-clean-item">
-                                                                        <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                        <i class="fa fa-file-text-o record-clean-icon"></i>
-                                                                        <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
-                                                                    </div>
-                                                                <?php endforeach; ?>
-                                                            </div>
-                                                        <?php else: ?>
-                                                            <div class="records-empty-placeholder" style="padding: 10px 14px;">No items specified under this header</div>
-                                                        <?php endif; ?>
+                                                    <?php elseif (!empty($grp['items'])): ?>
+                                                        <div class="records-clean-list" style="margin-bottom: 12px;">
+                                                            <?php foreach ($grp['items'] as $index => $item): ?>
+                                                                <div class="record-clean-item">
+                                                                    <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                                    <i class="fa fa-file-text-o record-clean-icon"></i>
+                                                                    <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                                                </div>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <?php if ($canEditProfileSections): ?>
+                                                    <div class="records-empty-placeholder records-empty-clickable btn-trigger-profile-modal" data-target-tab="applicable_records" role="button" title="Click to Add Applicable Records &amp; Documents">
+                                                        <i class="fa fa-plus-circle text-primary" style="font-size: 16px;"></i>
+                                                        <span>Not assigned yet &mdash; <strong style="text-decoration: underline;">Click to Add</strong></span>
                                                     </div>
-                                                <?php elseif (!empty($grp['items'])): ?>
-                                                    <div class="records-clean-list" style="margin-bottom: 12px;">
-                                                        <?php foreach ($grp['items'] as $index => $item): ?>
-                                                            <div class="record-clean-item">
-                                                                <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                <i class="fa fa-file-text-o record-clean-icon"></i>
-                                                                <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
-                                                            </div>
-                                                        <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <div class="records-empty-placeholder">
+                                                        <i class="fa fa-info-circle"></i>
+                                                        <span>Not assigned yet</span>
                                                     </div>
                                                 <?php endif; ?>
-                                            <?php endforeach; ?>
-                                        <?php else: ?>
-                                            <div class="records-empty-placeholder">
-                                                <i class="fa fa-info-circle"></i>
-                                                <span>Not assigned yet</span>
-                                            </div>
-                                        <?php endif; ?>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div class="col-sm-6 profile-records-col" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
                                     <!-- 2. RESOURCE ISSUE RECORD (WARM AMBER / ORANGE THEME) -->
-                                    <div class="profile-records-container records-theme-amber" style="width: 100%; flex: 1;">
-                                        <div class="records-section-title">
+                                    <div class="profile-records-container records-theme-amber" data-card-section="resource_issue_record" style="width: 100%; flex: 1;">
+                                        <div class="records-section-title" data-toggle-card="resource_issue_record" title="Click to collapse / expand">
                                             <div class="records-title-main">
                                                 <div class="records-title-icon-wrap">
                                                     <i class="fa fa-exclamation-circle"></i>
@@ -3269,29 +3847,131 @@
                                                     <span class="records-title-sub">Hardware, software, access &amp; resource issue logs</span>
                                                 </div>
                                             </div>
-                                            <?php if (!empty($resIssueGroups)): ?>
-                                                <span class="records-badge-count"><?php echo count($resIssueGroups); ?> Group<?php echo count($resIssueGroups) > 1 ? 's' : ''; ?></span>
-                                            <?php endif; ?>
+                                            <div class="records-title-actions">
+                                                <?php if (!empty($resIssueGroups)): ?>
+                                                    <span class="records-badge-count"><?php echo count($resIssueGroups); ?> Group<?php echo count($resIssueGroups) > 1 ? 's' : ''; ?></span>
+                                                <?php endif; ?>
+                                                <?php if ($canEditProfileSections): ?>
+                                                    <button type="button" class="btn-records-edit-action btn-trigger-profile-modal" data-target-tab="resource_issue_record" title="Add / Edit Resource Issue Record">
+                                                        <i class="fa fa-pencil-square-o"></i> <span>Add / Edit</span>
+                                                    </button>
+                                                <?php endif; ?>
+                                                <button type="button" class="btn-records-toggle-action" data-toggle-card="resource_issue_record" title="Collapse / Expand Section">
+                                                    <i class="fa fa-chevron-up toggle-chevron"></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <?php if (!empty($resIssueGroups)): ?>
-                                            <?php foreach ($resIssueGroups as $grp): ?>
-                                                <?php if (!empty($grp['header'])): ?>
-                                                    <div class="record-category-card">
-                                                        <div class="record-category-header">
-                                                            <div style="display: flex; align-items: center; gap: 8px;">
-                                                                <i class="fa fa-wrench"></i>
-                                                                <span><?php echo htmlspecialchars($grp['header']); ?></span>
+                                        <div class="records-section-body" id="recordsBodyResIssue">
+                                            <?php if (!empty($resIssueGroups)): ?>
+                                                <?php foreach ($resIssueGroups as $grp): ?>
+                                                    <?php if (!empty($grp['header'])): ?>
+                                                        <div class="record-category-card">
+                                                            <div class="record-category-header" title="Click to collapse / expand items">
+                                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                                    <i class="fa fa-wrench"></i>
+                                                                    <span><?php echo htmlspecialchars($grp['header']); ?></span>
+                                                                </div>
+                                                                <div style="display: flex; align-items: center; gap: 6px;">
+                                                                    <?php if (!empty($grp['items'])): ?>
+                                                                        <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
+                                                                    <?php endif; ?>
+                                                                    <i class="fa fa-chevron-up category-chevron" style="font-size: 10px; opacity: 0.7;"></i>
+                                                                </div>
                                                             </div>
                                                             <?php if (!empty($grp['items'])): ?>
-                                                                <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
+                                                                <div class="records-clean-list">
+                                                                    <?php foreach ($grp['items'] as $index => $item): ?>
+                                                                        <div class="record-clean-item">
+                                                                            <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                                            <i class="fa fa-exclamation-circle record-clean-icon"></i>
+                                                                            <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                                                        </div>
+                                                                    <?php endforeach; ?>
+                                                                </div>
+                                                            <?php else: ?>
+                                                                <div class="records-empty-placeholder" style="padding: 10px 14px;">No items specified under this header</div>
                                                             <?php endif; ?>
+                                                        </div>
+                                                    <?php elseif (!empty($grp['items'])): ?>
+                                                        <div class="records-clean-list" style="margin-bottom: 12px;">
+                                                            <?php foreach ($grp['items'] as $index => $item): ?>
+                                                                <div class="record-clean-item">
+                                                                    <span class="record-clean-num"><?php echo ($index + 1); ?></span>
+                                                                    <i class="fa fa-exclamation-circle record-clean-icon"></i>
+                                                                    <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
+                                                                </div>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <?php if ($canEditProfileSections): ?>
+                                                    <div class="records-empty-placeholder records-empty-clickable btn-trigger-profile-modal" data-target-tab="resource_issue_record" role="button" title="Click to Add Resource Issue Record">
+                                                        <i class="fa fa-plus-circle" style="font-size: 16px; color: #d97706;"></i>
+                                                        <span>Not assigned yet &mdash; <strong style="text-decoration: underline;">Click to Add</strong></span>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <div class="records-empty-placeholder">
+                                                        <i class="fa fa-info-circle"></i>
+                                                        <span>Not assigned yet</span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. WORK DESCRIPTION (EMERALD GREEN THEME) -->
+                            <div class="profile-work-desc-wrap" style="margin: 0 16px 20px 16px; clear: both;">
+                                <div class="profile-records-container records-theme-emerald" data-card-section="work_description">
+                                    <div class="records-section-title" data-toggle-card="work_description" title="Click to collapse / expand">
+                                        <div class="records-title-main">
+                                            <div class="records-title-icon-wrap">
+                                                <i class="fa fa-briefcase"></i>
+                                            </div>
+                                            <div class="records-title-text">
+                                                <span class="records-title-heading">Work Description &amp; Responsibilities</span>
+                                                <span class="records-title-sub">Main Responsibilities, Authorities &amp; Reporting</span>
+                                            </div>
+                                        </div>
+                                        <div class="records-title-actions">
+                                            <?php if (!empty($workDescGroups)): ?>
+                                                <span class="records-badge-count"><?php echo count($workDescGroups); ?> Group<?php echo count($workDescGroups) > 1 ? 's' : ''; ?></span>
+                                            <?php endif; ?>
+                                            <?php if ($canEditProfileSections): ?>
+                                                <button type="button" class="btn-records-edit-action btn-trigger-profile-modal" data-target-tab="work_description" title="Add / Edit Work Description &amp; Responsibilities">
+                                                    <i class="fa fa-pencil-square-o"></i> <span>Add / Edit</span>
+                                                </button>
+                                            <?php endif; ?>
+                                            <button type="button" class="btn-records-toggle-action" data-toggle-card="work_description" title="Collapse / Expand Section">
+                                                <i class="fa fa-chevron-up toggle-chevron"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="records-section-body" id="recordsBodyWorkDesc">
+                                        <?php if (!empty($workDescGroups)): ?>
+                                            <?php foreach ($workDescGroups as $grp): ?>
+                                                <?php if (!empty($grp['header'])): ?>
+                                                    <div class="record-category-card">
+                                                        <div class="record-category-header" title="Click to collapse / expand items">
+                                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                                <i class="fa fa-tasks"></i>
+                                                                <span><?php echo htmlspecialchars($grp['header']); ?></span>
+                                                            </div>
+                                                            <div style="display: flex; align-items: center; gap: 6px;">
+                                                                <?php if (!empty($grp['items'])): ?>
+                                                                    <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
+                                                                <?php endif; ?>
+                                                                <i class="fa fa-chevron-up category-chevron" style="font-size: 10px; opacity: 0.7;"></i>
+                                                            </div>
                                                         </div>
                                                         <?php if (!empty($grp['items'])): ?>
                                                             <div class="records-clean-list">
                                                                 <?php foreach ($grp['items'] as $index => $item): ?>
                                                                     <div class="record-clean-item">
                                                                         <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                        <i class="fa fa-exclamation-circle record-clean-icon"></i>
+                                                                        <i class="fa fa-check-square-o record-clean-icon"></i>
                                                                         <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                                                     </div>
                                                                 <?php endforeach; ?>
@@ -3305,7 +3985,7 @@
                                                         <?php foreach ($grp['items'] as $index => $item): ?>
                                                             <div class="record-clean-item">
                                                                 <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                <i class="fa fa-exclamation-circle record-clean-icon"></i>
+                                                                <i class="fa fa-check-square-o record-clean-icon"></i>
                                                                 <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
                                                             </div>
                                                         <?php endforeach; ?>
@@ -3313,80 +3993,21 @@
                                                 <?php endif; ?>
                                             <?php endforeach; ?>
                                         <?php else: ?>
-                                            <div class="records-empty-placeholder">
-                                                <i class="fa fa-info-circle"></i>
-                                                <span>Not assigned yet</span>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 3. WORK DESCRIPTION (EMERALD GREEN THEME) -->
-                            <div class="profile-work-desc-wrap" style="margin: 0 16px 20px 16px; clear: both;">
-                                <div class="profile-records-container records-theme-emerald">
-                                    <div class="records-section-title">
-                                        <div class="records-title-main">
-                                            <div class="records-title-icon-wrap">
-                                                <i class="fa fa-briefcase"></i>
-                                            </div>
-                                            <div class="records-title-text">
-                                                <span class="records-title-heading">Work Description &amp; Responsibilities</span>
-                                                <span class="records-title-sub">Main Responsibilities, Authorities &amp; Reporting</span>
-                                            </div>
-                                        </div>
-                                        <?php if (!empty($workDescGroups)): ?>
-                                            <span class="records-badge-count"><?php echo count($workDescGroups); ?> Group<?php echo count($workDescGroups) > 1 ? 's' : ''; ?></span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <?php if (!empty($workDescGroups)): ?>
-                                        <?php foreach ($workDescGroups as $grp): ?>
-                                            <?php if (!empty($grp['header'])): ?>
-                                                <div class="record-category-card">
-                                                    <div class="record-category-header">
-                                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                                            <i class="fa fa-tasks"></i>
-                                                            <span><?php echo htmlspecialchars($grp['header']); ?></span>
-                                                        </div>
-                                                        <?php if (!empty($grp['items'])): ?>
-                                                            <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                    <?php if (!empty($grp['items'])): ?>
-                                                        <div class="records-clean-list">
-                                                            <?php foreach ($grp['items'] as $index => $item): ?>
-                                                                <div class="record-clean-item">
-                                                                    <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                    <i class="fa fa-check-square-o record-clean-icon"></i>
-                                                                    <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
-                                                                </div>
-                                                            <?php endforeach; ?>
-                                                        </div>
-                                                    <?php else: ?>
-                                                        <div class="records-empty-placeholder" style="padding: 10px 14px;">No items specified under this header</div>
-                                                    <?php endif; ?>
+                                            <?php if ($canEditProfileSections): ?>
+                                                <div class="records-empty-placeholder records-empty-clickable btn-trigger-profile-modal" data-target-tab="work_description" role="button" title="Click to Add Work Description &amp; Responsibilities">
+                                                    <i class="fa fa-plus-circle" style="font-size: 16px; color: #059669;"></i>
+                                                    <span>Not assigned yet &mdash; <strong style="text-decoration: underline;">Click to Add</strong></span>
                                                 </div>
-                                            <?php elseif (!empty($grp['items'])): ?>
-                                                <div class="records-clean-list" style="margin-bottom: 12px;">
-                                                    <?php foreach ($grp['items'] as $index => $item): ?>
-                                                        <div class="record-clean-item">
-                                                            <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                            <i class="fa fa-check-square-o record-clean-icon"></i>
-                                                            <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
-                                                        </div>
-                                                    <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <div class="records-empty-placeholder">
+                                                    <i class="fa fa-info-circle"></i>
+                                                    <span>Not assigned yet</span>
                                                 </div>
                                             <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <div class="records-empty-placeholder">
-                                            <i class="fa fa-info-circle"></i>
-                                            <span>Not assigned yet</span>
-                                        </div>
-                                    <?php endif; ?>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                     <!-- 2. Attendance Tab Pane -->
@@ -3536,10 +4157,220 @@
     </div>
 </div>
 
+<?php if ($canEditProfileSections): 
+    $effectiveAudId = !empty($targetAudId) ? (int)$targetAudId : (!empty($audId) ? (int)$audId : 0);
+    $effectiveUid = (int)($userRow['user_id'] ?? 0);
+    if ($effectiveUid <= 0 && $effectiveAudId <= 0) {
+        $effectiveUid = $actualLoggedInUserId;
+    }
+?>
+<!-- Modal for Add / Edit Profile Sections & Email (Top Mgmt, Admin, Finance, BDM Only) -->
+<div class="modal fade" id="dashEditProfileSectionsModal" tabindex="-1" role="dialog" aria-labelledby="dashEditProfileSectionsModalLabel" aria-hidden="true" style="z-index: 10500;">
+    <div class="modal-dialog" role="document" style="max-width: 740px; margin: 35px auto;">
+        <div class="modal-content dash-profile-modal-content">
+            <div class="modal-header dash-profile-modal-header" style="padding: 16px 20px;">
+                <button type="button" class="close dash-modal-close" data-dismiss="modal" aria-label="Close" style="font-size: 24px; color: #64748b; opacity: 0.8; margin-top: -2px;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <div class="dash-modal-title-wrap">
+                    <h4 class="modal-title" id="dashEditProfileSectionsModalLabel" style="font-size: 16.5px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                        <span id="dashModalDynamicIconWrap"><i class="fa fa-pencil-square-o text-primary"></i></span>
+                        <span id="dashModalDynamicTitle">Edit Profile Section</span>
+                    </h4>
+                    <div class="dash-modal-user-meta" style="font-size: 12px; margin-top: 4px; color: #64748b;">
+                        Target User: <strong style="color: #0f172a;"><?php echo htmlspecialchars($userName); ?></strong>
+                        <span class="dash-modal-role-pill"><?php echo htmlspecialchars($userRole); ?></span>
+                    </div>
+                </div>
+            </div>
 
+            <div class="modal-body dash-profile-modal-body" style="padding: 20px;">
+                <!-- 1. Applicable Records & Documents (Single Header) -->
+                <div class="dash-section-pane" id="paneApplicableRecords" style="display: none;">
+                    <div class="dash-section-single-card" style="margin-top: 0; margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label for="dashModalAppRecHeader" style="font-weight: 700; font-size: 13px; color: #1e293b; display: block; margin-bottom: 6px;">
+                                <i class="fa fa-folder-open text-primary" style="margin-right: 4px;"></i> Category / Header Title
+                            </label>
+                            <input type="text" class="form-control dash-single-hdr-input" id="dashModalAppRecHeader" placeholder="e.g. Cloud base Accounts - With Admin Credentials, Server &amp; Codebase Access...">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="dashModalAppRecDesc" style="font-weight: 700; font-size: 13px; color: #1e293b; display: block; margin-bottom: 6px;">
+                                <i class="fa fa-list-ul text-primary" style="margin-right: 4px;"></i> Applicable Records &amp; Document Locations (one item per line)
+                            </label>
+                            <textarea class="form-control dash-single-desc-textarea" id="dashModalAppRecDesc" rows="8" placeholder="Enter applicable records and documents with their locations (one per line)..."></textarea>
+                            <span class="help-block" style="font-size: 11.5px; color: #64748b; margin-top: 6px; margin-bottom: 0;">
+                                <i class="fa fa-info-circle"></i> Each line will appear as an individual item on the user's dashboard.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Resource Issue Record (Single Header) -->
+                <div class="dash-section-pane" id="paneResourceIssues" style="display: none;">
+                    <div class="dash-section-single-card" style="margin-top: 0; margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label for="dashModalResIssueHeader" style="font-weight: 700; font-size: 13px; color: #1e293b; display: block; margin-bottom: 6px;">
+                                <i class="fa fa-exclamation-circle text-warning" style="color: #d97706 !important; margin-right: 4px;"></i> Category / Header Title
+                            </label>
+                            <input type="text" class="form-control dash-single-hdr-input" id="dashModalResIssueHeader" placeholder="e.g. Assets / Resource Issue Record, Hardware &amp; Equipment...">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="dashModalResIssueDesc" style="font-weight: 700; font-size: 13px; color: #1e293b; display: block; margin-bottom: 6px;">
+                                <i class="fa fa-list-ul text-warning" style="color: #d97706 !important; margin-right: 4px;"></i> Resource Issue Records &amp; Details (one item per line)
+                            </label>
+                            <textarea class="form-control dash-single-desc-textarea" id="dashModalResIssueDesc" rows="8" placeholder="Enter resource issue records (one per line)..."></textarea>
+                            <span class="help-block" style="font-size: 11.5px; color: #64748b; margin-top: 6px; margin-bottom: 0;">
+                                <i class="fa fa-info-circle"></i> Each line will appear as an individual item on the user's dashboard.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Work Description & Responsibilities (Multiple Headers Supported) -->
+                <div class="dash-section-pane" id="paneWorkDesc" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap;">
+                        <span style="font-size: 12px; color: #64748b; font-weight: 600;">
+                            <i class="fa fa-info-circle text-success" style="color: #059669;"></i> Add multiple category headers with responsibilities below:
+                        </span>
+                        <button type="button" class="btn btn-sm btn-success dash-modal-add-entry-btn" data-container="#dashModalWorkDescContainer" data-type="work" style="border-radius: 6px; font-weight: 600; padding: 5px 12px;">
+                            <i class="fa fa-plus"></i> Add Category / Header
+                        </button>
+                    </div>
+                    <div id="dashModalWorkDescContainer" class="dash-modal-entries-container" style="max-height: 52vh; overflow-y: auto; padding-right: 4px;">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
+                        <button type="button" class="btn btn-default btn-sm dash-modal-add-entry-btn" data-container="#dashModalWorkDescContainer" data-type="work" style="border-radius: 6px; font-weight: 600;">
+                            <i class="fa fa-plus-circle"></i> Add Another Category
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. Email Address -->
+                <div class="dash-section-pane" id="paneEmail" style="display: none;">
+                    <div class="email-edit-card" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 20px; margin-top: 0;">
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label for="dashModalEmailInput" style="font-weight: 700; font-size: 13px; color: #1e293b; display: block; margin-bottom: 6px;">
+                                Email Address <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-addon" style="background: #ffffff; border-color: #cbd5e1; color: #64748b;"><i class="fa fa-envelope"></i></span>
+                                <input type="email" class="form-control" id="dashModalEmailInput" value="<?php echo htmlspecialchars($userEmail); ?>" placeholder="e.g. user@aitf.co.in" style="height: 44px; font-size: 14px; font-weight: 600; border-color: #cbd5e1;">
+                            </div>
+                        </div>
+                        <div class="alert alert-info" style="font-size: 12.5px; margin-bottom: 0; background: #eff6ff; border-color: #bfdbfe; color: #1e40af; border-radius: 6px;">
+                            <i class="fa fa-info-circle"></i> <strong>Note:</strong> User name, role (<em><?php echo htmlspecialchars($userRole); ?></em>), and employee ID cannot be modified from this dashboard. Only email ID can be updated here.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clean Single Modal Footer -->
+            <div class="modal-footer dash-profile-modal-footer" style="padding: 12px 20px;">
+                <div class="dash-modal-security-note" style="font-size: 12px; color: #64748b;">
+                    <i class="fa fa-shield text-muted"></i> Role: <strong><?php echo htmlspecialchars($actualLoggedInRole); ?></strong>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-default" data-dismiss="modal" style="border-radius: 6px; font-weight: 600;">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnDashSaveActiveSection" data-section="" style="border-radius: 6px; font-weight: 700; min-width: 150px;">
+                        <i class="fa fa-check"></i> <span id="btnDashSaveActiveSectionText">Save Changes</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+window.aitfProfileEditData = {
+    target_user_id: <?php echo (int)$effectiveUid; ?>,
+    target_auditor_id: <?php echo (int)$effectiveAudId; ?>,
+    user_name: <?php echo json_encode($userName); ?>,
+    email_id: <?php echo json_encode($userEmail); ?>,
+    role: <?php echo json_encode($userRole); ?>,
+    applicable_records: <?php echo json_encode($applicableRecords); ?>,
+    resource_issue_record: <?php echo json_encode($resourceIssueRecord); ?>,
+    work_description: <?php echo json_encode($workDescription); ?>
+};
+</script>
+<?php endif; ?>
 
 <script>
 $(document).ready(function() {
+
+    // =========================================================================
+    // Profile Records Cards Collapse / Expand with LocalStorage Persistence
+    // =========================================================================
+    var profileCardKeys = ['applicable_records', 'resource_issue_record', 'work_description'];
+
+    // Initialize state on page load: by default open, only collapse if user explicitly closed it
+    profileCardKeys.forEach(function(key) {
+        var isCollapsed = localStorage.getItem('aitf_dash_card_collapsed_' + key);
+        var $container = $('.profile-records-container[data-card-section="' + key + '"]');
+        var $body = $container.find('.records-section-body');
+
+        if (isCollapsed === '1') {
+            $container.addClass('is-collapsed');
+            $body.hide();
+            $container.find('.btn-records-toggle-action').attr('title', 'Expand Section');
+        } else {
+            $container.removeClass('is-collapsed');
+            $body.show();
+            $container.find('.btn-records-toggle-action').attr('title', 'Collapse Section');
+        }
+    });
+
+    // Toggle main section cards
+    $(document).on('click', '.records-section-title, .btn-records-toggle-action', function(e) {
+        // Do not toggle if clicking Add/Edit button or empty state clickable
+        if ($(e.target).closest('.btn-records-edit-action, .records-empty-clickable').length > 0) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        var cardKey = $(this).attr('data-toggle-card') || $(this).closest('.profile-records-container').attr('data-card-section');
+        if (!cardKey) return;
+
+        var $container = $('.profile-records-container[data-card-section="' + cardKey + '"]');
+        var $body = $container.find('.records-section-body');
+        var isNowCollapsed = $container.hasClass('is-collapsed');
+
+        if (isNowCollapsed) {
+            // Expand / Open
+            $container.removeClass('is-collapsed');
+            $body.stop(true, true).slideDown(220);
+            $container.find('.btn-records-toggle-action').attr('title', 'Collapse Section');
+            localStorage.setItem('aitf_dash_card_collapsed_' + cardKey, '0');
+        } else {
+            // Collapse / Close
+            $body.stop(true, true).slideUp(220, function() {
+                $container.addClass('is-collapsed');
+            });
+            $container.find('.btn-records-toggle-action').attr('title', 'Expand Section');
+            localStorage.setItem('aitf_dash_card_collapsed_' + cardKey, '1');
+        }
+    });
+
+    // Toggle inner category card items
+    $(document).on('click', '.record-category-header', function(e) {
+        e.stopPropagation();
+        var $card = $(this).closest('.record-category-card');
+        var $list = $card.find('.records-clean-list');
+        var $chevron = $(this).find('.category-chevron');
+        if ($list.length) {
+            $list.stop(true, true).slideToggle(180, function() {
+                if ($list.is(':visible')) {
+                    $chevron.css('transform', 'rotate(0deg)');
+                } else {
+                    $chevron.css('transform', 'rotate(180deg)');
+                }
+            });
+        }
+    });
+
     $('.dash-tab-btn').on('click', function(e) {
         var target = $(this).data('target');
         if (!target) return;
@@ -3695,6 +4526,335 @@ $(document).ready(function() {
     $(document).on('click', '.btn-dash-add-task-dummy', function(e) {
         e.preventDefault();
     });
+
+    // =========================================================================
+    // PROFILE RECORDS & EMAIL DIRECT EDIT (Top Mgmt, Admin, Finance Only)
+    // =========================================================================
+    if (window.aitfProfileEditData) {
+        // Append modal to body to avoid clipping / backdrop stacking issues
+        $('#dashEditProfileSectionsModal').appendTo('body');
+
+        function dashEscapeHtml(str) {
+            if (!str) return '';
+            return $('<div>').text(str).html();
+        }
+
+        function dashCreateSectionCardHtml(num, headerVal, descVal, headerPlaceholder, descPlaceholder) {
+            return '<div class="dash-section-card">' +
+                '<div class="dash-section-card-top">' +
+                    '<span class="dash-card-num-badge"><i class="fa fa-folder-open-o text-muted"></i> Category #' + num + '</span>' +
+                    '<button type="button" class="btn-remove-section-card" title="Remove this category block">' +
+                        '<i class="fa fa-trash"></i> Remove' +
+                    '</button>' +
+                '</div>' +
+                '<input type="text" class="form-control dash-card-hdr-input" value="' + dashEscapeHtml(headerVal) + '" placeholder="' + dashEscapeHtml(headerPlaceholder) + '">' +
+                '<div style="margin-bottom: 5px;">' +
+                    '<span style="font-size: 11.5px; font-weight: 600; color: #64748b;"><i class="fa fa-list-ul"></i> Details / Items (one per line)</span>' +
+                '</div>' +
+                '<textarea class="form-control dash-card-desc-textarea" rows="3" placeholder="' + dashEscapeHtml(descPlaceholder) + '">' + dashEscapeHtml(descVal) + '</textarea>' +
+            '</div>';
+        }
+
+        function dashPopulateSectionContainer(containerSelector, rawData, defaultHdr, defaultDesc) {
+            var $c = $(containerSelector);
+            $c.empty();
+            var items = [];
+            if (rawData && typeof rawData === 'string' && rawData.trim() !== '') {
+                try {
+                    var parsed = JSON.parse(rawData);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        items = parsed;
+                    }
+                } catch (e) {
+                    var lines = rawData.split(/\r\n|\r|\n/);
+                    var currentHdr = '';
+                    var currentLines = [];
+                    lines.forEach(function(l) {
+                        var tl = l.trim();
+                        if (tl === '') return;
+                        var match = tl.match(/^([A-Za-z0-9\s\&\(\)\/]+)[\-\:]$/);
+                        if (match && match[1].trim().length > 3) {
+                            if (currentLines.length > 0 || currentHdr !== '') {
+                                items.push({ header: currentHdr, desc: currentLines.join('\n') });
+                                currentLines = [];
+                            }
+                            currentHdr = match[1].trim();
+                        } else {
+                            currentLines.push(tl.replace(/^\s*\d+[\.\)\-]\s*/, ''));
+                        }
+                    });
+                    if (currentLines.length > 0 || currentHdr !== '') {
+                        items.push({ header: currentHdr, desc: currentLines.join('\n') });
+                    }
+                }
+            }
+
+            if (items.length === 0) {
+                items = [{ header: '', desc: '' }];
+            }
+
+            items.forEach(function(item, idx) {
+                $c.append(dashCreateSectionCardHtml(idx + 1, item.header || '', item.desc || '', defaultHdr, defaultDesc));
+            });
+        }
+
+        function dashSerializeContainer(containerSelector) {
+            var items = [];
+            $(containerSelector).find('.dash-section-card').each(function() {
+                var hdr = $.trim($(this).find('.dash-card-hdr-input').val());
+                var desc = $.trim($(this).find('.dash-card-desc-textarea').val());
+                if (hdr !== '' || desc !== '') {
+                    items.push({ header: hdr, desc: desc });
+                }
+            });
+            return items.length > 0 ? JSON.stringify(items) : '';
+        }
+
+        function dashRenumberCards(containerSelector) {
+            $(containerSelector).find('.dash-section-card').each(function(idx) {
+                $(this).find('.dash-card-num-badge').html('<i class="fa fa-folder-open-o text-muted"></i> Category #' + (idx + 1));
+            });
+        }
+
+        // Extract single header & desc for Tab 1 (Applicable Records) and Tab 2 (Resource Issues)
+        function dashExtractSingleSection(rawData) {
+            var header = '';
+            var desc = '';
+            if (rawData && typeof rawData === 'string' && rawData.trim() !== '') {
+                try {
+                    var parsed = JSON.parse(rawData);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        header = parsed[0].header || '';
+                        if (parsed.length === 1) {
+                            desc = parsed[0].desc || '';
+                        } else {
+                            var descParts = [];
+                            parsed.forEach(function(p, i) {
+                                if (i === 0) {
+                                    if (p.desc) descParts.push(p.desc);
+                                } else {
+                                    if (p.header) descParts.push('--- ' + p.header + ' ---');
+                                    if (p.desc) descParts.push(p.desc);
+                                }
+                            });
+                            desc = descParts.join('\n');
+                        }
+                    }
+                } catch (e) {
+                    var lines = rawData.split(/\r\n|\r|\n/);
+                    var descLines = [];
+                    lines.forEach(function(l) {
+                        var tl = l.trim();
+                        if (!tl) return;
+                        var match = tl.match(/^([A-Za-z0-9\s\&\(\)\/]+)[\-\:]$/);
+                        if (match && !header) {
+                            header = match[1].trim();
+                        } else {
+                            descLines.push(tl.replace(/^\s*\d+[\.\)\-]\s*/, ''));
+                        }
+                    });
+                    desc = descLines.join('\n');
+                }
+            }
+            return { header: header, desc: desc };
+        }
+
+        // Initialize Tab 1 (Applicable Records - Single Header Only)
+        var appRecInit = dashExtractSingleSection(window.aitfProfileEditData.applicable_records);
+        $('#dashModalAppRecHeader').val(appRecInit.header);
+        $('#dashModalAppRecDesc').val(appRecInit.desc);
+
+        // Initialize Tab 2 (Resource Issues - Single Header Only)
+        var resIssueInit = dashExtractSingleSection(window.aitfProfileEditData.resource_issue_record);
+        $('#dashModalResIssueHeader').val(resIssueInit.header);
+        $('#dashModalResIssueDesc').val(resIssueInit.desc);
+
+        // Initialize Tab 3 (Work Description - Multiple Categories Supported)
+        dashPopulateSectionContainer('#dashModalWorkDescContainer', window.aitfProfileEditData.work_description, 'e.g. Daily ISO Audit Scope, IT Development, HR Responsibilities...', 'Enter responsibilities, authorities and reporting items (one per line)...');
+
+        // Add category block event
+        $(document).on('click', '.dash-modal-add-entry-btn', function(e) {
+            e.preventDefault();
+            var containerSel = $(this).data('container');
+            var type = $(this).data('type');
+            var hPlaceholder = 'Header / Category Title (e.g. IT Support, HR Activities...)';
+            var dPlaceholder = 'Enter details / points (one per line)...';
+            
+            if (type === 'applicable') {
+                hPlaceholder = 'e.g. Codebase Access, Hosting, Email Accounts, Reporting Documents...';
+                dPlaceholder = 'Enter applicable records and documents with its locations (one per line)...';
+            } else if (type === 'resource') {
+                hPlaceholder = 'e.g. Hardware Issues, Laptop/PC Assets, Access Permissions, Software Licenses...';
+                dPlaceholder = 'Enter resource issue records (one per line)...';
+            } else if (type === 'work') {
+                hPlaceholder = 'e.g. Daily ISO Audit Scope, IT Development, HR Responsibilities...';
+                dPlaceholder = 'Enter responsibilities, authorities and reporting items (one per line)...';
+            }
+
+            var currentCount = $(containerSel).find('.dash-section-card').length;
+            var cardHtml = dashCreateSectionCardHtml(currentCount + 1, '', '', hPlaceholder, dPlaceholder);
+            var $newCard = $(cardHtml).hide();
+            $(containerSel).append($newCard);
+            $newCard.slideDown(150, function() {
+                $newCard.find('.dash-card-hdr-input').focus();
+            });
+        });
+
+        // Remove category block event
+        $(document).on('click', '.btn-remove-section-card', function(e) {
+            e.preventDefault();
+            var $card = $(this).closest('.dash-section-card');
+            var $container = $card.parent();
+            if ($container.find('.dash-section-card').length > 1) {
+                $card.slideUp(150, function() {
+                    $card.remove();
+                    dashRenumberCards($container);
+                });
+            } else {
+                $card.find('.dash-card-hdr-input').val('');
+                $card.find('.dash-card-desc-textarea').val('');
+            }
+        });
+
+                var activeProfileSection = 'applicable_records';
+
+        // Open modal on click of Add/Edit icons or empty state
+        $(document).on('click', '.btn-trigger-profile-modal', function(e) {
+            e.preventDefault();
+            var tabKey = $(this).attr('data-target-tab') || 'applicable_records';
+            activeProfileSection = tabKey;
+
+            // Hide all section panes
+            $('.dash-section-pane').hide();
+
+            var $saveBtn = $('#btnDashSaveActiveSection');
+            $saveBtn.removeClass('btn-primary btn-warning btn-success btn-info').prop('disabled', false);
+
+            if (tabKey === 'applicable_records') {
+                $('#dashModalDynamicTitle').text('Edit Applicable Records & Documents');
+                $('#dashModalDynamicIconWrap').html('<i class="fa fa-folder-open text-primary" style="margin-right: 6px;"></i>');
+                $('#paneApplicableRecords').show();
+                $saveBtn.addClass('btn-primary').attr('data-section', 'applicable_records');
+                $('#btnDashSaveActiveSectionText').text('Save Applicable Records');
+            } else if (tabKey === 'resource_issue_record') {
+                $('#dashModalDynamicTitle').text('Edit Resource Issue Record');
+                $('#dashModalDynamicIconWrap').html('<i class="fa fa-exclamation-circle text-warning" style="color: #d97706 !important; margin-right: 6px;"></i>');
+                $('#paneResourceIssues').show();
+                $saveBtn.addClass('btn-warning').attr('data-section', 'resource_issue_record');
+                $('#btnDashSaveActiveSectionText').text('Save Resource Issues');
+            } else if (tabKey === 'work_description') {
+                $('#dashModalDynamicTitle').text('Edit Work Description & Responsibilities');
+                $('#dashModalDynamicIconWrap').html('<i class="fa fa-briefcase text-success" style="color: #059669 !important; margin-right: 6px;"></i>');
+                $('#paneWorkDesc').show();
+                $saveBtn.addClass('btn-success').attr('data-section', 'work_description');
+                $('#btnDashSaveActiveSectionText').text('Save Work Description');
+            } else if (tabKey === 'email') {
+                $('#dashModalDynamicTitle').text('Edit Email Address');
+                $('#dashModalDynamicIconWrap').html('<i class="fa fa-envelope text-info" style="color: #0284c7 !important; margin-right: 6px;"></i>');
+                $('#paneEmail').show();
+                $saveBtn.addClass('btn-primary').attr('data-section', 'email');
+                $('#btnDashSaveActiveSectionText').text('Save Email Address');
+            }
+            
+            $('#dashEditProfileSectionsModal').modal('show');
+        });
+
+        // Save active profile section via AJAX
+        $(document).on('click', '#btnDashSaveActiveSection', function(e) {
+            e.preventDefault();
+            var sectionToSave = $(this).attr('data-section') || activeProfileSection;
+            var $btn = $(this);
+            var originalBtnHtml = $btn.html();
+
+            var appRecHdr = $.trim($('#dashModalAppRecHeader').val());
+            var appRecDesc = $.trim($('#dashModalAppRecDesc').val());
+            var appRecVal = (appRecHdr !== '' || appRecDesc !== '') ? JSON.stringify([{ header: appRecHdr, desc: appRecDesc }]) : '';
+
+            var resIssueHdr = $.trim($('#dashModalResIssueHeader').val());
+            var resIssueDesc = $.trim($('#dashModalResIssueDesc').val());
+            var resIssueVal = (resIssueHdr !== '' || resIssueDesc !== '') ? JSON.stringify([{ header: resIssueHdr, desc: resIssueDesc }]) : '';
+
+            var workDescVal = dashSerializeContainer('#dashModalWorkDescContainer');
+            var emailVal = $.trim($('#dashModalEmailInput').val());
+
+            // Email validation if email section is being saved
+            if (sectionToSave === 'email') {
+                if (!emailVal) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Email Required', text: 'Please enter a valid email address.' });
+                    } else {
+                        alert('Please enter a valid email address.');
+                    }
+                    $('#dashModalEmailInput').focus();
+                    return;
+                }
+                var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailPattern.test(emailVal)) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Invalid Email', text: 'Please enter a valid email format (e.g. name@aitf.co.in).' });
+                    } else {
+                        alert('Please enter a valid email format (e.g. name@aitf.co.in).');
+                    }
+                    $('#dashModalEmailInput').focus();
+                    return;
+                }
+            }
+
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+
+            $.ajax({
+                url: 'user_dashboard_profile_action.php',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'update_profile_records',
+                    target_user_id: window.aitfProfileEditData.target_user_id,
+                    target_auditor_id: window.aitfProfileEditData.target_auditor_id,
+                    section: sectionToSave,
+                    applicable_records: appRecVal,
+                    resource_issue_record: resIssueVal,
+                    work_description: workDescVal,
+                    email_id: emailVal
+                },
+                success: function(resp) {
+                    if (resp && resp.success) {
+                        $('#dashEditProfileSectionsModal').modal('hide');
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Updated Successfully!',
+                                text: resp.message || 'Record has been updated.',
+                                timer: 1200,
+                                showConfirmButton: false
+                            }).then(function() {
+                                window.location.reload();
+                            });
+                        } else {
+                            alert(resp.message || 'Record updated successfully!');
+                            window.location.reload();
+                        }
+                    } else {
+                        $btn.prop('disabled', false).html(originalBtnHtml);
+                        var errMsg = (resp && resp.error) ? resp.error : 'Failed to update record.';
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({ icon: 'error', title: 'Update Failed', text: errMsg });
+                        } else {
+                            alert('Error: ' + errMsg);
+                        }
+                    }
+                },
+                error: function(xhr, status, err) {
+                    $btn.prop('disabled', false).html(originalBtnHtml);
+                    var msg = 'An unexpected server error occurred: ' + (err || status);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Server Error', text: msg });
+                    } else {
+                        alert(msg);
+                    }
+                }
+            });
+        });
+    }
 
 });
 </script>
