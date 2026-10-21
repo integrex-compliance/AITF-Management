@@ -66,6 +66,7 @@ switch ($action) {
             'current_user_id' => $loggedInUserId,
             'target_user_id' => $targetUserId,
             'can_add' => $canManage,
+            'can_delete' => aitf_can_delete_tasks($loggedInRole),
             'is_self' => ($targetUserId === $loggedInUserId)
         ]);
         exit;
@@ -146,6 +147,56 @@ switch ($action) {
             'reminder_time' => trim((string)($_POST['reminder_time'] ?? ''))
         ]);
 
+        // Process "Also assign to" additional users if requested (Top Mgmt, Admin, Finance, Managers)
+        $alsoAssignedCount = 0;
+        $alsoAssignUids = $_POST['also_assign_to_uids'] ?? [];
+        if (!is_array($alsoAssignUids)) {
+            $alsoAssignUids = array_filter(array_map('intval', explode(',', (string)$alsoAssignUids)));
+        }
+
+        if (!empty($alsoAssignUids) && $canManage) {
+            foreach ($alsoAssignUids as $extraUid) {
+                $extraUid = (int)$extraUid;
+                if ($extraUid <= 0 || $extraUid === $assignedToId) {
+                    continue;
+                }
+
+                $extraName = '';
+                $extraRole = 'Staff';
+                try {
+                    $uStmt = $db->prepare("SELECT user_name, role FROM `user` WHERE `user_id` = :id LIMIT 1");
+                    $uStmt->execute([':id' => $extraUid]);
+                    if ($u = $uStmt->fetch(PDO::FETCH_ASSOC)) {
+                        $extraName = $u['user_name'];
+                        $extraRole = $u['role'] ?: 'Staff';
+                    }
+                } catch (Throwable $e) {}
+
+                if ($extraName !== '') {
+                    aitf_create_task($db, [
+                        'title' => $title,
+                        'description' => trim((string)($_POST['description'] ?? '')),
+                        'assigned_to_user_id' => $extraUid,
+                        'assigned_to_user_type' => 'user',
+                        'assigned_to_user_key' => 'user_' . $extraUid,
+                        'assigned_to_name' => $extraName,
+                        'assigned_to_role' => $extraRole,
+                        'assigned_by_user_id' => $loggedInUserId,
+                        'assigned_by_name' => $loggedInUsername,
+                        'assigned_by_role' => $loggedInRole,
+                        'due_date' => $dueDate,
+                        'is_important' => !empty($_POST['is_important']) ? 1 : 0,
+                        'reminder_time' => trim((string)($_POST['reminder_time'] ?? ''))
+                    ]);
+                    $alsoAssignedCount++;
+                }
+            }
+        }
+
+        if (is_array($res)) {
+            $res['also_assigned_count'] = $alsoAssignedCount;
+        }
+
         echo json_encode($res);
         exit;
 
@@ -179,12 +230,20 @@ switch ($action) {
         exit;
 
     // -------------------------------------------------------------
-    // 5. Delete task (Creator or Manager only)
+    // 5. Delete task (Top Mgmt, Admin, and Finance only)
     // -------------------------------------------------------------
     case 'delete_task':
         $taskId = (int)($_POST['task_id'] ?? 0);
         if ($taskId <= 0) {
             echo json_encode(['success' => false, 'error' => 'Invalid task ID.']);
+            exit;
+        }
+
+        if (!aitf_can_delete_tasks($loggedInRole)) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Permission denied. Only Top Management, Admin, and Finance can delete tasks.'
+            ]);
             exit;
         }
 

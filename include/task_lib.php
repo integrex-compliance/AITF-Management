@@ -44,6 +44,44 @@ if (!function_exists('aitf_can_manage_tasks')) {
     }
 }
 
+if (!function_exists('aitf_can_delete_tasks')) {
+    /**
+     * Checks if the given role (or currently logged-in user) can delete tasks.
+     * Enforced Requirement: Only Top Mgmt, Director, Admin, and Finance can delete tasks.
+     * Regular assigned staff/users CANNOT delete tasks.
+     */
+    function aitf_can_delete_tasks($role = null)
+    {
+        if ($role === null) {
+            $role = $_SESSION['role'] ?? '';
+        }
+        $r = strtolower(trim((string)$role));
+        $allowed = [
+            'top mgmt',
+            'mgmt',
+            'management',
+            'director',
+            'main admin',
+            'admin',
+            'finance'
+        ];
+
+        if (in_array($r, $allowed, true)) {
+            return true;
+        }
+
+        if (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($role)) {
+            return true;
+        }
+
+        if (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin())) {
+            return true;
+        }
+
+        return false;
+    }
+}
+
 if (!function_exists('aitf_ensure_tasks_schema')) {
     /**
      * Ensures the aitf_tasks table and indexes exist idempotently.
@@ -408,7 +446,9 @@ if (!function_exists('aitf_toggle_task_importance')) {
 
 if (!function_exists('aitf_delete_task')) {
     /**
-     * Soft deletes a task. Can be deleted by creator or a manager.
+     * Soft deletes a task.
+     * Enforced Requirement: Only Top Mgmt, Director, Admin, and Finance can delete tasks.
+     * Regular assigned staff/users CANNOT delete tasks.
      */
     function aitf_delete_task($db, $taskId, $currentUserId, $currentUserRole)
     {
@@ -418,22 +458,22 @@ if (!function_exists('aitf_delete_task')) {
             return ['success' => false, 'error' => 'Invalid task ID.'];
         }
 
+        if (!aitf_can_delete_tasks($currentUserRole)) {
+            return [
+                'success' => false,
+                'error' => 'Permission denied. Only Top Management, Admin, or Finance can delete tasks.'
+            ];
+        }
+
         try {
             $stmt = $db->prepare("SELECT * FROM `aitf_tasks` WHERE `id` = :id AND `is_deleted` = 0 LIMIT 1");
             $stmt->execute([':id' => $taskId]);
             $task = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$task) {
-                return ['success' => false, 'error' => 'Task not found.'];
+                return ['success' => false, 'error' => 'Task not found or has already been removed.'];
             }
 
-            $canManage = aitf_can_manage_tasks($currentUserRole);
-            $isCreator = ((int)$task['assigned_by_user_id'] === (int)$currentUserId);
-
-            if (!$canManage && !$isCreator) {
-                return ['success' => false, 'error' => 'Permission denied to delete this task.'];
-            }
-
-            $upd = $db->prepare("UPDATE `aitf_tasks` SET `is_deleted` = 1 WHERE `id` = :id");
+            $upd = $db->prepare("UPDATE `aitf_tasks` SET `is_deleted` = 1, `updated_at` = NOW() WHERE `id` = :id");
             $upd->execute([':id' => $taskId]);
 
             return ['success' => true];

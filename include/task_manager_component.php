@@ -36,6 +36,14 @@ $isTopMgmtUser = (!empty($isTopMgmt))
     || (strcasecmp(trim($actualRole), 'Top Mgmt') === 0)
     || (strcasecmp(trim($actualRole), 'Top Management') === 0)
     || aitf_can_manage_tasks($actualRole);
+$canDeleteTasks = aitf_can_delete_tasks($actualRole);
+$canForwardTasks = aitf_can_manage_tasks($actualRole);
+
+// Fetch all system users for "Also assign to" forward option
+$assignableUsers = [];
+if ($canForwardTasks && function_exists('aitf_get_all_system_users') && isset($db) && $db) {
+    $assignableUsers = aitf_get_all_system_users($db, false);
+}
 
 // Fetch initial tasks for target user
 $initialTasks = [];
@@ -445,6 +453,31 @@ $totalCount = $pendingCount + $completedCount;
     color: #f59e0b;
 }
 
+/* Delete Task Button (Top Mgmt, Admin, Finance only) */
+.todo-delete-btn {
+    font-size: 13.5px;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+    padding: 3px 5px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.todo-delete-btn:hover {
+    color: #ef4444;
+    background: #fee2e2;
+    transform: scale(1.15);
+}
+html.theme-dark .todo-delete-btn {
+    color: #64748b !important;
+}
+html.theme-dark .todo-delete-btn:hover {
+    color: #f87171 !important;
+    background: rgba(239, 68, 68, 0.2) !important;
+}
+
 .todo-expand-chevron {
     font-size: 10px;
     color: #94a3b8;
@@ -528,45 +561,128 @@ $totalCount = $pendingCount + $completedCount;
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    padding: 9px 16px;
+    padding: 7px 14px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
     transition: border-color 0.18s ease, box-shadow 0.18s ease;
-    min-height: 44px;
+    min-height: 48px;
     box-sizing: border-box;
     position: relative;
 }
 
 .todo-ms-add-box:focus-within {
-    border-color: #2563eb;
-    box-shadow: 0 3px 12px rgba(37, 99, 235, 0.12);
+    border-color: #10b981;
+    box-shadow: 0 3px 12px rgba(16, 185, 129, 0.18);
 }
 
-/* Hollow circle on the left */
-.todo-ms-circle {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 2px solid #94a3b8;
-    background: transparent;
+/* Highly visible Green "Add Task" button on the left of input box */
+.todo-ms-circle,
+.todo-ms-plus-btn {
+    height: 34px;
+    padding: 0 13px;
+    border-radius: 6px;
+    background: #10b981;
+    color: #ffffff !important;
+    border: none !important;
+    outline: none !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 7px;
     flex-shrink: 0;
     cursor: pointer;
-    transition: all 0.15s ease;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     box-sizing: border-box;
+    margin-right: 2px;
+    white-space: nowrap;
+    user-select: none;
 }
 
-.todo-ms-add-box:focus-within .todo-ms-circle {
-    border-color: #2563eb;
+.todo-ms-circle i,
+.todo-ms-plus-btn i {
+    color: #ffffff !important;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
 }
 
-.todo-ms-circle:hover {
-    border-color: #2563eb;
-    background: #eff6ff;
+.todo-ms-circle span,
+.todo-ms-plus-btn span {
+    color: #ffffff !important;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.todo-ms-circle:hover,
+.todo-ms-plus-btn:hover {
+    background: #059669;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.45);
+}
+
+.todo-ms-circle:active,
+.todo-ms-plus-btn:active {
+    transform: translateY(0) scale(0.97);
+}
+
+.todo-ms-add-box:focus-within .todo-ms-circle,
+.todo-ms-add-box:focus-within .todo-ms-plus-btn {
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+}
+
+/* Secondary Add Button on right toolbar */
+.todo-ms-right-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 5px;
+    background: #10b981;
+    color: #ffffff !important;
+    border: none !important;
+    outline: none !important;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-left: 6px;
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.35);
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.todo-ms-right-add-btn i {
+    color: #ffffff !important;
+    font-size: 11px;
+}
+.todo-ms-right-add-btn:hover {
+    background: #059669;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.45);
+    transform: translateY(-1px);
+}
+.todo-ms-right-add-btn:active {
+    transform: translateY(0) scale(0.97);
+}
+
+@media (max-width: 576px) {
+    .todo-ms-plus-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border-radius: 50%;
+    }
+    .todo-ms-plus-btn span {
+        display: none;
+    }
 }
 
 /* Input field - completely borderless and seamless (Overriding all global styles) */
@@ -736,6 +852,258 @@ input.todo-ms-add-input:focus,
 }
 .todo-ms-remind-clear:hover {
     color: #ef4444;
+}
+
+/* Also Assign Indicator Badge */
+.todo-ms-forward-badge {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    background: #eef2ff;
+    color: #4f46e5;
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.todo-ms-forward-badge.show {
+    display: inline-flex;
+}
+.todo-ms-forward-clear {
+    cursor: pointer;
+    color: #818cf8;
+    font-size: 10px;
+    margin-left: 2px;
+    transition: color 0.15s;
+}
+.todo-ms-forward-clear:hover {
+    color: #ef4444;
+}
+.todo-ms-icon-btn.forward-btn.active {
+    color: #4f46e5;
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+/* Also Assign To Popover */
+.todo-forward-popover {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+    width: 290px;
+    z-index: 1000;
+    padding: 8px 0 4px 0;
+    user-select: none;
+}
+.todo-forward-popover.show {
+    display: block;
+    animation: todoPopFade 0.15s ease-out;
+}
+.todo-forward-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 14px 8px 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.todo-forward-header-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.todo-forward-header-title i {
+    color: #6366f1;
+    font-size: 13px;
+}
+.todo-forward-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4f46e5;
+    background: #e0e7ff;
+    padding: 2px 7px;
+    border-radius: 10px;
+}
+.todo-forward-search-wrap {
+    padding: 8px 12px 6px 12px;
+    position: relative;
+}
+.todo-forward-search-wrap i {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: #94a3b8;
+}
+.todo-forward-search-input {
+    width: 100% !important;
+    padding: 5px 8px 5px 26px !important;
+    font-size: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 5px !important;
+    background: #f8fafc !important;
+    color: #1e293b !important;
+    box-sizing: border-box !important;
+    height: 28px !important;
+    outline: none !important;
+}
+.todo-forward-search-input:focus {
+    border-color: #6366f1 !important;
+    background: #ffffff !important;
+}
+.todo-forward-user-list {
+    max-height: 190px;
+    overflow-y: auto;
+    padding: 4px 8px;
+}
+.todo-forward-user-list::-webkit-scrollbar {
+    width: 5px;
+}
+.todo-forward-user-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+.todo-forward-user-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    margin-bottom: 2px;
+    font-weight: normal;
+}
+.todo-forward-user-item:hover {
+    background: #f1f5f9;
+}
+.todo-forward-user-item.is-primary {
+    background: #f8fafc;
+    opacity: 0.85;
+    cursor: default;
+}
+.todo-forward-checkbox {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    accent-color: #6366f1;
+    margin: 0 !important;
+}
+.todo-forward-user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e0e7ff;
+    color: #4338ca;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.todo-forward-user-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+.todo-forward-user-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.todo-forward-user-role {
+    font-size: 10.5px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.badge-primary-assignee {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 1px 5px;
+    background: #dcfce7;
+    color: #15803d;
+    border-radius: 4px;
+    margin-left: 4px;
+}
+.todo-forward-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px 4px 12px;
+    border-top: 1px solid #f1f5f9;
+    background: #fafafa;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+.todo-forward-btn-clear {
+    background: transparent;
+    border: none;
+    font-size: 11.5px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+.todo-forward-btn-clear:hover {
+    color: #ef4444;
+}
+.todo-forward-btn-done {
+    background: #4f46e5;
+    color: #ffffff;
+    border: none;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 14px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+.todo-forward-btn-done:hover {
+    background: #4338ca;
+}
+
+html.theme-dark .todo-forward-popover {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+html.theme-dark .todo-forward-header {
+    border-bottom-color: #334155;
+}
+html.theme-dark .todo-forward-header-title {
+    color: #f1f5f9;
+}
+html.theme-dark .todo-forward-search-input {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f1f5f9 !important;
+}
+html.theme-dark .todo-forward-user-item:hover {
+    background: #334155;
+}
+html.theme-dark .todo-forward-user-name {
+    color: #f1f5f9;
+}
+html.theme-dark .todo-forward-footer {
+    border-top-color: #334155;
+    background: #1e293b;
 }
 
 /* Remind Me Popover (Microsoft To-Do Style) */
@@ -979,6 +1347,11 @@ input.todo-ms-add-input:focus,
                 <span class="todo-star-icon <?php echo !empty($task['is_important']) ? 'active' : ''; ?>" data-task-id="<?php echo (int)$task['id']; ?>" title="Star task">
                     <i class="fa fa-star"></i>
                 </span>
+                <?php if ($canDeleteTasks): ?>
+                <span class="todo-delete-btn" data-task-id="<?php echo (int)$task['id']; ?>" title="Delete task">
+                    <i class="fa fa-trash-o"></i>
+                </span>
+                <?php endif; ?>
                 <i class="fa fa-chevron-down todo-expand-chevron" title="Click to view details"></i>
             </div>
         </div>
@@ -1035,6 +1408,11 @@ input.todo-ms-add-input:focus,
                     <span class="todo-star-icon <?php echo !empty($task['is_important']) ? 'active' : ''; ?>" data-task-id="<?php echo (int)$task['id']; ?>" title="Star task">
                         <i class="fa fa-star"></i>
                     </span>
+                    <?php if ($canDeleteTasks): ?>
+                    <span class="todo-delete-btn" data-task-id="<?php echo (int)$task['id']; ?>" title="Delete task">
+                        <i class="fa fa-trash-o"></i>
+                    </span>
+                    <?php endif; ?>
                     <i class="fa fa-chevron-down todo-expand-chevron" title="Click to view details"></i>
                 </div>
             </div>
@@ -1045,13 +1423,16 @@ input.todo-ms-add-input:focus,
     <!-- Microsoft To-Do Style Bottom "Add a task" Bar (Clean White, Borderless Input) -->
     <div class="todo-bottom-add-container">
         <div class="todo-ms-add-box" id="todoAddBox">
-            <!-- Left Hollow Circle -->
-            <span class="todo-ms-circle" id="todoMsCircleAdd" title="Click or press Enter to add task"></span>
+            <!-- Left Highly Visible Green "Add Task" Button -->
+            <button type="button" class="todo-ms-plus-btn" id="todoMsCircleAdd" title="Click or press Enter to add task">
+                <i class="fa fa-plus"></i>
+                <span>Add Task</span>
+            </button>
 
             <!-- Main Input Field (Completely borderless) -->
-            <input type="text" id="todoNewTaskTitle" class="todo-ms-add-input" placeholder="Try typing 'Pay utilities bill by Friday 6pm'" autocomplete="off" maxlength="350" style="border:none !important; outline:none !important; box-shadow:none !important; background:transparent !important; margin:0 !important; padding:0 4px !important; height:auto !important; min-height:24px !important; width:100% !important; flex:1 !important;" />
+            <input type="text" id="todoNewTaskTitle" class="todo-ms-add-input" placeholder="Type a task here... (e.g. 'Pay utilities bill by Friday 6pm')" autocomplete="off" maxlength="350" style="border:none !important; outline:none !important; box-shadow:none !important; background:transparent !important; margin:0 !important; padding:0 8px !important; height:auto !important; min-height:26px !important; width:100% !important; flex:1 !important; font-size:13.5px;" />
 
-            <!-- Right Toolbar Icons (Calendar, Alarm, Star) -->
+            <!-- Right Toolbar Icons (Calendar, Alarm, Star, Add Button) -->
             <div class="todo-ms-toolbar" id="todoMsToolbar">
                 <!-- Date badge (visible when date picked) -->
                 <span class="todo-ms-date-badge" id="todoMsDateBadge" title="Selected deadline">
@@ -1065,6 +1446,13 @@ input.todo-ms-add-input:focus,
                     <i class="fa fa-clock-o"></i>
                     <span id="todoMsRemindText"></span>
                     <i class="fa fa-times todo-ms-remind-clear" id="todoMsRemindClear" title="Clear reminder"></i>
+                </span>
+
+                <!-- Also assign badge (visible when other users selected) -->
+                <span class="todo-ms-forward-badge" id="todoMsForwardBadge" title="Selected additional assignees">
+                    <i class="fa fa-share"></i>
+                    <span id="todoMsForwardText"></span>
+                    <i class="fa fa-times todo-ms-forward-clear" id="todoMsForwardClear" title="Clear additional assignees"></i>
                 </span>
 
                 <!-- 1. Due Date Calendar Icon -->
@@ -1135,9 +1523,62 @@ input.todo-ms-add-input:focus,
                     </div>
                 </div>
 
+                <!-- 3. Forward (Also Assign To) Icon & Popover -->
+                <?php if ($canForwardTasks): ?>
+                <div style="position: relative; display: inline-flex;">
+                    <button type="button" class="todo-ms-icon-btn forward-btn" id="todoNewTaskForwardBtn" title="Also assign to other users">
+                        <i class="fa fa-share"></i>
+                    </button>
+
+                    <!-- Also Assign To Popover -->
+                    <div class="todo-forward-popover" id="todoForwardPopover">
+                        <div class="todo-forward-header">
+                            <div class="todo-forward-header-title">
+                                <i class="fa fa-share"></i>
+                                <span>Also assign to -</span>
+                            </div>
+                            <span class="todo-forward-count" id="todoForwardSelectedCount">0 selected</span>
+                        </div>
+                        <div class="todo-forward-search-wrap">
+                            <i class="fa fa-search"></i>
+                            <input type="text" id="todoForwardSearch" class="todo-forward-search-input" placeholder="Search user by name / role..." autocomplete="off" />
+                        </div>
+                        <div class="todo-forward-user-list" id="todoForwardUserList">
+                            <?php foreach ($assignableUsers as $u): 
+                                $uId = (int)$u['user_id'];
+                                $uName = htmlspecialchars($u['name']);
+                                $uRole = htmlspecialchars($u['role'] ?? 'Staff');
+                                $isPrimary = ($uId === (int)$targetDashboardUid);
+                            ?>
+                            <label class="todo-forward-user-item <?php echo $isPrimary ? 'is-primary' : ''; ?>" data-uid="<?php echo $uId; ?>" data-name="<?php echo strtolower($u['name']); ?>" data-role="<?php echo strtolower($uRole); ?>" title="<?php echo $isPrimary ? 'Currently assigned primary user' : 'Click to select'; ?>">
+                                <input type="checkbox" class="todo-forward-checkbox" value="<?php echo $uId; ?>" data-name="<?php echo $uName; ?>" data-role="<?php echo $uRole; ?>" <?php echo $isPrimary ? 'disabled checked' : ''; ?> />
+                                <span class="todo-forward-user-avatar"><i class="fa fa-user"></i></span>
+                                <span class="todo-forward-user-details">
+                                    <span class="todo-forward-user-name">
+                                        <?php echo $uName; ?>
+                                        <?php if ($isPrimary): ?><span class="badge-primary-assignee">Primary</span><?php endif; ?>
+                                    </span>
+                                    <span class="todo-forward-user-role"><?php echo $uRole; ?></span>
+                                </span>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="todo-forward-footer">
+                            <button type="button" class="todo-forward-btn-clear" id="todoForwardClearBtn">Clear</button>
+                            <button type="button" class="todo-forward-btn-done" id="todoForwardDoneBtn">Done</button>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- 3. Star (High Priority) Icon -->
                 <button type="button" class="todo-ms-icon-btn star-btn" id="todoNewTaskStarBtn" title="Mark as high priority">
                     <i class="fa fa-star-o" id="todoNewTaskStarIcon"></i>
+                </button>
+
+                <!-- 4. Direct Green Add Button on right -->
+                <button type="button" class="todo-ms-right-add-btn" id="todoSubmitNewTaskBtn" title="Click to add task">
+                    <i class="fa fa-plus"></i> <span>Add</span>
                 </button>
             </div>
         </div>
@@ -1152,6 +1593,7 @@ input.todo-ms-add-input:focus,
     var todoTargetRole = <?php echo json_encode($targetDashboardRole); ?>;
     var todoCurrentUid = <?php echo (int)$currentLoggedInUid; ?>;
     var isViewingSelf = <?php echo $isViewingSelf ? 'true' : 'false'; ?>;
+    var todoCanDelete = <?php echo $canDeleteTasks ? 'true' : 'false'; ?>;
     var currentReminderValue = '';
 
     // Toast alert helper
@@ -1244,6 +1686,13 @@ input.todo-ms-add-input:focus,
                 '</span>';
         }
 
+        var deleteBtnHtml = '';
+        if (todoCanDelete) {
+            deleteBtnHtml = '<span class="todo-delete-btn" data-task-id="' + taskId + '" title="Delete task">' +
+                '<i class="fa fa-trash-o"></i>' +
+                '</span>';
+        }
+
         return '<div class="todo-card ' + (isDone ? 'is-completed' : '') + '" data-task-id="' + taskId + '" data-status="' + (isDone ? 'completed' : 'pending') + '" data-important="' + (isStar ? '1' : '0') + '">' +
             '<span class="todo-check-circle" data-task-id="' + taskId + '" title="' + (isDone ? 'Mark incomplete' : 'Mark completed') + '">' +
                 (isDone ? '<i class="fa fa-check" style="font-size: 10px;"></i>' : '') +
@@ -1268,6 +1717,7 @@ input.todo-ms-add-input:focus,
                 '<span class="todo-star-icon ' + (isStar ? 'active' : '') + '" data-task-id="' + taskId + '" title="Star task">' +
                     '<i class="fa fa-star"></i>' +
                 '</span>' +
+                deleteBtnHtml +
                 '<i class="fa fa-chevron-down todo-expand-chevron" title="Click to view details"></i>' +
             '</div>' +
         '</div>';
@@ -1304,15 +1754,21 @@ input.todo-ms-add-input:focus,
         var title = $.trim($titleInput.val());
         if (!title) {
             $titleInput.focus();
+            showTodoToast('Please type a task title first.', true);
             return;
         }
 
         var dueDate = $('#todoNewTaskDueDate').val();
         var isImportant = $('#todoNewTaskStarBtn').hasClass('active') ? 1 : 0;
         var reminderTime = currentReminderValue;
-        var $circle = $('#todoMsCircleAdd');
+        var $addBtns = $('#todoMsCircleAdd, #todoSubmitNewTaskBtn');
 
-        $circle.css('opacity', '0.4');
+        var alsoAssignUids = [];
+        $('.todo-forward-checkbox:checked').not(':disabled').each(function() {
+            alsoAssignUids.push($(this).val());
+        });
+
+        $addBtns.css('opacity', '0.5').prop('disabled', true);
 
         $.ajax({
             url: 'task_actions.php?action=create_task',
@@ -1325,10 +1781,11 @@ input.todo-ms-add-input:focus,
                 assigned_to_role: todoTargetRole,
                 due_date: dueDate,
                 is_important: isImportant,
-                reminder_time: reminderTime
+                reminder_time: reminderTime,
+                also_assign_to_uids: alsoAssignUids
             },
             success: function(resp) {
-                $circle.css('opacity', '1');
+                $addBtns.css('opacity', '1').prop('disabled', false);
                 if (resp && resp.success && resp.task) {
                     var newCardHtml = buildTaskCardHtml(resp.task);
                     var $newCard = $(newCardHtml).hide();
@@ -1348,12 +1805,25 @@ input.todo-ms-add-input:focus,
                     $('#todoRemindPopover').removeClass('show');
                     $('#todoRemindCustomPanel').removeClass('show');
 
+                    // Reset also assign
+                    $('.todo-forward-checkbox').not(':disabled').prop('checked', false);
+                    $('#todoMsForwardBadge').removeClass('show');
+                    $('#todoNewTaskForwardBtn').removeClass('active');
+                    $('#todoForwardSelectedCount').text('0 selected');
+                    $('#todoForwardPopover').removeClass('show');
+                    $('#todoForwardSearch').val('');
+                    $('#todoForwardUserList .todo-forward-user-item').show();
+
                     // Reset star
                     $('#todoNewTaskStarBtn').removeClass('active');
                     $('#todoNewTaskStarIcon').removeClass('fa-star').addClass('fa-star-o');
 
                     updateTaskCounts();
-                    showTodoToast('Task added successfully!', false);
+                    if (resp.also_assigned_count && resp.also_assigned_count > 0) {
+                        showTodoToast('Task created & also assigned to ' + resp.also_assigned_count + ' other user(s)!', false);
+                    } else {
+                        showTodoToast('Task added successfully!', false);
+                    }
 
                     // Re-apply filter if on "completed"
                     var currentFilter = $('.todo-filter-btn.active').data('filter');
@@ -1361,11 +1831,12 @@ input.todo-ms-add-input:focus,
                         $newCard.hide();
                     }
                 } else {
+                    $addBtns.css('opacity', '1').prop('disabled', false);
                     showTodoToast((resp && resp.error) ? resp.error : 'Failed to add task.', true);
                 }
             },
             error: function() {
-                $circle.css('opacity', '1');
+                $addBtns.css('opacity', '1').prop('disabled', false);
                 showTodoToast('Error communicating with server.', true);
             }
         });
@@ -1409,7 +1880,7 @@ input.todo-ms-add-input:focus,
     }
 
     $(document).ready(function() {
-        // 1. Enter key & click on circle to submit task
+        // 1. Enter key & click on Add Task buttons to submit task
         $('#todoNewTaskTitle').on('keydown', function(e) {
             if (e.key === 'Enter' || e.keyCode === 13) {
                 e.preventDefault();
@@ -1417,7 +1888,7 @@ input.todo-ms-add-input:focus,
             }
         });
 
-        $('#todoMsCircleAdd').on('click', function(e) {
+        $('#todoMsCircleAdd, #todoSubmitNewTaskBtn').on('click', function(e) {
             e.preventDefault();
             submitNewTask();
         });
@@ -1541,6 +2012,65 @@ input.todo-ms-add-input:focus,
             $('#todoNewTaskStarIcon').toggleClass('fa-star', isStar).toggleClass('fa-star-o', !isStar);
         });
 
+        // 4b. Forward (Also Assign To) Popover & User Selection
+        function updateForwardBadge() {
+            var selectedNames = [];
+            $('.todo-forward-checkbox:checked').not(':disabled').each(function() {
+                selectedNames.push($(this).data('name'));
+            });
+            var cnt = selectedNames.length;
+            $('#todoForwardSelectedCount').text(cnt + (cnt === 1 ? ' user selected' : ' users selected'));
+            if (cnt > 0) {
+                var label = cnt === 1 ? ('Also: ' + selectedNames[0]) : ('Also: +' + cnt + ' users');
+                $('#todoMsForwardText').text(label);
+                $('#todoMsForwardBadge').addClass('show');
+                $('#todoNewTaskForwardBtn').addClass('active');
+            } else {
+                $('#todoMsForwardBadge').removeClass('show');
+                $('#todoNewTaskForwardBtn').removeClass('active');
+            }
+        }
+
+        $(document).on('change', '.todo-forward-checkbox', function() {
+            updateForwardBadge();
+        });
+
+        $('#todoNewTaskForwardBtn').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#todoRemindPopover').removeClass('show');
+            $('#todoForwardPopover').toggleClass('show');
+            if ($('#todoForwardPopover').hasClass('show')) {
+                setTimeout(function() { $('#todoForwardSearch').focus(); }, 50);
+            }
+        });
+
+        $('#todoForwardSearch').on('input', function() {
+            var q = $.trim($(this).val()).toLowerCase();
+            $('#todoForwardUserList .todo-forward-user-item').each(function() {
+                var name = ($(this).data('name') || '').toString().toLowerCase();
+                var role = ($(this).data('role') || '').toString().toLowerCase();
+                $(this).toggle(name.indexOf(q) !== -1 || role.indexOf(q) !== -1);
+            });
+        });
+
+        $('#todoForwardClearBtn, #todoMsForwardClear').on('click', function(e) {
+            e.stopPropagation();
+            $('.todo-forward-checkbox').not(':disabled').prop('checked', false);
+            updateForwardBadge();
+        });
+
+        $('#todoForwardDoneBtn').on('click', function(e) {
+            e.preventDefault();
+            $('#todoForwardPopover').removeClass('show');
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#todoForwardPopover, #todoNewTaskForwardBtn').length) {
+                $('#todoForwardPopover').removeClass('show');
+            }
+        });
+
         // 5. Toggle Status (Check Circle click)
         $(document).on('click', '.todo-check-circle', function(e) {
             e.stopPropagation();
@@ -1637,9 +2167,50 @@ input.todo-ms-add-input:focus,
             });
         });
 
+        // 6b. Delete Task (Top Mgmt, Admin, Finance only)
+        $(document).on('click', '.todo-delete-btn', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            var $btn = $(this);
+            var $card = $btn.closest('.todo-card');
+            var taskId = $card.data('task-id');
+            var taskTitle = $.trim($card.find('.todo-task-title').text());
+            var displayTitle = taskTitle.length > 50 ? (taskTitle.substring(0, 47) + '...') : taskTitle;
+
+            if (!confirm('Are you sure you want to delete this task?\n"' + displayTitle + '"')) {
+                return;
+            }
+
+            $btn.css('opacity', '0.4').css('pointer-events', 'none');
+
+            $.ajax({
+                url: 'task_actions.php?action=delete_task',
+                type: 'POST',
+                dataType: 'json',
+                data: { task_id: taskId },
+                success: function(resp) {
+                    if (resp && resp.success) {
+                        $card.slideUp(180, function() {
+                            $card.remove();
+                            updateTaskCounts();
+                        });
+                        showTodoToast('Task deleted successfully.', false);
+                    } else {
+                        $btn.css('opacity', '1').css('pointer-events', 'auto');
+                        showTodoToast((resp && resp.error) ? resp.error : 'Failed to delete task.', true);
+                    }
+                },
+                error: function() {
+                    $btn.css('opacity', '1').css('pointer-events', 'auto');
+                    showTodoToast('Error communicating with server.', true);
+                }
+            });
+        });
+
         // 7. Single Accordion Behavior (Click on card)
         $(document).on('click', '.todo-card', function(e) {
-            if ($(e.target).closest('.todo-check-circle, .todo-star-icon, button, input, label').length > 0) {
+            if ($(e.target).closest('.todo-check-circle, .todo-star-icon, .todo-delete-btn, button, input, label').length > 0) {
                 return;
             }
 
