@@ -365,7 +365,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         
         $loginSuccess = false;
-        $redirectUrl = 'myDashboard.php';
+        $redirectUrl = 'myDashboard.php#pane-task-mgmt';
         
         if ($role === 'Director') {
             if (aitf_verify_director_credentials($identifier, $password)) {
@@ -377,7 +377,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 aitf_record_login_activity($db, ['user_id'=>0, 'user_name'=>'Managing Director', 'email_id'=>$identifier, 'role'=>'Director', 'e_id'=>'DIRECTOR']);
                 aitf_create_daily_session_token($db, 0, 'Director', 'Managing Director', $identifier);
                 $loginSuccess = true;
-                $redirectUrl = 'myDashboard.php';
+                $redirectUrl = 'myDashboard.php#pane-task-mgmt';
             }
         } elseif ($role === 'Employee') {
             $stmt = $db->prepare("SELECT * FROM user WHERE LOWER(email_id) = :id OR e_id = :id_upper LIMIT 1");
@@ -409,7 +409,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 
                 aitf_create_daily_session_token($db, $row['user_id'], $row['role'], $row['user_name'], $identifier);
-                $redirectUrl = 'myDashboard.php';
+                $redirectUrl = 'myDashboard.php#pane-task-mgmt';
                 $loginSuccess = true;
             }
         } elseif ($role === 'Auditor') {
@@ -427,7 +427,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 aitf_record_login_activity($db, ['user_id'=>$row['auditors_id'], 'user_name'=>$row['auditor_name'], 'email_id'=>$row['login_email'], 'role'=>'Auditor', 'e_id'=>'AUDITOR']);
                 aitf_create_daily_session_token($db, $row['auditors_id'], 'Auditor', $row['auditor_name'], $identifier);
                 $loginSuccess = true;
-                $redirectUrl = 'myDashboard.php';
+                $redirectUrl = 'myDashboard.php#pane-task-mgmt';
             }
         } elseif ($role === 'Client') {
             $matchingClients = aitf_find_matching_clients($db, $identifier);

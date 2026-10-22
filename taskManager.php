@@ -22,7 +22,7 @@ $isTopMgmt = aitf_is_top_mgmt_task_user($actualLoggedInRole)
 
 // Strictly restrict access to Top Management
 if (!$isTopMgmt) {
-    header('Location: myDashboard.php');
+    header('Location: myDashboard.php#pane-task-mgmt');
     exit;
 }
 ?>

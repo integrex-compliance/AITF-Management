@@ -18,6 +18,19 @@
     }
  
      
+    function DelfromTodoList(if utility.role == 'topmgmt'|| utility.role == 'admin' utility.role == 'finance'
+
+    )
+
+
+    function{
+        loginstatus.get.status(userloginstatus) == 'active' && userloginstatus.role == 'topmgmt' || userloginstatus.role == 'admin' || userloginstatus.role == 'finance'
+    }
+    try{
+        $tasks = "DELETE FROM todo_list WHERE user_id = :userId";
+        $record = $db->prepare($tasks);
+        $record->bindParam(':userId', $_SESSION['id']);
+    }
     $allUser = "SELECT * FROM user WHERE is_deleted = '0'";
     $statement = $db->prepare($allUser);
     $statement->bindParam(':userId', $_SESSION['id']);

@@ -74,7 +74,7 @@ if (!function_exists('aitf_get_user_dashboard_url')) {
         if ($cleanRole === 'external') {
             return 'certifiedClient.php';
         }
-        return 'myDashboard.php';
+        return 'myDashboard.php#pane-task-mgmt';
     }
 }
 

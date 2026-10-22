@@ -42,22 +42,26 @@ if (!function_exists('aitf_start_session')) {
         $lifetime = aitf_session_lifetime();
 
         if (session_status() !== PHP_SESSION_ACTIVE) {
-            ini_set('session.gc_maxlifetime', (string)$lifetime);
-            ini_set('session.cookie_lifetime', (string)$lifetime);
-            ini_set('session.use_strict_mode', '1');
-            ini_set('session.cookie_httponly', '1');
-            ini_set('session.cookie_samesite', 'Lax');
+            if (!headers_sent()) {
+                @ini_set('session.gc_maxlifetime', (string)$lifetime);
+                @ini_set('session.cookie_lifetime', (string)$lifetime);
+                @ini_set('session.use_strict_mode', '1');
+                @ini_set('session.cookie_httponly', '1');
+                @ini_set('session.cookie_samesite', 'Lax');
 
-            $options = aitf_session_cookie_options();
-            session_set_cookie_params([
-                'lifetime' => $lifetime,
-                'path' => $options['path'],
-                'domain' => $options['domain'],
-                'secure' => $options['secure'],
-                'httponly' => $options['httponly'],
-                'samesite' => $options['samesite']
-            ]);
-            session_start();
+                $options = aitf_session_cookie_options();
+                @session_set_cookie_params([
+                    'lifetime' => $lifetime,
+                    'path' => $options['path'],
+                    'domain' => $options['domain'],
+                    'secure' => $options['secure'],
+                    'httponly' => $options['httponly'],
+                    'samesite' => $options['samesite']
+                ]);
+                @session_start();
+            } else {
+                @session_start();
+            }
         }
 
         if (empty($_SESSION['username'])) {
@@ -80,7 +84,9 @@ if (!function_exists('aitf_start_session')) {
 
         if (($now - $lastActivity) >= $lifetime) {
             $_SESSION = [];
-            session_regenerate_id(true);
+            if (!headers_sent()) {
+                @session_regenerate_id(true);
+            }
             $_SESSION['login_notice'] = 'Your session expired after 24 hours. Please log in again.';
             $_SESSION['session_expired'] = true;
             aitf_refresh_session_cookie();

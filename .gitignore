@@ -1,4 +1,5 @@
 # Directories to ignore
+api/
 uploads/
 tinymce/
 PHPMailer/
@@ -54,3 +55,8 @@ curl_test.*
 output_test.*
 error_test.*
 *_backup.php
+dump.*
+dump_*
+dump*.php
+dump*.html
+check_js.*

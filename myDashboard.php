@@ -295,6 +295,7 @@
                             if ($header !== '' || !empty($items)) {
                                 $groups[] = [
                                     'header' => $header,
+                                    'desc'   => $descRaw,
                                     'items'  => $items
                                 ];
                             }
@@ -310,6 +311,7 @@
             $lines = preg_split('/\r\n|\r|\n/', $rawContent);
             $currentHeader = '';
             $currentItems = [];
+            $currentDescLines = [];
 
             foreach ($lines as $line) {
                 $trimmed = trim($line);
@@ -319,12 +321,15 @@
                     if (!empty($currentItems) || $currentHeader !== '') {
                         $groups[] = [
                             'header' => $currentHeader,
+                            'desc'   => implode("\n", $currentDescLines),
                             'items'  => $currentItems
                         ];
                         $currentItems = [];
+                        $currentDescLines = [];
                     }
                     $currentHeader = trim($m[1]);
                 } else {
+                    $currentDescLines[] = $trimmed;
                     $clean = preg_replace('/^\s*\d+[\.\)\-]\s*/', '', $trimmed);
                     if ($clean !== '') {
                         $currentItems[] = $clean;
@@ -335,6 +340,7 @@
             if (!empty($currentItems) || $currentHeader !== '') {
                 $groups[] = [
                     'header' => $currentHeader,
+                    'desc'   => implode("\n", $currentDescLines),
                     'items'  => $currentItems
                 ];
             }
@@ -370,11 +376,17 @@
             background-color: #f8fafc;
             color: #0f172a;
             -webkit-font-smoothing: antialiased;
+            overflow: visible !important;
+            overflow-x: clip !important;
+            height: auto !important;
+            min-height: 100% !important;
         }
 
         #page-content-wrapper {
             margin-top: 72px !important;
             padding-top: 0 !important;
+            overflow: visible !important;
+            overflow-x: clip !important;
         }
 
         .page-content,
@@ -384,6 +396,7 @@
             padding-left: 20px !important;
             padding-right: 20px !important;
             padding-bottom: 30px !important;
+            overflow: visible !important;
         }
 
         .my-dash-container {
@@ -391,6 +404,8 @@
             margin: 0 auto !important;
             max-width: 1540px !important;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            overflow: visible !important;
+            overflow-x: clip !important;
         }
 
         /* 1. MasterCreator Compact Hero Header */
@@ -496,8 +511,12 @@
             margin-top: 3px;
         }
 
-        /* 2. Modern Segmented Tab Bar */
+        /* 2. Modern Segmented Tab Bar (Sticky on Scroll) */
         .dash-tabs-bar {
+            position: -webkit-sticky !important;
+            position: sticky !important;
+            top: 72px !important;
+            z-index: 990 !important;
             display: flex !important;
             flex-wrap: nowrap !important;
             align-items: center !important;
@@ -512,6 +531,14 @@
             -webkit-overflow-scrolling: touch !important;
             white-space: nowrap !important;
             width: 100% !important;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease, border-radius 0.2s ease;
+        }
+
+        .dash-tabs-bar.is-sticky {
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+            border-color: #cbd5e1 !important;
+            border-top-left-radius: 0 !important;
+            border-top-right-radius: 0 !important;
         }
 
         .dash-tabs-bar:has(.dash-tab-btn.active[data-target="#pane-task-mgmt"]),
@@ -519,6 +546,11 @@
             margin-bottom: 0 !important;
             border-bottom-left-radius: 0 !important;
             border-bottom-right-radius: 0 !important;
+        }
+
+        .dash-tabs-bar.tabs-attached-bottom.is-sticky {
+            border-bottom-left-radius: 8px !important;
+            border-bottom-right-radius: 8px !important;
         }
 
         #pane-task-mgmt .todo-app-wrapper {
@@ -970,15 +1002,29 @@
             gap: 5px;
         }
 
-        /* Profile Sections (Applicable Records, Work Description & Resource Issue Record) */
+                /* Profile Sections (Applicable Records, Work Description & Resource Issue Record) */
+        .profile-records-row {
+            margin: 16px 8px 0 8px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start !important;
+        }
+
+        .profile-records-col {
+            padding: 0 8px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            align-self: flex-start !important;
+        }
+
         .profile-records-container {
             border-radius: 12px;
             padding: 16px 18px;
-            transition: all 0.2s ease;
+            transition: padding 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
             display: block;
             width: 100%;
             height: auto;
-            min-height: 100%;
             overflow: visible;
             box-sizing: border-box;
         }
@@ -1055,36 +1101,39 @@
         .records-clean-list {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 2px;
             margin: 0;
-            padding: 0;
+            padding: 4px 6px;
         }
 
         .record-clean-item {
             display: flex;
             align-items: flex-start;
-            gap: 12px;
-            background: #ffffff;
-            border-radius: 8px;
-            padding: 10px 14px;
-            transition: all 0.15s ease;
+            gap: 10px;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 5px !important;
+            padding: 6px 8px !important;
+            transition: background 0.15s ease;
             flex-shrink: 0;
             width: 100%;
             box-sizing: border-box;
         }
 
         .record-clean-item:hover {
-            transform: translateX(2px);
+            transform: none !important;
         }
 
         .record-clean-num {
             font-size: 11px;
             font-weight: 700;
-            border-radius: 6px;
+            border-radius: 5px;
             padding: 2px 7px;
             flex-shrink: 0;
             margin-top: 1px;
             line-height: 1.3;
+            border: none !important;
         }
 
         .record-clean-icon {
@@ -1141,9 +1190,49 @@
         }
 
         .record-category-card .records-clean-list {
-            padding: 10px 12px;
-            gap: 8px;
+            padding: 6px 8px;
+            gap: 2px;
             border-radius: 0 0 7px 7px;
+        }
+
+        /* Unified Records Styling (Applicable Records & Resource Issue Record - Clean single container without nested card boxes) */
+        .records-unified-box {
+            background: transparent;
+            border: none;
+            padding: 4px 6px;
+            margin-bottom: 10px;
+        }
+        .records-unified-box:last-child {
+            margin-bottom: 0;
+        }
+        .records-unified-header {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .records-unified-header-amber {
+            color: #92400e !important;
+        }
+        .records-unified-text {
+            font-size: 13px;
+            line-height: 1.75;
+            color: #334155;
+            word-break: break-word;
+            white-space: normal;
+            padding: 2px 2px;
+        }
+        html.theme-dark .records-unified-header {
+            color: #93c5fd !important;
+        }
+        html.theme-dark .records-unified-header-amber {
+            color: #fcd34d !important;
+        }
+        html.theme-dark .records-unified-text {
+            color: var(--hpd-text) !important;
         }
 
         /* 1. BLUE / SAPPHIRE THEME (Applicable Records) */
@@ -1174,17 +1263,16 @@
             color: #2563eb;
         }
         .records-theme-blue .record-clean-item {
-            background: #ffffff;
-            border: 1px solid #e0e7ff;
+            background: transparent !important;
+            border: none !important;
         }
         .records-theme-blue .record-clean-item:hover {
-            background: #f0f7ff;
-            border-color: #93c5fd;
+            background: #eff6ff !important;
         }
         .records-theme-blue .record-clean-num {
-            background: #dbeafe;
-            color: #1e40af;
-            border: 1px solid #bfdbfe;
+            background: #dbeafe !important;
+            color: #1e40af !important;
+            border: none !important;
         }
         .records-theme-blue .record-clean-icon {
             color: #3b82f6;
@@ -1226,17 +1314,16 @@
             color: #059669;
         }
         .records-theme-emerald .record-clean-item {
-            background: #ffffff;
-            border: 1px solid #d1fae5;
+            background: transparent !important;
+            border: none !important;
         }
         .records-theme-emerald .record-clean-item:hover {
-            background: #f0fdf4;
-            border-color: #6ee7b7;
+            background: #f0fdf4 !important;
         }
         .records-theme-emerald .record-clean-num {
-            background: #d1fae5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
+            background: #d1fae5 !important;
+            color: #065f46 !important;
+            border: none !important;
         }
         .records-theme-emerald .record-clean-icon {
             color: #10b981;
@@ -1278,17 +1365,16 @@
             color: #d97706;
         }
         .records-theme-amber .record-clean-item {
-            background: #ffffff;
-            border: 1px solid #fed7aa;
+            background: transparent !important;
+            border: none !important;
         }
         .records-theme-amber .record-clean-item:hover {
-            background: #fffbeb;
-            border-color: #fcd34d;
+            background: #fffbeb !important;
         }
         .records-theme-amber .record-clean-num {
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #fde68a;
+            background: #fef3c7 !important;
+            color: #92400e !important;
+            border: none !important;
         }
         .records-theme-amber .record-clean-icon {
             color: #f59e0b;
@@ -1379,7 +1465,9 @@
 
         .profile-records-container.is-collapsed {
             min-height: 0 !important;
-            padding-bottom: 12px !important;
+            height: auto !important;
+            flex: none !important;
+            padding: 12px 14px !important;
         }
 
         .profile-records-container.is-collapsed .records-section-title {
@@ -1813,6 +1901,11 @@
             border-color: var(--hpd-border) !important;
         }
 
+        html.theme-dark .dash-tabs-bar.is-sticky {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+        }
+
         html.theme-dark .dash-tab-btn {
             color: var(--hpd-text-dim) !important;
         }
@@ -2040,17 +2133,16 @@
             color: #60a5fa !important;
         }
         html.theme-dark .records-theme-blue .record-clean-item {
-            background: #0f172a !important;
-            border-color: #1e3a8a !important;
+            background: transparent !important;
+            border: none !important;
         }
         html.theme-dark .records-theme-blue .record-clean-item:hover {
-            background: #162444 !important;
-            border-color: #3b82f6 !important;
+            background: rgba(37, 99, 235, 0.15) !important;
         }
         html.theme-dark .records-theme-blue .record-clean-num {
             background: #1e3a8a !important;
-            border-color: #2563eb !important;
             color: #bfdbfe !important;
+            border: none !important;
         }
         html.theme-dark .records-theme-blue .record-clean-icon {
             color: #60a5fa !important;
@@ -2085,17 +2177,16 @@
             color: #34d399 !important;
         }
         html.theme-dark .records-theme-emerald .record-clean-item {
-            background: #091a14 !important;
-            border-color: #065f46 !important;
+            background: transparent !important;
+            border: none !important;
         }
         html.theme-dark .records-theme-emerald .record-clean-item:hover {
-            background: #103328 !important;
-            border-color: #10b981 !important;
+            background: rgba(16, 185, 129, 0.15) !important;
         }
         html.theme-dark .records-theme-emerald .record-clean-num {
             background: #065f46 !important;
-            border-color: #059669 !important;
             color: #d1fae5 !important;
+            border: none !important;
         }
         html.theme-dark .records-theme-emerald .record-clean-icon {
             color: #34d399 !important;
@@ -2130,17 +2221,16 @@
             color: #fbbf24 !important;
         }
         html.theme-dark .records-theme-amber .record-clean-item {
-            background: #1c1507 !important;
-            border-color: #78350f !important;
+            background: transparent !important;
+            border: none !important;
         }
         html.theme-dark .records-theme-amber .record-clean-item:hover {
-            background: #332512 !important;
-            border-color: #f59e0b !important;
+            background: rgba(217, 119, 6, 0.15) !important;
         }
         html.theme-dark .records-theme-amber .record-clean-num {
             background: #78350f !important;
-            border-color: #92400e !important;
             color: #fef3c7 !important;
+            border: none !important;
         }
         html.theme-dark .records-theme-amber .record-clean-icon {
             color: #fbbf24 !important;
@@ -2318,6 +2408,40 @@
             background: #162032 !important;
             border-color: var(--hpd-border-2) !important;
         }
+        html.theme-dark .todo-card.is-self-task {
+            background: #111827 !important;
+            border-color: #374151 !important;
+            border-left: 3.5px solid #6b7280 !important;
+        }
+        html.theme-dark .todo-card.is-self-task:hover {
+            background: #182234 !important;
+            border-color: #4b5563 !important;
+        }
+        html.theme-dark .todo-card.is-self-task.is-expanded {
+            background: #182234 !important;
+            border-color: #4b5563 !important;
+        }
+        html.theme-dark .todo-card.is-completed.is-self-task {
+            background: #0f172a !important;
+            border-color: var(--hpd-border) !important;
+            border-left: 3.5px solid #475569 !important;
+        }
+        html.theme-dark .todo-self-tag {
+            background: #1f2937 !important;
+            border-color: #374151 !important;
+            color: #9ca3af !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-assigned-by.pill-self-assigned {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            color: #cbd5e1 !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-assigned-by.pill-self-assigned i {
+            color: #94a3b8 !important;
+        }
+        html.theme-dark .todo-meta-pill.pill-assigned-by.pill-self-assigned strong {
+            color: #f1f5f9 !important;
+        }
         html.theme-dark .todo-expand-chevron {
             color: var(--hpd-text-dim) !important;
         }
@@ -2405,13 +2529,29 @@
         }
 
         /* ================================================================== */
+        /* RESPONSIVE DESIGN FOR TABLETS (<= 991px)                            */
+        /* ================================================================== */
+        @media screen and (max-width: 991px) {
+            #page-content-wrapper {
+                margin-top: 64px !important;
+            }
+            .dash-tabs-bar {
+                top: 64px !important;
+            }
+        }
+
+        /* ================================================================== */
         /* FULL-FLEDGED MOBILE RESPONSIVE DESIGN (<= 768px)                   */
         /* PC/Desktop view (> 768px) remains 100% untouched                  */
         /* ================================================================== */
         @media screen and (max-width: 768px) {
             /* 1. Global Page Layout & Insets */
             body, #wrapper {
-                overflow-x: hidden !important;
+                overflow: visible !important;
+                overflow-x: clip !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
             }
 
             #wrapper.active {
@@ -2484,11 +2624,12 @@
             }
 
             #page-content-wrapper {
-                margin-top: 66px !important;
+                margin-top: 60px !important;
                 padding-left: 0 !important;
                 padding-right: 0 !important;
                 width: 100% !important;
-                overflow-x: hidden !important;
+                overflow: visible !important;
+                overflow-x: clip !important;
             }
 
             .page-content,
@@ -2497,16 +2638,19 @@
                 padding-right: 10px !important;
                 padding-top: 8px !important;
                 padding-bottom: 24px !important;
+                overflow: visible !important;
             }
 
             .my-dash-container {
                 max-width: 100% !important;
                 padding: 0 !important;
-                overflow-x: hidden !important;
+                overflow: visible !important;
+                overflow-x: clip !important;
             }
 
             /* 2. Responsive Tabs Bar & User Switcher */
             .dash-tabs-bar {
+                top: 60px !important;
                 flex-direction: column !important;
                 align-items: stretch !important;
                 gap: 8px !important;
@@ -3148,9 +3292,11 @@
             }
 
             .record-clean-item {
-                padding: 7px 9px !important;
+                padding: 5px 6px !important;
                 gap: 8px !important;
-                border-radius: 6px !important;
+                border-radius: 4px !important;
+                border: none !important;
+                background: transparent !important;
             }
 
             .record-clean-num {
@@ -3399,6 +3545,12 @@
 
         /* Extra Compact Adjustments for Ultra-narrow Phones (<= 480px) */
         @media screen and (max-width: 480px) {
+            #page-content-wrapper {
+                margin-top: 58px !important;
+            }
+            .dash-tabs-bar {
+                top: 58px !important;
+            }
             .page-content,
             .page-content.inset {
                 padding-left: 6px !important;
@@ -3439,15 +3591,15 @@
                 $targetDashboardRole = $userRole;
                 ?>
                 <!-- 1. Tabs Bar -->
-                <div class="dash-tabs-bar" role="tablist">
+                <div class="dash-tabs-bar tabs-attached-bottom" role="tablist">
                     <div class="dash-tabs-scroller">
-                        <button type="button" class="dash-tab-btn active" data-target="#pane-profile">
+                        <button type="button" class="dash-tab-btn" data-target="#pane-profile">
                             <i class="fa fa-user-circle"></i> Profile
                         </button>
                         <button type="button" class="dash-tab-btn" data-target="#pane-attendance">
                             <i class="fa fa-calendar-check-o"></i> Attendance
                         </button>
-                        <button type="button" class="dash-tab-btn" data-target="#pane-task-mgmt">
+                        <button type="button" class="dash-tab-btn active" data-target="#pane-task-mgmt">
                             <i class="fa fa-tasks"></i> Task Management
                         </button>
                         <button type="button" class="dash-tab-btn" data-target="#pane-guidelines">
@@ -3600,36 +3752,12 @@
                     <?php endif; ?>
                 </div>
 
-                <?php if ($isViewingOther): ?>
-                <!-- Alert Banner when viewing another user's dashboard in Management Mode -->
-                <div class="dash-viewing-alert" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; border-left: 5px solid #2563eb; border-radius: 10px; padding: 12px 18px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 6px rgba(37,99,235,0.08);">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 36px; height: 36px; border-radius: 9px; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">
-                            <i class="fa fa-eye"></i>
-                        </div>
-                        <div>
-                            <div style="font-size: 14px; font-weight: 700; color: #1e3a8a;">
-                                Viewing Dashboard of: <strong style="color: #0f172a; font-size: 15px;"><?php echo htmlspecialchars($userName); ?></strong>
-                                <span class="badge" style="background: #2563eb; color: #fff; font-size: 11px; margin-left: 6px; padding: 3px 8px; font-weight: 600;"><?php echo htmlspecialchars($userRole); ?></span>
-                            </div>
-                            <div style="font-size: 12px; color: #475569; margin-top: 2px;">
-                                You are reviewing this user's profile, responsibilities, and directives in Management View.
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <a href="myDashboard.php" class="btn" style="background: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; font-weight: 600; font-size: 12.5px; border-radius: 7px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none;">
-                            <i class="fa fa-arrow-left"></i> Return to My Dashboard
-                        </a>
-                    </div>
-                </div>
-                <?php endif; ?>
 
                 <!-- 2. Tab Content Panes -->
                 <div class="dash-tab-content">
                     
                     <!-- Profile Tab Pane -->
-                    <div class="dash-tab-pane active" id="pane-profile">
+                    <div class="dash-tab-pane" id="pane-profile">
                         
                         <!-- MasterCreator Styled Card with Distinct Header -->
                         <div class="qms_complete_btn header-theme-profile">
@@ -3746,10 +3874,10 @@
                             </div>
 
                             <!-- Applicable Records & Resource Issue Record Side-by-Side Row -->
-                            <div class="row profile-records-row" style="margin: 16px 8px 0 8px; display: flex; flex-wrap: wrap;">
-                                <div class="col-sm-6 profile-records-col" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
+                            <div class="row profile-records-row">
+                                <div class="col-sm-6 profile-records-col">
                                     <!-- 1. APPLICABLE RECORDS (BLUE / SAPPHIRE THEME) -->
-                                    <div class="profile-records-container records-theme-blue" data-card-section="applicable_records" style="width: 100%; flex: 1;">
+                                    <div class="profile-records-container records-theme-blue" data-card-section="applicable_records">
                                         <div class="records-section-title" data-toggle-card="applicable_records" title="Click to collapse / expand">
                                             <div class="records-title-main">
                                                 <div class="records-title-icon-wrap">
@@ -3777,45 +3905,28 @@
                                         <div class="records-section-body" id="recordsBodyAppRec">
                                             <?php if (!empty($recordGroups)): ?>
                                                 <?php foreach ($recordGroups as $grp): ?>
-                                                    <?php if (!empty($grp['header'])): ?>
-                                                        <div class="record-category-card">
-                                                            <div class="record-category-header" title="Click to collapse / expand items">
-                                                                <div style="display: flex; align-items: center; gap: 8px;">
-                                                                    <i class="fa fa-folder-open-o"></i>
-                                                                    <span><?php echo htmlspecialchars($grp['header']); ?></span>
-                                                                </div>
-                                                                <div style="display: flex; align-items: center; gap: 6px;">
-                                                                    <?php if (!empty($grp['items'])): ?>
-                                                                        <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
-                                                                    <?php endif; ?>
-                                                                    <i class="fa fa-chevron-up category-chevron" style="font-size: 10px; opacity: 0.7;"></i>
-                                                                </div>
+                                                    <?php 
+                                                        $grpHeader = trim($grp['header'] ?? '');
+                                                        $grpDesc = trim($grp['desc'] ?? '');
+                                                        if ($grpDesc === '' && !empty($grp['items'])) {
+                                                            $grpDesc = implode("\n", $grp['items']);
+                                                        }
+                                                        $isGenericHeader = in_array(strtolower($grpHeader), ['records', 'applicable records', 'applicable record', 'document', 'documents']);
+                                                    ?>
+                                                    <div class="records-unified-box">
+                                                        <?php if ($grpHeader !== '' && !$isGenericHeader): ?>
+                                                            <div class="records-unified-header">
+                                                                <i class="fa fa-folder-open-o"></i> <span><?php echo htmlspecialchars($grpHeader); ?></span>
                                                             </div>
-                                                            <?php if (!empty($grp['items'])): ?>
-                                                                <div class="records-clean-list">
-                                                                    <?php foreach ($grp['items'] as $index => $item): ?>
-                                                                        <div class="record-clean-item">
-                                                                            <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                            <i class="fa fa-file-text-o record-clean-icon"></i>
-                                                                            <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
-                                                                        </div>
-                                                                    <?php endforeach; ?>
-                                                                </div>
-                                                            <?php else: ?>
-                                                                <div class="records-empty-placeholder" style="padding: 10px 14px;">No items specified under this header</div>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                    <?php elseif (!empty($grp['items'])): ?>
-                                                        <div class="records-clean-list" style="margin-bottom: 12px;">
-                                                            <?php foreach ($grp['items'] as $index => $item): ?>
-                                                                <div class="record-clean-item">
-                                                                    <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                    <i class="fa fa-file-text-o record-clean-icon"></i>
-                                                                    <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
-                                                                </div>
-                                                            <?php endforeach; ?>
-                                                        </div>
-                                                    <?php endif; ?>
+                                                        <?php endif; ?>
+                                                        <?php if ($grpDesc !== ''): ?>
+                                                            <div class="records-unified-text">
+                                                                <?php echo nl2br(htmlspecialchars($grpDesc)); ?>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <div class="records-empty-placeholder" style="padding: 10px 14px;">No records specified</div>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 <?php endforeach; ?>
                                             <?php else: ?>
                                                 <?php if ($canEditProfileSections): ?>
@@ -3834,9 +3945,9 @@
                                     </div>
                                 </div>
 
-                                <div class="col-sm-6 profile-records-col" style="padding: 0 8px; margin-bottom: 16px; display: flex; flex-direction: column;">
+                                <div class="col-sm-6 profile-records-col">
                                     <!-- 2. RESOURCE ISSUE RECORD (WARM AMBER / ORANGE THEME) -->
-                                    <div class="profile-records-container records-theme-amber" data-card-section="resource_issue_record" style="width: 100%; flex: 1;">
+                                    <div class="profile-records-container records-theme-amber" data-card-section="resource_issue_record">
                                         <div class="records-section-title" data-toggle-card="resource_issue_record" title="Click to collapse / expand">
                                             <div class="records-title-main">
                                                 <div class="records-title-icon-wrap">
@@ -3864,45 +3975,28 @@
                                         <div class="records-section-body" id="recordsBodyResIssue">
                                             <?php if (!empty($resIssueGroups)): ?>
                                                 <?php foreach ($resIssueGroups as $grp): ?>
-                                                    <?php if (!empty($grp['header'])): ?>
-                                                        <div class="record-category-card">
-                                                            <div class="record-category-header" title="Click to collapse / expand items">
-                                                                <div style="display: flex; align-items: center; gap: 8px;">
-                                                                    <i class="fa fa-wrench"></i>
-                                                                    <span><?php echo htmlspecialchars($grp['header']); ?></span>
-                                                                </div>
-                                                                <div style="display: flex; align-items: center; gap: 6px;">
-                                                                    <?php if (!empty($grp['items'])): ?>
-                                                                        <span class="category-count-badge"><?php echo count($grp['items']); ?> item<?php echo count($grp['items']) > 1 ? 's' : ''; ?></span>
-                                                                    <?php endif; ?>
-                                                                    <i class="fa fa-chevron-up category-chevron" style="font-size: 10px; opacity: 0.7;"></i>
-                                                                </div>
+                                                    <?php 
+                                                        $grpHeader = trim($grp['header'] ?? '');
+                                                        $grpDesc = trim($grp['desc'] ?? '');
+                                                        if ($grpDesc === '' && !empty($grp['items'])) {
+                                                            $grpDesc = implode("\n", $grp['items']);
+                                                        }
+                                                        $isGenericHeader = in_array(strtolower($grpHeader), ['recources', 'resources', 'resource', 'resource issue', 'resource issues', 'resource issue record']);
+                                                    ?>
+                                                    <div class="records-unified-box">
+                                                        <?php if ($grpHeader !== '' && !$isGenericHeader): ?>
+                                                            <div class="records-unified-header records-unified-header-amber">
+                                                                <i class="fa fa-wrench"></i> <span><?php echo htmlspecialchars($grpHeader); ?></span>
                                                             </div>
-                                                            <?php if (!empty($grp['items'])): ?>
-                                                                <div class="records-clean-list">
-                                                                    <?php foreach ($grp['items'] as $index => $item): ?>
-                                                                        <div class="record-clean-item">
-                                                                            <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                            <i class="fa fa-exclamation-circle record-clean-icon"></i>
-                                                                            <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
-                                                                        </div>
-                                                                    <?php endforeach; ?>
-                                                                </div>
-                                                            <?php else: ?>
-                                                                <div class="records-empty-placeholder" style="padding: 10px 14px;">No items specified under this header</div>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                    <?php elseif (!empty($grp['items'])): ?>
-                                                        <div class="records-clean-list" style="margin-bottom: 12px;">
-                                                            <?php foreach ($grp['items'] as $index => $item): ?>
-                                                                <div class="record-clean-item">
-                                                                    <span class="record-clean-num"><?php echo ($index + 1); ?></span>
-                                                                    <i class="fa fa-exclamation-circle record-clean-icon"></i>
-                                                                    <span class="record-clean-text"><?php echo htmlspecialchars($item); ?></span>
-                                                                </div>
-                                                            <?php endforeach; ?>
-                                                        </div>
-                                                    <?php endif; ?>
+                                                        <?php endif; ?>
+                                                        <?php if ($grpDesc !== ''): ?>
+                                                            <div class="records-unified-text">
+                                                                <?php echo nl2br(htmlspecialchars($grpDesc)); ?>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <div class="records-empty-placeholder" style="padding: 10px 14px;">No resource issues specified</div>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 <?php endforeach; ?>
                                             <?php else: ?>
                                                 <?php if ($canEditProfileSections): ?>
@@ -4021,7 +4115,7 @@
                     </div>
 
                     <!-- 3. Task Management Tab Pane -->
-                    <div class="dash-tab-pane" id="pane-task-mgmt">
+                    <div class="dash-tab-pane active" id="pane-task-mgmt">
                         <?php
                         $targetDashboardUid = (int)($userRow['user_id'] ?? $actualLoggedInUserId);
                         $targetDashboardName = $userName;
@@ -4322,7 +4416,7 @@ $(document).ready(function() {
     });
 
     // Toggle main section cards
-    $(document).on('click', '.records-section-title, .btn-records-toggle-action', function(e) {
+    $(document).on('click', '.records-section-title', function(e) {
         // Do not toggle if clicking Add/Edit button or empty state clickable
         if ($(e.target).closest('.btn-records-edit-action, .records-empty-clickable').length > 0) {
             return;
@@ -4346,9 +4440,8 @@ $(document).ready(function() {
             localStorage.setItem('aitf_dash_card_collapsed_' + cardKey, '0');
         } else {
             // Collapse / Close
-            $body.stop(true, true).slideUp(220, function() {
-                $container.addClass('is-collapsed');
-            });
+            $container.addClass('is-collapsed');
+            $body.stop(true, true).slideUp(220);
             $container.find('.btn-records-toggle-action').attr('title', 'Expand Section');
             localStorage.setItem('aitf_dash_card_collapsed_' + cardKey, '1');
         }
@@ -4371,6 +4464,18 @@ $(document).ready(function() {
         }
     });
 
+    // Sticky tabs bar scroll state handler
+    function checkTabsBarSticky() {
+        var scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        if (scrollY > 10) {
+            $('.dash-tabs-bar').addClass('is-sticky');
+        } else {
+            $('.dash-tabs-bar').removeClass('is-sticky');
+        }
+    }
+    $(window).on('scroll', checkTabsBarSticky);
+    checkTabsBarSticky();
+
     $('.dash-tab-btn').on('click', function(e) {
         var target = $(this).data('target');
         if (!target) return;
@@ -4388,6 +4493,15 @@ $(document).ready(function() {
             $('.dash-tabs-bar').removeClass('tabs-attached-bottom');
         }
 
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, null, target);
+        }
+
+        // Smooth scroll to top of page when changing tabs if user is scrolled down
+        if (e.originalEvent && (window.pageYOffset || document.documentElement.scrollTop || 0) > 40) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         // Smooth scroll tab into view on mobile
         if (window.innerWidth <= 768 && this.scrollIntoView) {
             try {
@@ -4396,21 +4510,33 @@ $(document).ready(function() {
         }
     });
 
-    // Auto-activate tab from hash if present
-    var hash = window.location.hash;
+    // Auto-activate tab from query param or hash if present (Default landing is Task Management)
+    var urlParams = new URLSearchParams(window.location.search);
+    var tabParam = (urlParams.get('tab') || urlParams.get('pane') || '').toLowerCase().trim();
+    var hash = (window.location.hash || '').toLowerCase().trim();
+
     if (hash && $('.dash-tab-btn[data-target="' + hash + '"]').length) {
         $('.dash-tab-btn[data-target="' + hash + '"]').click();
-    } else if (hash === '#guidelines' || hash === '#pane-guidelines' || hash === '#work-guidelines') {
+    } else if (hash === '#profile' || hash === '#pane-profile' || tabParam === 'profile' || tabParam === 'pane-profile') {
+        $('.dash-tab-btn[data-target="#pane-profile"]').click();
+    } else if (hash === '#guidelines' || hash === '#pane-guidelines' || hash === '#work-guidelines' || tabParam === 'guidelines' || tabParam === 'pane-guidelines') {
         $('.dash-tab-btn[data-target="#pane-guidelines"]').click();
-    } else if (hash === '#tasks' || hash === '#task-mgmt' || hash === '#pane-task-mgmt' || hash === '#task') {
-        $('.dash-tab-btn[data-target="#pane-task-mgmt"]').click();
-    } else if (hash === '#attendance' || hash === '#pane-attendance') {
+    } else if (hash === '#attendance' || hash === '#pane-attendance' || tabParam === 'attendance' || tabParam === 'pane-attendance') {
         $('.dash-tab-btn[data-target="#pane-attendance"]').click();
+    } else if (hash === '#tasks' || hash === '#task-mgmt' || hash === '#pane-task-mgmt' || hash === '#task' || tabParam === 'tasks' || tabParam === 'task' || tabParam === 'task-mgmt' || tabParam === 'pane-task-mgmt') {
+        $('.dash-tab-btn[data-target="#pane-task-mgmt"]').click();
+    } else {
+        // Always land on Task Management by default
+        if (!$('.dash-tab-btn[data-target="#pane-task-mgmt"]').hasClass('active')) {
+            $('.dash-tab-btn[data-target="#pane-task-mgmt"]').click();
+        }
     }
 
     // Set initial tabs attached state
     if ($('.dash-tab-btn.active').data('target') === '#pane-task-mgmt') {
         $('.dash-tabs-bar').addClass('tabs-attached-bottom');
+    } else {
+        $('.dash-tabs-bar').removeClass('tabs-attached-bottom');
     }
 
     // Live filter for work guidelines

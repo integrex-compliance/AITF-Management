@@ -24,6 +24,8 @@ RewriteRule ^fix_.*\.php$ - [F,L,NC]
 RewriteRule ^generate_.*mail\.php$ - [F,L,NC]
 RewriteRule ^sync_old_data\.php$ - [F,L,NC]
 RewriteRule ^populate_service_data\.php$ - [F,L,NC]
+RewriteRule ^dump.* - [F,L,NC]
+RewriteRule ^check_js.* - [F,L,NC]
 
 
 <IfModule mod_php7.c>
@@ -126,6 +128,19 @@ RewriteRule ^policy/?$ policy.php [NC,L,QSA]
 RewriteRule ^news/?$ news.php [NC,L,QSA]
 RewriteRule ^login/?$ login.php [NC,L,QSA]
 
+# Modern Error Page Routes
+RewriteRule ^error/?$ error.php [NC,L,QSA]
+RewriteRule ^error/([0-9]{3})/?$ error.php?code=$1 [NC,L,QSA]
+RewriteRule ^400/?$ error.php?code=400 [NC,L,QSA]
+RewriteRule ^401/?$ error.php?code=401 [NC,L,QSA]
+RewriteRule ^403/?$ error.php?code=403 [NC,L,QSA]
+RewriteRule ^404/?$ error.php?code=404 [NC,L,QSA]
+RewriteRule ^405/?$ error.php?code=405 [NC,L,QSA]
+RewriteRule ^500/?$ error.php?code=500 [NC,L,QSA]
+RewriteRule ^502/?$ error.php?code=502 [NC,L,QSA]
+RewriteRule ^503/?$ error.php?code=503 [NC,L,QSA]
+RewriteRule ^504/?$ error.php?code=504 [NC,L,QSA]
+
 
 
 # ----------------------------------------------------
@@ -141,8 +156,31 @@ RewriteRule ^(.*)$ $1.php [L,QSA]
 # ----------------------------------------------------
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{HTTP_ACCEPT} text/html [NC]
-RewriteRule ^ loginRedirect.php?reason=not_found [L,QSA]
+RewriteRule ^ error.php?code=404 [L,QSA]
+
+# ----------------------------------------------------
+# 6. Global HTTP Error Documents (Apache native errors)
+# ----------------------------------------------------
+<If "%{HTTP_HOST} =~ /localhost|127\.0\.0\.1/">
+    ErrorDocument 400 /public_html/error.php?code=400
+    ErrorDocument 401 /public_html/error.php?code=401
+    ErrorDocument 403 /public_html/error.php?code=403
+    ErrorDocument 404 /public_html/error.php?code=404
+    ErrorDocument 500 /public_html/error.php?code=500
+    ErrorDocument 502 /public_html/error.php?code=502
+    ErrorDocument 503 /public_html/error.php?code=503
+    ErrorDocument 504 /public_html/error.php?code=504
+</If>
+<Else>
+    ErrorDocument 400 /error.php?code=400
+    ErrorDocument 401 /error.php?code=401
+    ErrorDocument 403 /error.php?code=403
+    ErrorDocument 404 /error.php?code=404
+    ErrorDocument 500 /error.php?code=500
+    ErrorDocument 502 /error.php?code=502
+    ErrorDocument 503 /error.php?code=503
+    ErrorDocument 504 /error.php?code=504
+</Else>
 
 # Enable compression for text assets
 <IfModule mod_deflate.c>

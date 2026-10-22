@@ -124,6 +124,28 @@ if (!function_exists('aitf_ensure_tasks_schema')) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
             
             $db->exec($sql);
+
+            // Self-healing check: Ensure `id` is PRIMARY KEY and AUTO_INCREMENT
+            try {
+                $pkCol = $db->query("SHOW COLUMNS FROM `aitf_tasks` LIKE 'id'")->fetch(PDO::FETCH_ASSOC);
+                if ($pkCol && strpos(strtolower($pkCol['Extra'] ?? ''), 'auto_increment') === false) {
+                    $hasPk = (($pkCol['Key'] ?? '') === 'PRI');
+                    if (!$hasPk) {
+                        $zeroCount = (int)$db->query("SELECT COUNT(*) FROM `aitf_tasks` WHERE `id` = 0")->fetchColumn();
+                        if ($zeroCount > 0) {
+                            $nextId = (int)$db->query("SELECT MAX(id) FROM `aitf_tasks`")->fetchColumn() + 1;
+                            $zeroRows = $db->query("SELECT created_at FROM `aitf_tasks` WHERE `id` = 0")->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($zeroRows as $zr) {
+                                $db->prepare("UPDATE `aitf_tasks` SET `id` = :nid WHERE `id` = 0 AND `created_at` = :cat LIMIT 1")
+                                   ->execute([':nid' => $nextId++, ':cat' => $zr['created_at']]);
+                            }
+                        }
+                        $db->exec("ALTER TABLE `aitf_tasks` ADD PRIMARY KEY (`id`)");
+                    }
+                    $db->exec("ALTER TABLE `aitf_tasks` MODIFY `id` INT(11) NOT NULL AUTO_INCREMENT");
+                }
+            } catch (Throwable $e) {}
+
             $taskSchemaEnsured = true;
         } catch (Throwable $e) {
             error_log("Failed to ensure aitf_tasks schema: " . $e->getMessage());
@@ -326,8 +348,13 @@ if (!function_exists('aitf_create_task')) {
 
             $newId = (int)$db->lastInsertId();
 
-            $fetchStmt = $db->prepare("SELECT * FROM `aitf_tasks` WHERE `id` = :id LIMIT 1");
-            $fetchStmt->execute([':id' => $newId]);
+            if ($newId <= 0) {
+                $fetchStmt = $db->prepare("SELECT * FROM `aitf_tasks` WHERE `title` = :title AND `assigned_to_user_id` = :to_id ORDER BY `id` DESC LIMIT 1");
+                $fetchStmt->execute([':title' => $title, ':to_id' => $assignedToId]);
+            } else {
+                $fetchStmt = $db->prepare("SELECT * FROM `aitf_tasks` WHERE `id` = :id LIMIT 1");
+                $fetchStmt->execute([':id' => $newId]);
+            }
             $task = $fetchStmt->fetch(PDO::FETCH_ASSOC);
 
             if ($task) {

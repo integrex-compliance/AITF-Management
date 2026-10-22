@@ -846,42 +846,36 @@ if (!isset($targetAttendanceRole)) {
     }
 
     // Attendance data cache (Key: 'YYYY-MM-DD' => Object)
-    window.AITF_ATTENDANCE_CACHE = window.AITF_ATTENDANCE_CACHE || {};
-
-    // Initial realistic demonstration entries for current month preview
-    var curY = today.getFullYear();
-    var curM = today.getMonth();
-    var sampleLate = curY + '-' + padZero(curM + 1) + '-07';
-    var sampleLeave = curY + '-' + padZero(curM + 1) + '-14';
-    var sampleHalf = curY + '-' + padZero(curM + 1) + '-22';
-
-    if (!window.AITF_ATTENDANCE_CACHE[sampleLate]) {
-        window.AITF_ATTENDANCE_CACHE[sampleLate] = {
-            status: 'late',
-            label: 'Late Login',
-            inTime: '10:20 AM',
-            outTime: '06:30 PM',
-            note: '20 mins late'
-        };
+<?php
+    $dbAttendanceMap = [];
+    if (isset($db) && $db instanceof PDO && !empty($targetAttendanceUid)) {
+        try {
+            $attStmt = $db->prepare("
+                SELECT attendance_date, status, in_time, out_time, remarks, punch_in_selfie_url 
+                FROM aitf_attendance 
+                WHERE user_id = :uid 
+                  AND attendance_date >= DATE_SUB(CURDATE(), INTERVAL 120 DAY)
+                ORDER BY attendance_date ASC
+            ");
+            $attStmt->execute([':uid' => $targetAttendanceUid]);
+            $rawRecords = $attStmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rawRecords as $r) {
+                $d = $r['attendance_date'];
+                $dbAttendanceMap[$d] = [
+                    'status' => $r['status'],
+                    'label' => ($r['status'] === 'late') ? 'Late Login' : (($r['status'] === 'halfday') ? 'Half Day' : ucfirst($r['status'])),
+                    'inTime' => !empty($r['in_time']) ? date('h:i A', strtotime($r['in_time'])) : '--',
+                    'outTime' => !empty($r['out_time']) ? date('h:i A', strtotime($r['out_time'])) : '--',
+                    'note' => $r['remarks'] ?? '',
+                    'selfieUrl' => $r['punch_in_selfie_url'] ?? ''
+                ];
+            }
+        } catch (Exception $e) {
+            error_log("Error loading attendance map: " . $e->getMessage());
+        }
     }
-    if (!window.AITF_ATTENDANCE_CACHE[sampleLeave]) {
-        window.AITF_ATTENDANCE_CACHE[sampleLeave] = {
-            status: 'leave',
-            label: 'Leave',
-            inTime: '--',
-            outTime: '--',
-            note: 'Casual Leave'
-        };
-    }
-    if (!window.AITF_ATTENDANCE_CACHE[sampleHalf]) {
-        window.AITF_ATTENDANCE_CACHE[sampleHalf] = {
-            status: 'halfday',
-            label: 'Half Day',
-            inTime: '09:30 AM',
-            outTime: '02:00 PM',
-            note: 'First half attended'
-        };
-    }
+?>
+    window.AITF_ATTENDANCE_CACHE = <?php echo json_encode($dbAttendanceMap, JSON_UNESCAPED_SLASHES); ?> || {};
 
     // Render Calendar Grid
     function renderCalendar(year, month) {

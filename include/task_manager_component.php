@@ -209,6 +209,58 @@ $totalCount = $pendingCount + $completedCount;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
+/* Self Assigned Task Card Styling (Subtle soft grey with slate accent) */
+.todo-card.is-self-task {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    border-left: 3.5px solid #94a3b8;
+}
+
+.todo-card.is-self-task:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.todo-card.is-self-task.is-expanded {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+.todo-card.is-completed.is-self-task {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    border-left: 3.5px solid #cbd5e1;
+}
+
+.todo-self-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #475569;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1.25;
+}
+
+/* Self Assigned Pill */
+.todo-meta-pill.pill-assigned-by.pill-self-assigned {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+.todo-meta-pill.pill-assigned-by.pill-self-assigned i {
+    color: #64748b;
+}
+.todo-meta-pill.pill-assigned-by.pill-self-assigned strong {
+    color: #1e293b;
+}
+
 .todo-card.is-expanded .todo-check-circle {
     margin-top: 1px;
 }
@@ -1300,23 +1352,30 @@ html.theme-dark .todo-forward-footer {
         <?php foreach ($pendingTasks as $task): 
             $isOverdue = (!empty($task['due_date']) && $task['due_date'] !== '0000-00-00' && strtotime($task['due_date']) < strtotime(date('Y-m-d')));
             $assignedDateStr = !empty($task['created_at']) && $task['created_at'] !== '0000-00-00 00:00:00' 
-                ? date('D, j M Y', strtotime($task['created_at'])) 
-                : date('D, j M Y', strtotime('-2 days'));
+                ? date('D, j M Y, h:i A', strtotime($task['created_at'])) 
+                : date('D, j M Y, h:i A', strtotime('-2 days'));
             $dueDateStr = !empty($task['due_date']) && $task['due_date'] !== '0000-00-00' 
                 ? date('D, j M Y', strtotime($task['due_date'])) 
                 : '';
+            $isSelfTask = (
+                (!empty($task['assigned_by_user_id']) && !empty($task['assigned_to_user_id']) && (int)$task['assigned_by_user_id'] === (int)$task['assigned_to_user_id'])
+                || (!empty($task['assigned_by_name']) && !empty($task['assigned_to_name']) && strcasecmp(trim($task['assigned_by_name']), trim($task['assigned_to_name'])) === 0)
+            );
         ?>
-        <div class="todo-card" data-task-id="<?php echo (int)$task['id']; ?>" data-status="pending" data-important="<?php echo !empty($task['is_important']) ? '1' : '0'; ?>">
+        <div class="todo-card <?php echo $isSelfTask ? 'is-self-task' : ''; ?>" data-task-id="<?php echo (int)$task['id']; ?>" data-status="pending" data-important="<?php echo !empty($task['is_important']) ? '1' : '0'; ?>" data-self="<?php echo $isSelfTask ? '1' : '0'; ?>">
             <span class="todo-check-circle" data-task-id="<?php echo (int)$task['id']; ?>" title="Mark as completed"></span>
             <div class="todo-content">
-                <p class="todo-task-title"><?php echo htmlspecialchars($task['title']); ?></p>
+                <p class="todo-task-title">
+                    <?php echo htmlspecialchars($task['title']); ?>
+                    <?php if ($isSelfTask): ?><span class="todo-self-tag" title="Self Assigned Task">Self</span><?php endif; ?>
+                </p>
                 <div class="todo-meta-row">
                     <span class="todo-meta-pill pill-assigned-date" title="Task Assigned Date">
                         <i class="fa fa-calendar-check-o"></i> Assigned Date: <strong><?php echo htmlspecialchars($assignedDateStr); ?></strong>
                     </span>
 
-                    <span class="todo-meta-pill pill-assigned-by" title="Assigned by">
-                        <i class="fa fa-user"></i> Assigned by: <strong><?php echo htmlspecialchars($task['assigned_by_name'] ?? 'Top Mgmt'); ?></strong>
+                    <span class="todo-meta-pill pill-assigned-by <?php echo $isSelfTask ? 'pill-self-assigned' : ''; ?>" title="<?php echo $isSelfTask ? 'Self Assigned Task' : 'Assigned by'; ?>">
+                        <i class="fa <?php echo $isSelfTask ? 'fa-user-circle-o' : 'fa-user'; ?>"></i> Assigned by: <strong><?php echo htmlspecialchars($task['assigned_by_name'] ?? 'Top Mgmt'); ?><?php echo $isSelfTask ? ' (Self)' : ''; ?></strong>
                     </span>
 
                     <?php if (!empty($dueDateStr)): ?>
@@ -1369,22 +1428,29 @@ html.theme-dark .todo-forward-footer {
         <div class="todo-list-container" id="todoCompletedList">
             <?php foreach ($completedTasks as $task): 
                 $assignedDateStr = !empty($task['created_at']) && $task['created_at'] !== '0000-00-00 00:00:00' 
-                    ? date('D, j M Y', strtotime($task['created_at'])) 
-                    : date('D, j M Y', strtotime('-5 days'));
+                    ? date('D, j M Y, h:i A', strtotime($task['created_at'])) 
+                    : date('D, j M Y, h:i A', strtotime('-5 days'));
+                $isSelfTask = (
+                    (!empty($task['assigned_by_user_id']) && !empty($task['assigned_to_user_id']) && (int)$task['assigned_by_user_id'] === (int)$task['assigned_to_user_id'])
+                    || (!empty($task['assigned_by_name']) && !empty($task['assigned_to_name']) && strcasecmp(trim($task['assigned_by_name']), trim($task['assigned_to_name'])) === 0)
+                );
             ?>
-            <div class="todo-card is-completed" data-task-id="<?php echo (int)$task['id']; ?>" data-status="completed" data-important="<?php echo !empty($task['is_important']) ? '1' : '0'; ?>">
+            <div class="todo-card is-completed <?php echo $isSelfTask ? 'is-self-task' : ''; ?>" data-task-id="<?php echo (int)$task['id']; ?>" data-status="completed" data-important="<?php echo !empty($task['is_important']) ? '1' : '0'; ?>" data-self="<?php echo $isSelfTask ? '1' : '0'; ?>">
                 <span class="todo-check-circle" data-task-id="<?php echo (int)$task['id']; ?>" title="Mark as incomplete">
                     <i class="fa fa-check" style="font-size: 10px;"></i>
                 </span>
                 <div class="todo-content">
-                    <p class="todo-task-title"><?php echo htmlspecialchars($task['title']); ?></p>
+                    <p class="todo-task-title">
+                        <?php echo htmlspecialchars($task['title']); ?>
+                        <?php if ($isSelfTask): ?><span class="todo-self-tag" title="Self Assigned Task">Self</span><?php endif; ?>
+                    </p>
                     <div class="todo-meta-row">
                         <span class="todo-meta-pill pill-assigned-date" title="Task Assigned Date">
                             <i class="fa fa-calendar-check-o"></i> Assigned Date: <strong><?php echo htmlspecialchars($assignedDateStr); ?></strong>
                         </span>
 
-                        <span class="todo-meta-pill pill-assigned-by" title="Assigned by">
-                            <i class="fa fa-user"></i> Assigned by: <strong><?php echo htmlspecialchars($task['assigned_by_name'] ?? 'Top Mgmt'); ?></strong>
+                        <span class="todo-meta-pill pill-assigned-by <?php echo $isSelfTask ? 'pill-self-assigned' : ''; ?>" title="<?php echo $isSelfTask ? 'Self Assigned Task' : 'Assigned by'; ?>">
+                            <i class="fa <?php echo $isSelfTask ? 'fa-user-circle-o' : 'fa-user'; ?>"></i> Assigned by: <strong><?php echo htmlspecialchars($task['assigned_by_name'] ?? 'Top Mgmt'); ?><?php echo $isSelfTask ? ' (Self)' : ''; ?></strong>
                         </span>
 
                         <?php if (!empty($task['completed_at'])): ?>
@@ -1642,8 +1708,28 @@ html.theme-dark .todo-forward-footer {
         var assignedBy = $('<div>').text(t.assigned_by_name || 'Top Mgmt').html();
         var assignedTo = $('<div>').text(t.assigned_to_name || '').html();
 
+        var isSelfTask = (
+            (t.assigned_by_user_id && t.assigned_to_user_id && parseInt(t.assigned_by_user_id) === parseInt(t.assigned_to_user_id))
+            || (t.assigned_by_name && t.assigned_to_name && t.assigned_by_name.trim().toLowerCase() === t.assigned_to_name.trim().toLowerCase())
+        );
+        var selfTagHtml = isSelfTask ? '<span class="todo-self-tag" title="Self Assigned Task">Self</span>' : '';
+        var assignedByPill = '<span class="todo-meta-pill pill-assigned-by ' + (isSelfTask ? 'pill-self-assigned' : '') + '" title="' + (isSelfTask ? 'Self Assigned Task' : 'Assigned by') + '">' +
+            '<i class="fa ' + (isSelfTask ? 'fa-user-circle-o' : 'fa-user') + '"></i> Assigned by: <strong>' + assignedBy + (isSelfTask ? ' (Self)' : '') + '</strong>' +
+            '</span>';
+
+        function formatTime12h(dateObj) {
+            var hours = dateObj.getHours();
+            var minutes = dateObj.getMinutes();
+            var ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            var hStr = (hours < 10 ? '0' : '') + hours;
+            var mStr = (minutes < 10 ? '0' : '') + minutes;
+            return hStr + ':' + mStr + ' ' + ampm;
+        }
+
         var createdDate = t.created_at ? new Date(t.created_at.replace(/-/g, '/')) : new Date();
-        var assignedDateStr = days[createdDate.getDay()] + ', ' + createdDate.getDate() + ' ' + months[createdDate.getMonth()] + ' ' + createdDate.getFullYear();
+        var assignedDateStr = days[createdDate.getDay()] + ', ' + createdDate.getDate() + ' ' + months[createdDate.getMonth()] + ' ' + createdDate.getFullYear() + ', ' + formatTime12h(createdDate);
 
         var dueDatePill = '';
         if (t.due_date && t.due_date !== '0000-00-00') {
@@ -1680,7 +1766,7 @@ html.theme-dark .todo-forward-footer {
         var completedPill = '';
         if (isDone && t.completed_at) {
             var cDate = new Date(t.completed_at.replace(/-/g, '/'));
-            var cStr = days[cDate.getDay()] + ', ' + cDate.getDate() + ' ' + months[cDate.getMonth()] + ' ' + cDate.getFullYear();
+            var cStr = days[cDate.getDay()] + ', ' + cDate.getDate() + ' ' + months[cDate.getMonth()] + ' ' + cDate.getFullYear() + ', ' + formatTime12h(cDate);
             completedPill = '<span class="todo-meta-pill pill-completed-date" title="Completed Date">' +
                 '<i class="fa fa-check-circle"></i> Completed: <strong>' + cStr + '</strong>' +
                 '</span>';
@@ -1693,19 +1779,17 @@ html.theme-dark .todo-forward-footer {
                 '</span>';
         }
 
-        return '<div class="todo-card ' + (isDone ? 'is-completed' : '') + '" data-task-id="' + taskId + '" data-status="' + (isDone ? 'completed' : 'pending') + '" data-important="' + (isStar ? '1' : '0') + '">' +
+        return '<div class="todo-card ' + (isDone ? 'is-completed ' : '') + (isSelfTask ? 'is-self-task ' : '') + '" data-task-id="' + taskId + '" data-status="' + (isDone ? 'completed' : 'pending') + '" data-important="' + (isStar ? '1' : '0') + '" data-self="' + (isSelfTask ? '1' : '0') + '">' +
             '<span class="todo-check-circle" data-task-id="' + taskId + '" title="' + (isDone ? 'Mark incomplete' : 'Mark completed') + '">' +
                 (isDone ? '<i class="fa fa-check" style="font-size: 10px;"></i>' : '') +
             '</span>' +
             '<div class="todo-content">' +
-                '<p class="todo-task-title">' + title + '</p>' +
+                '<p class="todo-task-title">' + title + selfTagHtml + '</p>' +
                 '<div class="todo-meta-row">' +
                     '<span class="todo-meta-pill pill-assigned-date" title="Task Assigned Date">' +
                         '<i class="fa fa-calendar-check-o"></i> Assigned Date: <strong>' + assignedDateStr + '</strong>' +
                     '</span>' +
-                    '<span class="todo-meta-pill pill-assigned-by" title="Assigned by">' +
-                        '<i class="fa fa-user"></i> Assigned by: <strong>' + assignedBy + '</strong>' +
-                    '</span>' +
+                    assignedByPill +
                     dueDatePill +
                     remindPill +
                     assignedToPill +
