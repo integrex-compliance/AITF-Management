@@ -134,6 +134,7 @@ function runAutoSendIntimationDue($db) {
         $mailer->SMTPKeepAlive = false;
     };
 
+    $notDeletedIntimation = " AND (svcdt.is_intimation_deleted IS NULL OR svcdt.is_intimation_deleted = 'N')";
     $excludeWithdrawn = " AND (ci.audit_status IS NULL OR ci.audit_status <> 'Withdrawn')";
     $latestCertificationService = aitfLatestCertificationServiceSubquery('ci');
     $validActions = "'Suspension Reminder', 'Suspend Letter', 'Withdrawal Reminder', 'Withdrawal Letter', 'Withdraw Letter', '1st Reminder', '2nd Reminder', 'Expire Letter'";
@@ -146,7 +147,7 @@ function runAutoSendIntimationDue($db) {
                 AND svcdt.action IN (" . $validActions . ") 
                 AND svcdt.due_date <= NOW() 
                 AND svcdt.status != 'sent' 
-                AND svcdt.is_deleted = 'N' " . $excludeWithdrawn . " 
+                AND svcdt.is_deleted = 'N'" . $notDeletedIntimation . $excludeWithdrawn . " 
               ORDER BY svcdt.due_date ASC";
 
     $statement = $db->prepare($query);

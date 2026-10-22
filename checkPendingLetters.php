@@ -39,6 +39,7 @@ try {
                 AND svcdt.due_date <= CURDATE() 
                 AND svcdt.status != 'sent' 
                 AND svcdt.is_deleted = 'N'
+                AND (svcdt.is_intimation_deleted IS NULL OR svcdt.is_intimation_deleted = 'N')
                 AND (ci.audit_status IS NULL OR ci.audit_status <> 'Withdrawn')
                 AND (ci.audit_status IS NULL OR ci.audit_status <> 'Application canceled')
               ORDER BY svcdt.due_date ASC";

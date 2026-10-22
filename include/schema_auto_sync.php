@@ -856,6 +856,104 @@ if (!function_exists('aitf_migrate_legacy_tds_to_payment_columns')) {
             if (function_exists('aitf_ensure_tasks_schema')) {
                 aitf_ensure_tasks_schema($db);
             }
+
+            // Ensure Mobile Attendance, Biometrics & Mobile Tokens Schema
+            $db->exec("CREATE TABLE IF NOT EXISTS `aitf_systems` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `system_code` VARCHAR(50) NOT NULL UNIQUE,
+                `system_name` VARCHAR(150) NOT NULL,
+                `api_base_url` VARCHAR(255) DEFAULT NULL,
+                `secret_key` VARCHAR(128) NOT NULL,
+                `is_active` TINYINT(1) DEFAULT 1,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            $db->exec("INSERT IGNORE INTO `aitf_systems` (`system_code`, `system_name`, `secret_key`, `is_active`)
+                       VALUES ('AITF_MAIN', 'AITF Central Enterprise', SHA2('AITF_SECURE_2026', 256), 1)");
+
+            $db->exec("CREATE TABLE IF NOT EXISTS `aitf_mobile_tokens` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `user_id` INT NOT NULL,
+                `token` VARCHAR(64) NOT NULL UNIQUE,
+                `system_code` VARCHAR(50) DEFAULT 'AITF_MAIN',
+                `device_id` VARCHAR(150) NULL,
+                `device_model` VARCHAR(100) NULL,
+                `os_version` VARCHAR(50) NULL,
+                `last_used_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `expires_at` DATETIME NOT NULL,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX `idx_token_lookup` (`token`, `expires_at`),
+                INDEX `idx_token_user` (`user_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            $db->exec("CREATE TABLE IF NOT EXISTS `aitf_user_biometrics` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `user_id` INT NOT NULL,
+                `system_code` VARCHAR(50) DEFAULT 'AITF_MAIN',
+                `enrollment_photo_url` VARCHAR(500) NOT NULL,
+                `face_embedding` MEDIUMTEXT NOT NULL,
+                `embedding_dimension` INT DEFAULT 192,
+                `enrollment_device_info` VARCHAR(255) NULL,
+                `is_verified` TINYINT(1) DEFAULT 1,
+                `enrolled_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `uk_user_system` (`user_id`, `system_code`),
+                INDEX `idx_bio_user` (`user_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            $db->exec("CREATE TABLE IF NOT EXISTS `aitf_attendance` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `user_id` INT NOT NULL,
+                `system_code` VARCHAR(50) DEFAULT 'AITF_MAIN',
+                `attendance_date` DATE NOT NULL,
+                `in_time` TIME NULL,
+                `out_time` TIME NULL,
+                `total_working_hours` DECIMAL(4,2) DEFAULT 0.00,
+                `status` ENUM('present', 'late', 'halfday', 'leave', 'holiday', 'absent') DEFAULT 'present',
+                `punch_in_selfie_url` VARCHAR(500) NULL,
+                `punch_out_selfie_url` VARCHAR(500) NULL,
+                `face_match_score` DECIMAL(5,4) NULL,
+                `in_latitude` DECIMAL(10,8) NULL,
+                `in_longitude` DECIMAL(11,8) NULL,
+                `in_address` VARCHAR(255) NULL,
+                `out_latitude` DECIMAL(10,8) NULL,
+                `out_longitude` DECIMAL(11,8) NULL,
+                `out_address` VARCHAR(255) NULL,
+                `device_id` VARCHAR(150) NULL,
+                `remarks` VARCHAR(255) NULL,
+                `is_manual_override` TINYINT(1) DEFAULT 0,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `uk_user_date` (`user_id`, `attendance_date`, `system_code`),
+                INDEX `idx_att_user_date` (`user_id`, `attendance_date`),
+                INDEX `idx_att_date` (`attendance_date`),
+                INDEX `idx_att_status` (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            $db->exec("CREATE TABLE IF NOT EXISTS `aitf_user_devices` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `user_id` INT NOT NULL,
+                `system_code` VARCHAR(50) DEFAULT 'AITF_MAIN',
+                `fcm_token` VARCHAR(500) NOT NULL,
+                `device_model` VARCHAR(100) NULL,
+                `os_version` VARCHAR(50) NULL,
+                `app_version` VARCHAR(30) NULL,
+                `last_active` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `uk_user_device_fcm` (`user_id`, `fcm_token`(191)),
+                INDEX `idx_dev_user` (`user_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            $db->exec("CREATE TABLE IF NOT EXISTS `aitf_notifications` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `user_id` INT NOT NULL,
+                `title` VARCHAR(200) NOT NULL,
+                `body` TEXT NOT NULL,
+                `notification_type` VARCHAR(50) DEFAULT 'task_assigned',
+                `reference_id` INT NULL,
+                `is_read` TINYINT(1) DEFAULT 0,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX `idx_notif_user` (`user_id`, `is_read`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         } catch (Throwable $e) {}
     }
 }

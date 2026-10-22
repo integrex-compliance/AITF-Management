@@ -202,6 +202,7 @@ function aitfGetServiceCycleIndex($db, $customerId, $serviceId, $serviceType)
          FROM service
          WHERE customer_id = :customer_id
          AND service_type = :service_type
+         AND (is_deleted IS NULL OR is_deleted = 'NO' OR is_deleted <> 'YES')
          ORDER BY service_id ASC"
     );
     $statement->execute(array(
@@ -542,6 +543,7 @@ function aitfFindNextCertificationServiceAuditDate($db, $serviceId, $customerId 
             WHERE s.customer_id = :customer_id
             AND s.service_type = :service_type
             AND s.service_id > :service_id
+            AND (s.is_deleted IS NULL OR s.is_deleted = 'NO' OR s.is_deleted <> 'YES')
             ORDER BY s.service_id ASC
             LIMIT 1";
     $statement = $db->prepare($sql);
@@ -706,6 +708,7 @@ function aitfSyncExistingClientStatusDatesForCustomer($db, $customerId, $fallbac
          INNER JOIN ca_service_dates csd ON csd.service_id = s.service_id
          WHERE s.customer_id = ?
          AND s.service_type IN ('CA', 'SA-I', 'SA-II', 'RC')
+         AND (s.is_deleted IS NULL OR s.is_deleted = 'NO' OR s.is_deleted <> 'YES')
          AND csd.action IN ($placeholders)"
     );
     $statement->execute($params);
@@ -758,5 +761,6 @@ function aitfLatestCertificationServiceSubquery($aliasName)
     return "(SELECT MAX(tmp.service_id)
              FROM service tmp
              WHERE tmp.customer_id = $aliasName.id
-             AND tmp.service_type IN ('CA', 'SA-I', 'SA-II', 'RC'))";
+             AND tmp.service_type IN ('CA', 'SA-I', 'SA-II', 'RC')
+             AND (tmp.is_deleted IS NULL OR tmp.is_deleted = 'NO' OR tmp.is_deleted <> 'YES'))";
 }
