@@ -8,9 +8,15 @@
 
 session_start();
 include_once './dbConnect.php';
+require_once __DIR__ . '/include/rbac_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 if (isset($_GET['id']) && !empty($_GET['id']) && isset($_GET['columnName'])) {
+    if (!aitf_can_access_customer($_GET['id'])) {
+        http_response_code(403);
+        echo json_encode(array('error' => true, 'message' => 'Access Denied: Client restricted'));
+        exit;
+    }
     try {
         $column = null;
         $dataVal = null;

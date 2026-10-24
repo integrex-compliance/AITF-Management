@@ -17,8 +17,11 @@
 
     $ststus = "YES";
     //    $customerList = "SELECT * FROM customer_info where is_deleted <> 'YES' ORDER BY unique_id";
+    require_once __DIR__ . '/include/rbac_helper.php';
     $hp_role = $_SESSION['role'] ?? '';
-$customerListBase = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES'";
+    // Client 1191 restricted: only Top Mgmt, Admin, Finance can access
+    $customer1191Filter = !aitf_can_access_customer(1191, $hp_role) ? " AND ci.id != 1191" : "";
+$customerListBase = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES'" . $customer1191Filter;
 
 if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B', 'BDM'), true)) {
     // C✔✔ - Active Past One Month+ Running Access
@@ -1178,6 +1181,13 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B', 'BDM'), t
     );
 
     $(document).ready(function () {
+        <?php if (isset($_GET['error']) && $_GET['error'] === 'client_access_denied'): ?>
+        alert("Access Denied: Only Top Management, Admin, and Finance are authorized to open this client.");
+        if (window.history.replaceState) {
+            var cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+        }
+        <?php endif; ?>
 
         // Status tabs: filter instantly on click, no page reload
         $('.hp-tab').on('click', function () {

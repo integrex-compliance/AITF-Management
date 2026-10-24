@@ -182,6 +182,10 @@ function isAuthorizedRequest() {
 if (!isAuthorizedRequest()) {
     outputJSON(array('error' => 'Unauthorized'), 401);
 }
+require_once __DIR__ . '/include/rbac_helper.php';
+if (isset($_GET['customerid']) && !empty($_GET['customerid']) && !aitf_can_access_customer($_GET['customerid'])) {
+    outputJSON(array('error' => true, 'message' => 'Access Denied: Client restricted'), 403);
+}
 session_write_close();
 
 if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {

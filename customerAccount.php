@@ -2,11 +2,30 @@
 require_once __DIR__ . '/include/session_helper.php';
 aitf_start_session();
 
+require_once __DIR__ . '/include/rbac_helper.php';
+
 $currentRole = strtolower(trim((string) ($_SESSION['role'] ?? '')));
 if ($currentRole === 'client' || $currentRole === 'external') {
     $_SESSION['login_error'] = true;
     $_SESSION['login_notice'] = 'Invalid URL. Please login again.';
     header('Location: login.php?reason=invalid_url');
+    exit;
+}
+
+// Client-level access restriction (e.g., customer 1191 restricted to Top Mgmt, Admin, Finance)
+$earlyRequestedCustomerId = 0;
+if (isset($_GET['customerid']) && is_numeric($_GET['customerid'])) {
+    $earlyRequestedCustomerId = (int) $_GET['customerid'];
+} elseif (isset($_POST['customerid']) && is_numeric($_POST['customerid'])) {
+    $earlyRequestedCustomerId = (int) $_POST['customerid'];
+} elseif (isset($_SESSION['current_customer_id']) && is_numeric($_SESSION['current_customer_id'])) {
+    $earlyRequestedCustomerId = (int) $_SESSION['current_customer_id'];
+}
+
+if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCustomerId)) {
+    unset($_SESSION['current_customer_id']);
+    $_SESSION['permission_error'] = 'Access Denied: Login with eligible role to access this client.';
+    header('Location: homePage.php?error=client_access_denied');
     exit;
 }
 ?>
@@ -1077,6 +1096,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
     // 3) If we still don't have a customer id, send the user back to the main dashboard
     if (!isset($_GET['customerid']) || empty($_GET['customerid'])) {
         echo "<script>window.location.href='dashboard';</script>";
+        exit;
+    }
+
+    // Enforce client-level access restriction (e.g., customer 1191 restricted to Top Mgmt, Admin, Finance)
+    if (!aitf_can_access_customer($_GET['customerid'] ?? 0)) {
+        unset($_SESSION['current_customer_id']);
+        echo "<script>alert('Access Denied: Login with eligible role to access this client.'); window.location.href='homePage.php';</script>";
         exit;
     }
 

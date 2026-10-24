@@ -77,6 +77,41 @@ if (!function_exists('aitf_verify_director_credentials')) {
     }
 }
 
+if (!function_exists('aitf_can_access_customer')) {
+    /**
+     * Check if the user with given role can access/open a customer account.
+     * Restriction: Customer 1191 is restricted: only Top Mgmt, Admin, and Finance can open it.
+     *
+     * @param int|string $customerId
+     * @param string|null $role If null, uses $_SESSION['role']
+     * @return bool
+     */
+    function aitf_can_access_customer($customerId, $role = null)
+    {
+        $customerId = (int) (is_scalar($customerId) ? $customerId : 0);
+        if ($customerId === 1191) {
+            $role = $role === null ? ($_SESSION['role'] ?? '') : $role;
+            $cleanRole = strtolower(trim((string)$role));
+            $cleanRoleNoSpace = str_replace(array(' ', '-'), '', $cleanRole);
+
+            // 1. Top Management (Top Mgmt, Director, Main Admin)
+            $isTopMgmt = (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($role))
+                || in_array($cleanRole, array('top mgmt', 'director', 'main admin', 'mgmt', 'top management'), true)
+                || in_array($cleanRoleNoSpace, array('topmgmt', 'mainadmin', 'topmanagement'), true);
+
+            // 2. Admin
+            $isAdmin = ($cleanRole === 'admin');
+
+            // 3. Finance
+            $isFinance = ($cleanRole === 'finance');
+
+            return ($isTopMgmt || $isAdmin || $isFinance);
+        }
+
+        return true;
+    }
+}
+
 if (!function_exists('aitf_ensure_rbac_schema')) {
     function aitf_ensure_rbac_schema(PDO $db)
     {

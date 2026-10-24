@@ -5,6 +5,7 @@ include_once './dbConnect.php';
 require_once __DIR__ . '/utility.php';
 require_once __DIR__ . '/include/rbac_helper.php';
 require_once __DIR__ . '/include/auditor_portal_helper.php';
+aitf_ensure_auditor_portal_schema($db);
 date_default_timezone_set('Asia/Kolkata');
 
 // Check auditor role
@@ -23,35 +24,38 @@ if (!$data) {
 $auditor = $data['auditor'];
 // Determine the correct user_id from the user table
 // Forms are assigned using the user_id from the `user` table, not `auditors_id`.
-$mappedUserId = (int)$_SESSION['id']; 
+$mappedUserId = 0;
 $staffUserRow = null;
 try {
-    $loginEmail = !empty($auditor['login_email']) ? $auditor['login_email'] : ($auditor['email'] ?? '');
-    $eid = !empty($auditor['auditor_number']) ? $auditor['auditor_number'] : '';
-    
-    // Look up by user_id first if $mappedUserId > 0, else by email, e_id, or name
-    if ($mappedUserId > 0) {
-        $uStmt = $db->prepare("SELECT * FROM user WHERE user_id = :uid LIMIT 1");
-        $uStmt->execute([':uid' => $mappedUserId]);
+    $loginEmail = !empty($auditor['login_email']) ? $auditor['login_email'] : (!empty($auditor['auditor_email']) ? $auditor['auditor_email'] : '');
+    $eid = !empty($auditor['auditor_number']) ? $auditor['auditor_number'] : (!empty($auditor['auditor_no']) ? $auditor['auditor_no'] : '');
+    $audName = $auditor['auditor_name'] ?? '';
+
+    // First look up in user table by matching auditor details with role = 'Auditor'
+    $uStmt = $db->prepare("SELECT * FROM user WHERE role = 'Auditor' AND ((LOWER(email_id) = LOWER(:email) AND email_id != '') OR (e_id = :eid AND e_id != '') OR LOWER(user_name) = LOWER(:uname)) LIMIT 1");
+    $uStmt->execute([':email' => $loginEmail, ':eid' => $eid, ':uname' => $audName]);
+    $staffUserRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+
+    // If not found and session id is set, verify if it corresponds to an Auditor user row
+    if (!$staffUserRow && !empty($_SESSION['id'])) {
+        $sessUid = (int)$_SESSION['id'];
+        $uStmt = $db->prepare("SELECT * FROM user WHERE user_id = :uid AND role = 'Auditor' LIMIT 1");
+        $uStmt->execute([':uid' => $sessUid]);
         $staffUserRow = $uStmt->fetch(PDO::FETCH_ASSOC);
     }
-    if (!$staffUserRow) {
-        $uStmt = $db->prepare("SELECT * FROM user WHERE role = 'Auditor' AND ((LOWER(email_id) = LOWER(:email) AND email_id != '') OR (e_id = :eid AND e_id != '') OR LOWER(user_name) = LOWER(:uname)) LIMIT 1");
-        $uStmt->execute([':email' => $loginEmail, ':eid' => $eid, ':uname' => $auditor['auditor_name']]);
-        $staffUserRow = $uStmt->fetch(PDO::FETCH_ASSOC);
-        if ($staffUserRow) {
-            $mappedUserId = (int)$staffUserRow['user_id'];
-        }
+
+    if ($staffUserRow) {
+        $mappedUserId = (int)$staffUserRow['user_id'];
     }
 } catch (Exception $e) {}
 
 // Profile & Dashboard values (from user table if linked, fallback to auditor table)
 $audStaffName = !empty($staffUserRow['user_name']) ? $staffUserRow['user_name'] : $auditor['auditor_name'];
-$audStaffEmail = !empty($staffUserRow['email_id']) ? $staffUserRow['email_id'] : (!empty($auditor['login_email']) ? $auditor['login_email'] : ($auditor['email'] ?? ''));
+$audStaffEmail = !empty($staffUserRow['email_id']) ? $staffUserRow['email_id'] : (!empty($auditor['login_email']) ? $auditor['login_email'] : ($auditor['auditor_email'] ?? ''));
 $audStaffRole = !empty($staffUserRow['role']) ? $staffUserRow['role'] : 'Auditor';
 $audStaffEid = !empty($staffUserRow['e_id']) ? $staffUserRow['e_id'] : (!empty($auditor['auditor_number']) ? $auditor['auditor_number'] : ($auditor['auditor_no'] ?? ''));
 $audStaffPcId = !empty($staffUserRow['pc_id']) ? $staffUserRow['pc_id'] : '';
-$audStaffContact = !empty($staffUserRow['contact_no']) ? $staffUserRow['contact_no'] : ($auditor['phone'] ?? '');
+$audStaffContact = !empty($staffUserRow['contact_no']) ? $staffUserRow['contact_no'] : (!empty($auditor['auditor_number']) ? $auditor['auditor_number'] : ($auditor['phone'] ?? ''));
 $audStaffStatus = !empty($staffUserRow['account_status']) ? $staffUserRow['account_status'] : 'active';
 $audStaffAbbr = !empty($staffUserRow['abbreviation']) ? $staffUserRow['abbreviation'] : ($auditor['abbrevation'] ?? '');
 $audDesignation = !empty($staffUserRow['designation_assigned']) ? trim($staffUserRow['designation_assigned']) : 'Senior Auditor';
@@ -204,6 +208,9 @@ aitf_touch_login_activity($db);
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link media="all" type="text/css" rel="stylesheet" href="css/font-awesome/css/font-awesome.min.css">
+    <script src="css/bootstrap/js/jquery.min.js"></script>
+    <script src="css/bootstrap/js/bootstrap.min.js"></script>
     
     <style>
         :root {
@@ -1674,7 +1681,7 @@ aitf_touch_login_activity($db);
         </div>
         
         <div class="topbar-right">
-            <a href="myDashboard.php" class="dash-switch-pill" title="Open My Staff Profile & Responsibilities Dashboard">
+            <a href="#mydashboard" class="dash-switch-pill" onclick="if (typeof switchTab === 'function') { switchTab('mydashboard'); } return false;" title="My Staff Profile & Responsibilities">
                 <i class="fas fa-id-card"></i>
                 <span class="hidden-xs">My Dashboard</span>
             </a>
@@ -2062,56 +2069,26 @@ aitf_touch_login_activity($db);
                     </div>
                 </div>
 
+            </div><!-- /#mydash-pane-profile -->
+
                 <!-- 2. Attendance Tab Pane -->
                 <div class="mydash-tab-pane" id="mydash-pane-attendance">
-                    <div class="qms_complete_btn header-theme-attendance">
-                        <i class="fas fa-calendar-check"></i> Attendance
-                    </div>
-                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 10px 10px; padding: 30px; box-shadow: var(--shadow-sm);">
-                        <div style="text-align: center; padding: 40px 20px;">
-                            <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(139, 92, 246, 0.12); color: #8b5cf6; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 16px;">
-                                <i class="far fa-clock"></i>
-                            </div>
-                            <h4 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Attendance &amp; Log System</h4>
-                            <p style="font-size: 13.5px; color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.6;">
-                                Daily attendance tracking and duty login records for your auditor profile. Feature is currently being synchronized with ERP biometric &amp; login gateway.
-                            </p>
-                        </div>
-                    </div>
+                    <?php
+                    $targetAttendanceUid = (int)$mappedUserId;
+                    $targetAttendanceName = $audStaffName;
+                    $targetAttendanceRole = $audStaffRole ?: 'Auditor';
+                    include __DIR__ . '/include/attendance_calendar_component.php';
+                    ?>
                 </div>
 
                 <!-- 3. Task Management Tab Pane -->
                 <div class="mydash-tab-pane" id="mydash-pane-task-mgmt">
-                    <div class="qms_complete_btn header-theme-tasks">
-                        <i class="fas fa-tasks"></i> Task Management
-                    </div>
-                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 10px 10px; padding: 24px; box-shadow: var(--shadow-sm);">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
-                            <div>
-                                <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-main);">
-                                    <i class="fas fa-check-square" style="color: #0284c7; margin-right: 6px;"></i> Assigned Tasks &amp; Activities
-                                </h4>
-                                <p style="margin: 4px 0 0 0; font-size: 12.5px; color: var(--text-muted);">
-                                    Track, manage and view your internal tasks and workflow assignments
-                                </p>
-                            </div>
-                            <div style="display: flex; gap: 8px;">
-                                <span style="padding: 5px 12px; font-size: 12px; background: rgba(2, 132, 199, 0.1); color: #0284c7; border-radius: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                                    <i class="far fa-clock"></i> Active Tasks
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div style="text-align: center; padding: 30px 20px;">
-                            <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(2, 132, 199, 0.12); color: #0284c7; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 16px;">
-                                <i class="fas fa-tasks"></i>
-                            </div>
-                            <h4 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Task Management Section</h4>
-                            <p style="font-size: 13.5px; color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.6;">
-                                No pending individual task assignments currently. New workflow tasks will be listed here with priority, deadlines, and tracking.
-                            </p>
-                        </div>
-                    </div>
+                    <?php
+                    $targetDashboardUid = (int)$mappedUserId;
+                    $targetDashboardName = $audStaffName;
+                    $targetDashboardRole = $audStaffRole ?: 'Auditor';
+                    include __DIR__ . '/include/task_manager_component.php';
+                    ?>
                 </div>
 
                 <!-- 4. Work Guidelines Tab Pane -->
@@ -2220,20 +2197,45 @@ aitf_touch_login_activity($db);
                             <?php
                             $assignedForms = [];
                             try {
+                                $audSearchIds = array_values(array_unique(array_filter([(int)$mappedUserId, (int)$auditorId])));
+                                $audInSql = !empty($audSearchIds) ? implode(',', $audSearchIds) : '0';
+
                                 // Fetch Audit Applications
-                                $stmt1 = $db->query("SELECT id, created_at, org_name as name, 'Audit Application' as type, 'applicationReceivedView.php' as view_url, admin_assign_message FROM online_audit_applications WHERE assigned_to_auditor_id = $mappedUserId");
-                                $forms1 = $stmt1->fetchAll(PDO::FETCH_ASSOC);
-                                
+                                try {
+                                    $stmt1 = $db->query("SELECT id, created_at, org_name as name, 'Audit Application' as type, 'applicationReceivedView.php' as view_url, admin_assign_message FROM online_audit_applications WHERE assigned_to_auditor_id IN ($audInSql)");
+                                    if ($stmt1) {
+                                        $forms1 = $stmt1->fetchAll(PDO::FETCH_ASSOC);
+                                        $assignedForms = array_merge($assignedForms, $forms1);
+                                    }
+                                } catch (Exception $e1) {}
+
                                 // Fetch Information Updation
-                                $stmt2 = $db->query("SELECT id, created_at, org_name as name, 'Information Updation' as type, 'info_updation_view.php' as view_url, admin_assign_message FROM information_updation_forms WHERE assigned_to_auditor_id = $mappedUserId");
-                                $forms2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
-                                
+                                try {
+                                    $stmt2 = $db->query("SELECT id, created_at, org_name as name, 'Information Updation' as type, 'info_updation_view.php' as view_url, admin_assign_message FROM information_updation_forms WHERE assigned_to_auditor_id IN ($audInSql)");
+                                    if ($stmt2) {
+                                        $forms2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+                                        $assignedForms = array_merge($assignedForms, $forms2);
+                                    }
+                                } catch (Exception $e2) {}
+
                                 // Fetch NC Closing Form
-                                $stmt3 = $db->query("SELECT id, created_at, org_name as name, 'NC Closing Form' as type, 'nc_closing_form_view.php' as view_url, admin_assign_message FROM nc_closing_forms WHERE assigned_to_auditor_id = $mappedUserId");
-                                $forms3 = $stmt3->fetchAll(PDO::FETCH_ASSOC);
-                                
-                                $assignedForms = array_merge($forms1, $forms2, $forms3);
-                                
+                                try {
+                                    $stmt3 = $db->query("SELECT id, created_at, org_name as name, 'NC Closing Form' as type, 'nc_closing_form_view.php' as view_url, admin_assign_message FROM nc_closing_forms WHERE assigned_to_auditor_id IN ($audInSql)");
+                                    if ($stmt3) {
+                                        $forms3 = $stmt3->fetchAll(PDO::FETCH_ASSOC);
+                                        $assignedForms = array_merge($assignedForms, $forms3);
+                                    }
+                                } catch (Exception $e3) {}
+
+                                // Fetch Job Applications
+                                try {
+                                    $stmt4 = $db->query("SELECT id, created_at, full_name as name, 'Job Application' as type, 'applicationReceivedView.php?type=job' as view_url, admin_assign_message FROM job_applications WHERE assigned_to_auditor_id IN ($audInSql)");
+                                    if ($stmt4) {
+                                        $forms4 = $stmt4->fetchAll(PDO::FETCH_ASSOC);
+                                        $assignedForms = array_merge($assignedForms, $forms4);
+                                    }
+                                } catch (Exception $e4) {}
+
                                 // Sort by created_at DESC
                                 usort($assignedForms, function($a, $b) {
                                     return strtotime($b['created_at']) - strtotime($a['created_at']);
@@ -2812,40 +2814,79 @@ aitf_touch_login_activity($db);
                 });
             });
 
-            // Handle hash on load and hash changes
-            window.addEventListener('hashchange', function() {
-                let hashTab = window.location.hash.replace('#', '');
-                if (hashTab === 'dashboard') hashTab = 'mydashboard';
-                if (hashTab && document.getElementById('tab-' + hashTab)) {
-                    switchTab(hashTab);
-                }
-            });
-
-            const initialHash = window.location.hash.replace('#', '');
-            if (initialHash && initialHash !== 'dashboard' && document.getElementById('tab-' + initialHash)) {
-                switchTab(initialHash);
-            } else {
-                switchTab('mydashboard');
-            }
-
             // My Dashboard Inner Tabs Switching
             const mydashTabBtns = document.querySelectorAll('.mydash-tab-btn[data-target]');
             const mydashTabPanes = document.querySelectorAll('.mydash-tab-pane');
-            
+
+            function switchInnerDashTab(targetPaneId, updateHash) {
+                if (!targetPaneId) return;
+                const innerBtn = document.querySelector('.mydash-tab-btn[data-target="' + targetPaneId + '"]');
+                const targetPane = document.querySelector(targetPaneId);
+                if (!targetPane) return;
+
+                mydashTabBtns.forEach(b => b.classList.remove('active'));
+                if (innerBtn) innerBtn.classList.add('active');
+
+                mydashTabPanes.forEach(pane => pane.classList.remove('active'));
+                targetPane.classList.add('active');
+
+                // If switching to Attendance, ensure calendar grid is rendered & fresh
+                if (targetPaneId === '#mydash-pane-attendance' && typeof window.refreshAttendanceCalendar === 'function') {
+                    window.refreshAttendanceCalendar();
+                }
+
+                if (updateHash) {
+                    const cleanHash = targetPaneId.replace('#mydash-', '');
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState(null, null, '#' + cleanHash);
+                    }
+                }
+            }
+
             mydashTabBtns.forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     const target = this.getAttribute('data-target');
-                    if (!target) return;
-                    
-                    mydashTabBtns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    mydashTabPanes.forEach(pane => pane.classList.remove('active'));
-                    const targetPane = document.querySelector(target);
-                    if (targetPane) targetPane.classList.add('active');
+                    switchInnerDashTab(target, true);
                 });
             });
+
+            // Unified Hash Router for Main Tabs & Inner Dashboard Tabs
+            const innerPaneMap = {
+                'profile': '#mydash-pane-profile',
+                'pane-profile': '#mydash-pane-profile',
+                'attendance': '#mydash-pane-attendance',
+                'pane-attendance': '#mydash-pane-attendance',
+                'task-mgmt': '#mydash-pane-task-mgmt',
+                'pane-task-mgmt': '#mydash-pane-task-mgmt',
+                'tasks': '#mydash-pane-task-mgmt',
+                'task': '#mydash-pane-task-mgmt',
+                'guidelines-inner': '#mydash-pane-guidelines',
+                'work-guidelines': '#mydash-pane-guidelines'
+            };
+
+            function handleHashRoute(rawHash) {
+                let hashTab = (rawHash || '').replace('#', '').toLowerCase().trim();
+                if (!hashTab || hashTab === 'dashboard') hashTab = 'mydashboard';
+
+                if (innerPaneMap[hashTab]) {
+                    switchTab('mydashboard');
+                    switchInnerDashTab(innerPaneMap[hashTab], false);
+                    return;
+                }
+
+                if (document.getElementById('tab-' + hashTab)) {
+                    switchTab(hashTab);
+                } else {
+                    switchTab('mydashboard');
+                }
+            }
+
+            window.addEventListener('hashchange', function() {
+                handleHashRoute(window.location.hash);
+            });
+
+            handleHashRoute(window.location.hash);
 
             // Animated Counters
             function animateCounters() {

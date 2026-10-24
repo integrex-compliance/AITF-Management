@@ -406,10 +406,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $_SESSION['auditor_id'] = $audData['auditors_id'];
                         $_SESSION['is_reviewer'] = !empty($audData['is_reviewer']) ? 1 : 0;
                     }
+                    $redirectUrl = 'auditorDashboard.php#mydashboard';
+                } else {
+                    $redirectUrl = 'myDashboard.php#pane-task-mgmt';
                 }
                 
                 aitf_create_daily_session_token($db, $row['user_id'], $row['role'], $row['user_name'], $identifier);
-                $redirectUrl = 'myDashboard.php#pane-task-mgmt';
                 $loginSuccess = true;
             }
         } elseif ($role === 'Auditor') {
@@ -427,7 +429,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 aitf_record_login_activity($db, ['user_id'=>$row['auditors_id'], 'user_name'=>$row['auditor_name'], 'email_id'=>$row['login_email'], 'role'=>'Auditor', 'e_id'=>'AUDITOR']);
                 aitf_create_daily_session_token($db, $row['auditors_id'], 'Auditor', $row['auditor_name'], $identifier);
                 $loginSuccess = true;
-                $redirectUrl = 'myDashboard.php#pane-task-mgmt';
+                $redirectUrl = 'auditorDashboard.php#mydashboard';
             }
         } elseif ($role === 'Client') {
             $matchingClients = aitf_find_matching_clients($db, $identifier);

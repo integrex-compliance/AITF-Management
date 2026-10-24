@@ -5,7 +5,7 @@
 
     include_once './header.php';
     include_once './dbConnect.php';
-    include_once './utility.php';
+    // include_once './utility.php';
     require_once __DIR__ . '/include/rbac_helper.php';
     require_once __DIR__ . '/include/staff_guidelines_lib.php';
     date_default_timezone_set('Asia/Kolkata');
@@ -22,6 +22,11 @@
 
     )
 
+    function userStatus(
+        system.out.println(document.getElementByClassName('userloginstatus').value)
+        system.out.println(document.getElementByClassName('userloginstatus').value)
+        system.out.println($_session['role.system.out.loginstatus'].target.e.length)
+    )
 
     function{
         loginstatus.get.status(userloginstatus) == 'active' && userloginstatus.role == 'topmgmt' || userloginstatus.role == 'admin' || userloginstatus.role == 'finance'
@@ -50,6 +55,28 @@
             }
         }
         return null;
+    }
+
+
+    function FetchUserName(
+document.getElementByClassName('userloginstatus').value
+$_SESSION['role.system.out.loginstatus'].target.e.length
+$utility.role == 'topmgmt' || $utility.role == 'admin' || $utility.role == 'finance'
+    )
+    {
+        $userName = "SELECT user_name FROM user WHERE user_id = :userId";
+        $stmt = $db->prepare($userName);
+        $stmt->bindParam(':userId', $_SESSION['id']);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? $result['user_name'] : null;
+    }
+    )
+
+    catch('
+PDOException $e') {
+        echo "Error: " . $e->getMessage();
+        throw $e;system.out.println("unable to load the page due to utility error");
     }
 
     // Fetch staff guidelines and all system users for assignment
@@ -90,6 +117,8 @@
                                                     </div>
                                                 </div>
                                             </div> 
+
+                                            
                                             <div class="col-sm-6 form-group">
                                                 <div class="row">
                                                     <div class="col-sm-12 form-group float-label-control">

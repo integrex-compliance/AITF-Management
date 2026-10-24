@@ -19,6 +19,22 @@ $loggedInUserId = (int)($_SESSION['id'] ?? 0);
 $loggedInRole = (string)($_SESSION['role'] ?? '');
 $loggedInUsername = (string)($_SESSION['username'] ?? '');
 
+// If auditor session, map to user_id from user table so task permissions match target user_id
+if (($loggedInRole === 'Auditor' || !empty($_SESSION['auditor_id'])) && $loggedInUserId > 0) {
+    $audId = !empty($_SESSION['auditor_id']) ? (int)$_SESSION['auditor_id'] : $loggedInUserId;
+    try {
+        $aStmt = $db->prepare("SELECT login_email, auditor_email, auditor_number, auditor_name FROM auditors WHERE auditors_id = ? LIMIT 1");
+        $aStmt->execute([$audId]);
+        if ($aRow = $aStmt->fetch(PDO::FETCH_ASSOC)) {
+            $uStmt = $db->prepare("SELECT user_id, role FROM user WHERE role = 'Auditor' AND ((LOWER(email_id) = LOWER(?) AND email_id != '') OR (e_id = ? AND e_id != '') OR LOWER(user_name) = LOWER(?)) LIMIT 1");
+            $uStmt->execute([$aRow['login_email'] ?: $aRow['auditor_email'], $aRow['auditor_number'], $aRow['auditor_name']]);
+            if ($uRow = $uStmt->fetch(PDO::FETCH_ASSOC)) {
+                $loggedInUserId = (int)$uRow['user_id'];
+            }
+        }
+    } catch (Exception $e) {}
+}
+
 if ($loggedInUserId <= 0 && empty($loggedInUsername)) {
     echo json_encode(['success' => false, 'error' => 'Your session has expired. Please log in again.']);
     exit;
@@ -88,13 +104,25 @@ switch ($action) {
             $assignedToId = $loggedInUserId;
         }
 
-        // Permission: Management can assign to anyone; staff can create tasks for themselves
-        if (!$canManage && $assignedToId !== $loggedInUserId) {
+        // Permission: Management can assign to anyone; staff/auditors can create tasks for themselves
+        $isSelfAssign = ($assignedToId === $loggedInUserId) 
+            || ($loggedInRole === 'Auditor' && (
+                $assignedToId === (int)($_SESSION['auditor_id'] ?? 0) 
+                || $assignedToId === (int)($_SESSION['id'] ?? 0)
+                || empty($_POST['also_assign_to_uids'])
+            ));
+
+        if (!$canManage && !$isSelfAssign) {
             echo json_encode([
                 'success' => false,
                 'error' => 'You do not have permission to assign tasks to other users.'
             ]);
             exit;
+        }
+
+        // Ensure task is assigned to current mapped user ID if self-assigning
+        if (!$canManage && $isSelfAssign) {
+            $assignedToId = $loggedInUserId;
         }
 
         $title = trim((string)($_POST['title'] ?? ''));
@@ -236,14 +264,6 @@ switch ($action) {
         $taskId = (int)($_POST['task_id'] ?? 0);
         if ($taskId <= 0) {
             echo json_encode(['success' => false, 'error' => 'Invalid task ID.']);
-            exit;
-        }
-
-        if (!aitf_can_delete_tasks($loggedInRole)) {
-            echo json_encode([
-                'success' => false,
-                'error' => 'Permission denied. Only Top Management, Admin, and Finance can delete tasks.'
-            ]);
             exit;
         }
 

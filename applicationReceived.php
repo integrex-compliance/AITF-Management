@@ -47,16 +47,41 @@ if (isset($db)) {
     } catch (Exception $e) {
     }
 
+    require_once __DIR__ . '/include/auditor_portal_helper.php';
+    aitf_ensure_auditor_portal_schema($db);
+
     $isAuditor = isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor';
-    $auditorId = $isAuditor ? (int)$_SESSION['id'] : 0;
-    
+    $auditorCondition = "";
     $assignModalAuditorsList = [];
     try {
         $stmtAuditor = $db->query("SELECT user_id, user_name, email_id FROM user WHERE role = 'Auditor' AND is_deleted = '0'");
         $assignModalAuditorsList = $stmtAuditor->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {}
-    
-    $auditorCondition = $isAuditor ? " WHERE assigned_to_auditor_id = $auditorId " : "";
+
+    if ($isAuditor) {
+        $sessId = (int)($_SESSION['id'] ?? 0);
+        $sessAudId = (int)($_SESSION['auditor_id'] ?? 0);
+        $audSearchIds = array_values(array_unique(array_filter([$sessId, $sessAudId])));
+        try {
+            if ($sessAudId > 0) {
+                $audStmt = $db->prepare("SELECT login_email, auditor_email, auditor_number, auditor_name FROM auditors WHERE auditors_id = ? LIMIT 1");
+                $audStmt->execute([$sessAudId]);
+                if ($audRow = $audStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $uStmt = $db->prepare("SELECT user_id FROM user WHERE role = 'Auditor' AND ((LOWER(email_id) = LOWER(?) AND email_id != '') OR (e_id = ? AND e_id != '') OR LOWER(user_name) = LOWER(?)) LIMIT 1");
+                    $uStmt->execute([$audRow['login_email'] ?: $audRow['auditor_email'], $audRow['auditor_number'], $audRow['auditor_name']]);
+                    if ($uRow = $uStmt->fetch(PDO::FETCH_ASSOC)) {
+                        $audSearchIds[] = (int)$uRow['user_id'];
+                    }
+                }
+            }
+        } catch (Exception $e) {}
+        $audSearchIds = array_values(array_unique(array_filter($audSearchIds)));
+        if (!empty($audSearchIds)) {
+            $auditorCondition = " WHERE assigned_to_auditor_id IN (" . implode(',', $audSearchIds) . ") ";
+        } else {
+            $auditorCondition = " WHERE 1=0 ";
+        }
+    }
 
     try {
         // Fetch audit applications

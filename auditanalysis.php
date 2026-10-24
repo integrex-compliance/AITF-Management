@@ -22,7 +22,9 @@
 //    $sql = "SELECT ci.id, customer_name, address, contact, email_id, scope, aif_nace, svc.service_id, service_type  FROM customer_info ci join service svc on ci.id = svc.customer_id WHERE is_deleted <> 'Y'";
 //    $sql = "SELECT distinct ca.aggrement_no, svc.service_id, ci.id, customer_name, address, contact_person, contact, email_id, scope, aif_nace, service_type, aggrement_date  FROM customer_info ci join service svc on ci.id = svc.customer_id right join certification_aggrement ca on ci.id = ca.customer_id WHERE ci.is_deleted <> 'Y' ORDER BY ca.aggrement_date DESC";
 //    $sql = "SELECT ci.id, customer_name, address, contact_person, contact, email_id, scope, aif_nace, svc.service_id, service_type  FROM customer_info ci join  service svc on ci.id = svc.customer_id WHERE ci.is_deleted <> 'Y'";
-    $sql = "SELECT ci.id, customer_name, address, contact_person, contact, email_id, scope, aif_nace, svc.service_id, service_type, ci.audit_status  FROM customer_info ci join  service svc on ci.id = svc.customer_id WHERE ci.is_deleted <> 'Y' AND (service_type <> 'CR' AND service_type <> 'SP' AND service_type <> 'Transition Audit' AND service_type <> 'PTR')";
+    require_once __DIR__ . '/include/rbac_helper.php';
+    $audit1191Filter = !aitf_can_access_customer(1191, $invRole) ? " AND ci.id != 1191" : "";
+    $sql = "SELECT ci.id, customer_name, address, contact_person, contact, email_id, scope, aif_nace, svc.service_id, service_type, ci.audit_status  FROM customer_info ci join  service svc on ci.id = svc.customer_id WHERE ci.is_deleted <> 'Y'" . $audit1191Filter . " AND (service_type <> 'CR' AND service_type <> 'SP' AND service_type <> 'Transition Audit' AND service_type <> 'PTR')";
     $statement = $db->prepare($sql);
     $statement->execute();
     $listOfCustomer = $statement->fetchAll();

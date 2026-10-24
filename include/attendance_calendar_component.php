@@ -1094,6 +1094,10 @@ if (!isset($targetAttendanceRole)) {
         }
     }
 
+    window.refreshAttendanceCalendar = function() {
+        renderCalendar(viewedYear, viewedMonth);
+    };
+
     // Initialize calendar on page load
     $(document).ready(function() {
         renderCalendar(viewedYear, viewedMonth);

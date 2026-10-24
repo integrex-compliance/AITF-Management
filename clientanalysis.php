@@ -21,6 +21,10 @@
 
     $ststus = "YES";
     $extraCustomerFilter = "";
+    require_once __DIR__ . '/include/rbac_helper.php';
+    if (!aitf_can_access_customer(1191, $invRole)) {
+        $extraCustomerFilter .= " AND ci.id != 1191";
+    }
     if ($isRestrictedRole) {
         $extraCustomerFilter = " AND (ci.audit_status IS NULL OR (LOWER(ci.audit_status) NOT LIKE '%active%' AND LOWER(ci.audit_status) NOT LIKE '%withdraw%'))";
     }

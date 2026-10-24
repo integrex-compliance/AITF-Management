@@ -862,14 +862,40 @@ if (!function_exists('aitf_migrate_legacy_tds_to_payment_columns')) {
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
                 `system_code` VARCHAR(50) NOT NULL UNIQUE,
                 `system_name` VARCHAR(150) NOT NULL,
+                `address` TEXT NULL,
+                `contact_email` VARCHAR(150) NULL,
+                `contact_phone` VARCHAR(50) NULL,
                 `api_base_url` VARCHAR(255) DEFAULT NULL,
+                `db_host` VARCHAR(150) DEFAULT 'localhost',
+                `db_name` VARCHAR(100) NULL,
+                `db_user` VARCHAR(100) NULL,
+                `db_password` VARCHAR(255) NULL,
+                `created_by_user_id` INT NULL,
                 `secret_key` VARCHAR(128) NOT NULL,
                 `is_active` TINYINT(1) DEFAULT 1,
                 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-            $db->exec("INSERT IGNORE INTO `aitf_systems` (`system_code`, `system_name`, `secret_key`, `is_active`)
-                       VALUES ('AITF_MAIN', 'AITF Central Enterprise', SHA2('AITF_SECURE_2026', 256), 1)");
+            // Ensure columns exist on existing aitf_systems table
+            $sysCols = [];
+            $scStmt = $db->query("SHOW COLUMNS FROM `aitf_systems`");
+            if ($scStmt) {
+                while ($r = $scStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $sysCols[strtolower($r['Field'])] = true;
+                }
+            }
+            if (!isset($sysCols['address'])) $db->exec("ALTER TABLE `aitf_systems` ADD COLUMN `address` TEXT NULL");
+            if (!isset($sysCols['contact_email'])) $db->exec("ALTER TABLE `aitf_systems` ADD COLUMN `contact_email` VARCHAR(150) NULL");
+            if (!isset($sysCols['contact_phone'])) $db->exec("ALTER TABLE `aitf_systems` ADD COLUMN `contact_phone` VARCHAR(50) NULL");
+            if (!isset($sysCols['db_host'])) $db->exec("ALTER TABLE `aitf_systems` ADD COLUMN `db_host` VARCHAR(150) DEFAULT 'localhost'");
+            if (!isset($sysCols['db_name'])) $db->exec("ALTER TABLE `aitf_systems` ADD COLUMN `db_name` VARCHAR(100) NULL");
+            if (!isset($sysCols['db_user'])) $db->exec("ALTER TABLE `aitf_systems` ADD COLUMN `db_user` VARCHAR(100) NULL");
+            if (!isset($sysCols['db_password'])) $db->exec("ALTER TABLE `aitf_systems` ADD COLUMN `db_password` VARCHAR(255) NULL");
+            if (!isset($sysCols['created_by_user_id'])) $db->exec("ALTER TABLE `aitf_systems` ADD COLUMN `created_by_user_id` INT NULL");
+
+            $db->exec("INSERT INTO `aitf_systems` (`system_code`, `system_name`, `secret_key`, `is_active`)
+                       VALUES ('AITF_MAIN', 'AITF-Management Certification Limited', SHA2('AITF_SECURE_2026', 256), 1)
+                       ON DUPLICATE KEY UPDATE `system_name` = 'AITF-Management Certification Limited'");
 
             $db->exec("CREATE TABLE IF NOT EXISTS `aitf_mobile_tokens` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,

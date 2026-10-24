@@ -88,7 +88,9 @@ if (!function_exists('hpDerivedStatus')) {
 }
 
 // Data Fetching Logic (Mirrored from homePage.php)
-$customerList = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES' ORDER BY ac.certification_date DESC";
+require_once __DIR__ . '/include/rbac_helper.php';
+$export1191Filter = !aitf_can_access_customer(1191, $hp_role) ? " AND ci.id != 1191" : "";
+$customerList = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES'" . $export1191Filter . " ORDER BY ac.certification_date DESC";
 $statement = $db->prepare($customerList);
 $statement->execute();
 $listOfCustomer = $statement->fetchAll();

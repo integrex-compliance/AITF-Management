@@ -5,12 +5,38 @@ if (!function_exists('aitf_ensure_auditor_portal_schema')) {
     function aitf_ensure_auditor_portal_schema(PDO $db)
     {
         $statements = array(
+            // auditors table columns
             "ALTER TABLE auditors ADD COLUMN login_email VARCHAR(100) NULL",
             "ALTER TABLE auditors ADD COLUMN login_key_hash VARCHAR(255) NULL",
             "ALTER TABLE auditors ADD COLUMN login_key_generated_at DATETIME NULL",
             "ALTER TABLE auditors ADD COLUMN login_enabled TINYINT(1) NOT NULL DEFAULT 0",
             "ALTER TABLE auditors ADD COLUMN last_key_sent_at DATETIME NULL",
-            "ALTER TABLE auditors ADD COLUMN is_reviewer TINYINT(1) NOT NULL DEFAULT 0"
+            "ALTER TABLE auditors ADD COLUMN is_reviewer TINYINT(1) NOT NULL DEFAULT 0",
+            "ALTER TABLE auditors ADD COLUMN assigned_divisions TEXT NULL",
+            "ALTER TABLE auditors ADD COLUMN assigned_nace_classes TEXT NULL",
+
+            // user table columns (for staff profile / responsibilities)
+            "ALTER TABLE user ADD COLUMN designation_assigned VARCHAR(255) NULL",
+            "ALTER TABLE user ADD COLUMN applicable_records TEXT NULL",
+            "ALTER TABLE user ADD COLUMN work_description TEXT NULL",
+            "ALTER TABLE user ADD COLUMN resource_issue_record TEXT NULL",
+
+            // online_audit_applications columns
+            "ALTER TABLE online_audit_applications ADD COLUMN assigned_to_auditor_id INT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN admin_assign_message TEXT NULL",
+
+            // information_updation_forms columns
+            "ALTER TABLE information_updation_forms ADD COLUMN assigned_to_auditor_id INT NULL",
+            "ALTER TABLE information_updation_forms ADD COLUMN admin_assign_message TEXT NULL",
+
+            // nc_closing_forms columns
+            "ALTER TABLE nc_closing_forms ADD COLUMN assigned_to_auditor_id INT NULL",
+            "ALTER TABLE nc_closing_forms ADD COLUMN admin_assign_message TEXT NULL",
+
+            // job_applications columns
+            "ALTER TABLE job_applications ADD COLUMN assigned_to_auditor_id INT NULL",
+            "ALTER TABLE job_applications ADD COLUMN admin_assign_message TEXT NULL",
+            "ALTER TABLE job_applications ADD COLUMN auditor_review TEXT NULL"
         );
 
         foreach ($statements as $sql) {

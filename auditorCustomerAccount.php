@@ -29,7 +29,7 @@ $auditorName = $_SESSION['username'] ?? '';
 
 // Get customer ID
 $customerId = isset($_GET['customerid']) ? (int)$_GET['customerid'] : 0;
-if ($customerId <= 0) {
+if ($customerId <= 0 || !aitf_can_access_customer($customerId)) {
     header('Location: auditorDashboard.php');
     exit;
 }

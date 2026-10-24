@@ -67,6 +67,7 @@ if (!function_exists('aitf_auditor_allowed_scripts')) {
 
             // Auditor portal & client view pages
             'auditordashboard.php', 'auditorcustomeraccount.php', 'mydashboard.php',
+            'task_actions.php', 'guidelines_action.php', 'user_dashboard_profile_action.php',
             'auditorpendingdocuments.php', 'save_auditor_doc_status.php',
             'customeraccount.php', 'homepage.php', 'auditplanning.php',
             'guidelines.php', 'view_guideline_doc.php',

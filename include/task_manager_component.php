@@ -29,14 +29,18 @@ if (!isset($targetDashboardRole)) {
     $targetDashboardRole = isset($currentActiveUserRole) ? $currentActiveUserRole : (isset($userRole) ? $userRole : $currentLoggedInRole);
 }
 $isViewingSelf = ($targetDashboardUid === $currentLoggedInUid);
+if (($currentLoggedInRole === 'Auditor' || !empty($_SESSION['auditor_id'])) && !empty($targetDashboardUid)) {
+    $currentLoggedInUid = (int)$targetDashboardUid;
+    $isViewingSelf = true;
+}
 
-// Check if current logged-in user is Top Mgmt / Admin / Manager
+// Check if current logged-in user is Top Management (Top Mgmt, Director, Main Admin)
 $actualRole = (string)($_SESSION['role'] ?? '');
 $isTopMgmtUser = (!empty($isTopMgmt))
-    || (strcasecmp(trim($actualRole), 'Top Mgmt') === 0)
-    || (strcasecmp(trim($actualRole), 'Top Management') === 0)
-    || aitf_can_manage_tasks($actualRole);
-$canDeleteTasks = aitf_can_delete_tasks($actualRole);
+    || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($actualRole))
+    || in_array(strtolower(trim($actualRole)), ['top mgmt', 'mgmt', 'management', 'director', 'main admin'], true)
+    || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()));
+$canDeleteTasks = true; // Task-level check handled per task
 $canForwardTasks = aitf_can_manage_tasks($actualRole);
 
 // Fetch all system users for "Also assign to" forward option
@@ -1406,7 +1410,14 @@ html.theme-dark .todo-forward-footer {
                 <span class="todo-star-icon <?php echo !empty($task['is_important']) ? 'active' : ''; ?>" data-task-id="<?php echo (int)$task['id']; ?>" title="Star task">
                     <i class="fa fa-star"></i>
                 </span>
-                <?php if ($canDeleteTasks): ?>
+                <?php 
+                $canDeleteThis = $isTopMgmtUser 
+                    || ((int)$task['assigned_by_user_id'] === (int)$currentLoggedInUid)
+                    || (!empty($_SESSION['id']) && (int)$task['assigned_by_user_id'] === (int)$_SESSION['id'])
+                    || (!empty($_SESSION['auditor_id']) && (int)$task['assigned_by_user_id'] === (int)$_SESSION['auditor_id'])
+                    || ((int)$task['assigned_to_user_id'] === (int)$currentLoggedInUid && (int)$task['assigned_by_user_id'] === (int)$task['assigned_to_user_id']);
+                ?>
+                <?php if ($canDeleteThis): ?>
                 <span class="todo-delete-btn" data-task-id="<?php echo (int)$task['id']; ?>" title="Delete task">
                     <i class="fa fa-trash-o"></i>
                 </span>
@@ -1474,7 +1485,14 @@ html.theme-dark .todo-forward-footer {
                     <span class="todo-star-icon <?php echo !empty($task['is_important']) ? 'active' : ''; ?>" data-task-id="<?php echo (int)$task['id']; ?>" title="Star task">
                         <i class="fa fa-star"></i>
                     </span>
-                    <?php if ($canDeleteTasks): ?>
+                    <?php 
+                    $canDeleteThis = $isTopMgmtUser 
+                        || ((int)$task['assigned_by_user_id'] === (int)$currentLoggedInUid)
+                        || (!empty($_SESSION['id']) && (int)$task['assigned_by_user_id'] === (int)$_SESSION['id'])
+                        || (!empty($_SESSION['auditor_id']) && (int)$task['assigned_by_user_id'] === (int)$_SESSION['auditor_id'])
+                        || ((int)$task['assigned_to_user_id'] === (int)$currentLoggedInUid && (int)$task['assigned_by_user_id'] === (int)$task['assigned_to_user_id']);
+                    ?>
+                    <?php if ($canDeleteThis): ?>
                     <span class="todo-delete-btn" data-task-id="<?php echo (int)$task['id']; ?>" title="Delete task">
                         <i class="fa fa-trash-o"></i>
                     </span>
@@ -1659,6 +1677,7 @@ html.theme-dark .todo-forward-footer {
     var todoTargetRole = <?php echo json_encode($targetDashboardRole); ?>;
     var todoCurrentUid = <?php echo (int)$currentLoggedInUid; ?>;
     var isViewingSelf = <?php echo $isViewingSelf ? 'true' : 'false'; ?>;
+    var isTopMgmt = <?php echo $isTopMgmtUser ? 'true' : 'false'; ?>;
     var todoCanDelete = <?php echo $canDeleteTasks ? 'true' : 'false'; ?>;
     var currentReminderValue = '';
 
@@ -1772,8 +1791,19 @@ html.theme-dark .todo-forward-footer {
                 '</span>';
         }
 
+        var canDeleteCard = false;
+        if (isTopMgmt) {
+            canDeleteCard = true;
+        } else {
+            var assignedByUid = parseInt(t.assigned_by_user_id, 10) || 0;
+            var assignedToUid = parseInt(t.assigned_to_user_id, 10) || 0;
+            if (assignedByUid === todoCurrentUid || (assignedToUid === todoCurrentUid && assignedByUid === assignedToUid) || isSelfTask) {
+                canDeleteCard = true;
+            }
+        }
+
         var deleteBtnHtml = '';
-        if (todoCanDelete) {
+        if (canDeleteCard) {
             deleteBtnHtml = '<span class="todo-delete-btn" data-task-id="' + taskId + '" title="Delete task">' +
                 '<i class="fa fa-trash-o"></i>' +
                 '</span>';

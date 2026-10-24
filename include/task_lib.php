@@ -63,7 +63,13 @@ if (!function_exists('aitf_can_delete_tasks')) {
             'director',
             'main admin',
             'admin',
-            'finance'
+            'finance',
+            'auditor',
+            'employee',
+            'staff',
+            'office staff-a',
+            'office staff-b',
+            'technical coordinator'
         ];
 
         if (in_array($r, $allowed, true)) {
@@ -485,19 +491,37 @@ if (!function_exists('aitf_delete_task')) {
             return ['success' => false, 'error' => 'Invalid task ID.'];
         }
 
-        if (!aitf_can_delete_tasks($currentUserRole)) {
-            return [
-                'success' => false,
-                'error' => 'Permission denied. Only Top Management, Admin, or Finance can delete tasks.'
-            ];
-        }
-
         try {
             $stmt = $db->prepare("SELECT * FROM `aitf_tasks` WHERE `id` = :id AND `is_deleted` = 0 LIMIT 1");
             $stmt->execute([':id' => $taskId]);
             $task = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$task) {
                 return ['success' => false, 'error' => 'Task not found or has already been removed.'];
+            }
+
+            // Check if current user is Top Management (Top Mgmt, Director, Main Admin)
+            $isTopMgmt = (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($currentUserRole))
+                || in_array(strtolower(trim((string)$currentUserRole)), ['top mgmt', 'mgmt', 'management', 'director', 'main admin'], true)
+                || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()));
+
+            if (!$isTopMgmt) {
+                // Rule: If task was assigned by someone else, assignee CANNOT delete it.
+                // Only the user who assigned the task can delete it.
+                $taskAssignedBy = (int)($task['assigned_by_user_id'] ?? 0);
+                $taskAssignedTo = (int)($task['assigned_to_user_id'] ?? 0);
+                $curUid = (int)$currentUserId;
+                $sessUid = (int)($_SESSION['id'] ?? 0);
+                $audId = (int)($_SESSION['auditor_id'] ?? 0);
+
+                $isAssigner = ($taskAssignedBy > 0 && ($taskAssignedBy === $curUid || $taskAssignedBy === $sessUid || ($audId > 0 && $taskAssignedBy === $audId)))
+                    || ($taskAssignedTo > 0 && $taskAssignedBy === $taskAssignedTo && ($taskAssignedTo === $curUid || $taskAssignedTo === $sessUid || ($audId > 0 && $taskAssignedTo === $audId)));
+
+                if (!$isAssigner) {
+                    return [
+                        'success' => false,
+                        'error' => 'Cant delete assigned task'
+                    ];
+                }
             }
 
             $upd = $db->prepare("UPDATE `aitf_tasks` SET `is_deleted` = 1, `updated_at` = NOW() WHERE `id` = :id");

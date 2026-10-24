@@ -1,3 +1,38 @@
+<?php
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
+
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') {
+    $tab = strtolower(trim((string)($_GET['tab'] ?? ($_GET['pane'] ?? ''))));
+    $destHash = '#mydashboard';
+    if (in_array($tab, ['attendance', 'pane-attendance'], true)) {
+        $destHash = '#attendance';
+    } elseif (in_array($tab, ['task-mgmt', 'tasks', 'task', 'pane-task-mgmt'], true)) {
+        $destHash = '#task-mgmt';
+    } elseif (in_array($tab, ['guidelines', 'pane-guidelines', 'work-guidelines'], true)) {
+        $destHash = '#guidelines';
+    } elseif (in_array($tab, ['profile', 'pane-profile'], true)) {
+        $destHash = '#profile';
+    }
+    echo '<!DOCTYPE html><html><head><script>
+        (function() {
+            var currentHash = (window.location.hash || "").toLowerCase();
+            var target = "' . $destHash . '";
+            if (currentHash.indexOf("attendance") !== -1) {
+                target = "#attendance";
+            } else if (currentHash.indexOf("task") !== -1) {
+                target = "#task-mgmt";
+            } else if (currentHash.indexOf("guideline") !== -1) {
+                target = "#guidelines";
+            } else if (currentHash.indexOf("profile") !== -1) {
+                target = "#profile";
+            }
+            window.location.replace("auditorDashboard.php" + target);
+        })();
+    </script><noscript><meta http-equiv="refresh" content="0;url=auditorDashboard.php' . $destHash . '"></noscript></head><body></body></html>';
+    exit;
+}
+?>
 <div id="wrapper" class="active">
     <?php
     $pageIdentifier = "My Dashboard";
@@ -79,28 +114,9 @@
     $userRow = null;
     $isAuditorUser = ($actualLoggedInRole === 'Auditor') || !empty($_SESSION['auditor_id']);
 
-    if (!empty($_SESSION['id'])) {
-        try {
-            $uStmt = $db->prepare("SELECT * FROM user WHERE user_id = :id LIMIT 1");
-            $uStmt->execute([':id' => $_SESSION['id']]);
-            $userRow = $uStmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Throwable $e) {
-            $userRow = null;
-        }
-    }
-    if (!$userRow && !empty($_SESSION['username'])) {
-        try {
-            $uStmt = $db->prepare("SELECT * FROM user WHERE LOWER(user_name) = :uname OR LOWER(email_id) = :uemail LIMIT 1");
-            $uStmt->execute([':uname' => strtolower($_SESSION['username']), ':uemail' => strtolower($_SESSION['username'])]);
-            $userRow = $uStmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Throwable $e) {
-            $userRow = null;
-        }
-    }
-
-    // If still not found and this is an Auditor session, resolve from auditors table
-    if (!$userRow && $isAuditorUser) {
-        $audId = !empty($_SESSION['auditor_id']) ? (int)$_SESSION['auditor_id'] : (int)$_SESSION['id'];
+    // If this is an Auditor session, resolve specifically with role = 'Auditor' first
+    if ($isAuditorUser) {
+        $audId = !empty($_SESSION['auditor_id']) ? (int)$_SESSION['auditor_id'] : (int)($_SESSION['id'] ?? 0);
         try {
             $audStmt = $db->prepare("SELECT auditors_id, auditor_name, abbrevation, auditor_number, auditor_email, login_email FROM auditors WHERE auditors_id = :aid LIMIT 1");
             $audStmt->execute([':aid' => $audId]);
@@ -108,7 +124,7 @@
                 $audLoginEmail = !empty($audData['login_email']) ? $audData['login_email'] : ($audData['auditor_email'] ?? '');
                 $audNo = !empty($audData['auditor_number']) ? $audData['auditor_number'] : '';
                 try {
-                    $uStmt = $db->prepare("SELECT * FROM user WHERE (LOWER(email_id) = LOWER(:email) AND email_id != '') OR (e_id = :eid AND e_id != '') OR LOWER(user_name) = LOWER(:uname) LIMIT 1");
+                    $uStmt = $db->prepare("SELECT * FROM user WHERE role = 'Auditor' AND ((LOWER(email_id) = LOWER(:email) AND email_id != '') OR (e_id = :eid AND e_id != '') OR LOWER(user_name) = LOWER(:uname)) LIMIT 1");
                     $uStmt->execute([':email' => $audLoginEmail, ':eid' => $audNo, ':uname' => $audData['auditor_name']]);
                     $userRow = $uStmt->fetch(PDO::FETCH_ASSOC);
                 } catch (Throwable $e) {
@@ -133,6 +149,25 @@
                 }
             }
         } catch (Throwable $e) {}
+    }
+
+    if (!$userRow && !empty($_SESSION['id'])) {
+        try {
+            $uStmt = $db->prepare("SELECT * FROM user WHERE user_id = :id LIMIT 1");
+            $uStmt->execute([':id' => $_SESSION['id']]);
+            $userRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            $userRow = null;
+        }
+    }
+    if (!$userRow && !empty($_SESSION['username'])) {
+        try {
+            $uStmt = $db->prepare("SELECT * FROM user WHERE LOWER(user_name) = :uname OR LOWER(email_id) = :uemail LIMIT 1");
+            $uStmt->execute([':uname' => strtolower($_SESSION['username']), ':uemail' => strtolower($_SESSION['username'])]);
+            $userRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            $userRow = null;
+        }
     }
 
     // 5. Management Switcher: Check if viewing another user's dashboard

@@ -3,6 +3,8 @@ ob_start();
 session_start();
 include 'dbConnect.php';
 include 'utility.php';
+require_once __DIR__ . '/include/auditor_portal_helper.php';
+aitf_ensure_auditor_portal_schema($db);
 require_once 'PHPMailerAutoload.php';
 
 header('Content-Type: application/json');
