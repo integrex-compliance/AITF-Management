@@ -72,7 +72,25 @@ if (!function_exists('hpDerivedStatus')) {
 
 require_once __DIR__ . '/include/rbac_helper.php';
 $export1191Filter = !aitf_can_access_customer(1191, $hp_role) ? " AND ci.id != 1191" : "";
-$customerList = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES'" . $export1191Filter . " ORDER BY ac.certification_date DESC";
+$customerListBase = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES'" . $export1191Filter;
+$cleanRole = strtolower(trim((string)$hp_role));
+$cleanRoleNoSpace = str_replace(array(' ', '-'), '', $cleanRole);
+$isTopMgmt = (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($hp_role))
+    || in_array($cleanRole, array('top mgmt', 'director', 'main admin', 'mgmt', 'top management'), true)
+    || in_array($cleanRoleNoSpace, array('topmgmt', 'mainadmin', 'topmanagement'), true);
+$isAdmin = ($cleanRole === 'admin');
+$isFinance = ($cleanRole === 'finance');
+$isFullAccess = ($isTopMgmt || $isAdmin || $isFinance);
+
+if ($isFullAccess) {
+    $customerList = $customerListBase . " ORDER BY ac.certification_date DESC";
+} else {
+    $customerList = $customerListBase . " AND (
+        (ac.certification_date IS NOT NULL AND ac.certification_date != '0000-00-00' AND ac.certification_date >= DATE_FORMAT(CURDATE() - INTERVAL 2 YEAR, '%Y-%m-01'))
+        OR
+        ((ac.certification_date IS NULL OR ac.certification_date = '0000-00-00') AND (ci.certification_stage_date IS NULL OR ci.certification_stage_date = '0000-00-00' OR ci.certification_stage_date >= DATE_FORMAT(CURDATE() - INTERVAL 2 YEAR, '%Y-%m-01')))
+    ) ORDER BY ac.certification_date DESC";
+}
 $statement = $db->prepare($customerList);
 $statement->execute();
 $listOfCustomer = $statement->fetchAll();
@@ -126,11 +144,6 @@ $filteredCustomers = [];
 foreach ($listOfCustomer as $customer) {
     $derivedStatus = hpDerivedStatus($customer, $serviceMap);
 
-    if ($isMarketingHead && in_array($derivedStatus, array('Active', 'Withdrawn', 'Withdrawal', 'Withdraw'), true)) {
-        continue;
-    }
-
-    $isCurrentOrRecent = empty($customer['certification_date']) || ($customer['certification_date'] >= date('Y-m-01', strtotime('-1 month')));
     if ($clientName != '') {
         $searchVal = strtolower(trim($clientName));
         $custName = strtolower(trim($customer['customer_name'] ?? ''));
@@ -138,17 +151,6 @@ foreach ($listOfCustomer as $customer) {
         $isMatch = (stripos($custName, $searchVal) !== false || stripos($uniqId, $searchVal) !== false);
         if (!$isMatch) {
             continue;
-        }
-        if ($isOfficeStaff && !$isCurrentOrRecent) {
-            if ($custName !== $searchVal && $uniqId !== $searchVal) {
-                continue;
-            }
-        }
-    } else {
-        if ($isOfficeStaff && empty($fromDate) && empty($toDate)) {
-            if (!$isCurrentOrRecent) {
-                continue;
-            }
         }
     }
     if ($serviceType != '' && strcasecmp($customer['next_service'], $serviceType) !== 0) {

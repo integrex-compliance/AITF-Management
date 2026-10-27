@@ -367,6 +367,22 @@ if (!function_exists('aitf_create_task')) {
                 $task['due_date_formatted'] = aitf_format_task_date($task['due_date']);
                 $task['is_overdue'] = false;
                 $task['created_formatted'] = aitf_format_task_date($task['created_at']);
+
+                // Notify assignee if assigned to another user
+                if ($assignedToId > 0 && $assignedToId !== (int)$assignedById) {
+                    try {
+                        $nStmt = $db->prepare("
+                            INSERT INTO aitf_notifications (user_id, title, body, notification_type, reference_id, is_read, created_at)
+                            VALUES (:uid, :title, :body, 'task_assigned', :ref, 0, NOW())
+                        ");
+                        $nStmt->execute([
+                            ':uid' => $assignedToId,
+                            ':title' => '📋 New Task Assigned',
+                            ':body' => "{$assignedByName} has assigned a task for you: {$title}",
+                            ':ref' => (int)($task['id'] ?? $newId)
+                        ]);
+                    } catch (Throwable $ne) {}
+                }
             }
 
             return ['success' => true, 'task' => $task];
@@ -433,6 +449,29 @@ if (!function_exists('aitf_toggle_task_status')) {
             $task['due_date_formatted'] = aitf_format_task_date($task['due_date']);
             $task['created_formatted'] = aitf_format_task_date($task['created_at']);
             $task['is_overdue'] = (!empty($task['due_date']) && $task['due_date'] !== '0000-00-00' && $newStatus === 'pending' && strtotime($task['due_date']) < strtotime(date('Y-m-d')));
+
+            // Notify assigner (e.g. Vaibhav Ajabe) when task is marked completed
+            $assignerId = (int)($task['assigned_by_user_id'] ?? 0);
+            if ($newStatus === 'completed' && $assignerId > 0 && $assignerId !== $currentUserId) {
+                try {
+                    $completerName = $_SESSION['username'] ?? '';
+                    if (empty($completerName)) {
+                        $uStmt = $db->prepare("SELECT user_name FROM user WHERE user_id = :uid LIMIT 1");
+                        $uStmt->execute([':uid' => $currentUserId]);
+                        $completerName = $uStmt->fetchColumn() ?: 'A team member';
+                    }
+                    $nStmt = $db->prepare("
+                        INSERT INTO aitf_notifications (user_id, title, body, notification_type, reference_id, is_read, created_at)
+                        VALUES (:uid, :title, :body, 'task_completed', :ref, 0, NOW())
+                    ");
+                    $nStmt->execute([
+                        ':uid' => $assignerId,
+                        ':title' => '✅ Task Completed',
+                        ':body' => "{$completerName} has marked completed a task: {$task['title']}",
+                        ':ref' => $taskId
+                    ]);
+                } catch (Throwable $ne) {}
+            }
 
             return [
                 'success' => true,

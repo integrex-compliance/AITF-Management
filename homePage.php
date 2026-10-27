@@ -23,14 +23,25 @@
     $customer1191Filter = !aitf_can_access_customer(1191, $hp_role) ? " AND ci.id != 1191" : "";
 $customerListBase = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES'" . $customer1191Filter;
 
-if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B', 'BDM'), true)) {
-    // C✔✔ - Active Past One Month+ Running Access
-    $customerList = $customerListBase . " AND ci.audit_status = 'Active' AND ac.certification_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01') ORDER BY ac.certification_date DESC";
-} elseif (in_array(trim($hp_role), array('Marketing Head', 'Marketing Executive'), true)) {
-    // C✔ All other like Suspended, Expired, In process, Application Cancel, New Enquiry
-    $customerList = $customerListBase . " AND ci.audit_status IN ('Suspended', 'Expired', 'In process', 'Application Cancel', 'New Enquiry') ORDER BY ac.certification_date DESC";
-} else {
+// Access control: Top Management, Admin, Finance have full access (all clients).
+// All other roles have access to clients from the past 2 years (plus recent enquiries / clients without allotment date).
+$cleanRole = strtolower(trim((string)$hp_role));
+$cleanRoleNoSpace = str_replace(array(' ', '-'), '', $cleanRole);
+$isTopMgmt = (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($hp_role))
+    || in_array($cleanRole, array('top mgmt', 'director', 'main admin', 'mgmt', 'top management'), true)
+    || in_array($cleanRoleNoSpace, array('topmgmt', 'mainadmin', 'topmanagement'), true);
+$isAdmin = ($cleanRole === 'admin');
+$isFinance = ($cleanRole === 'finance');
+$isFullAccess = ($isTopMgmt || $isAdmin || $isFinance);
+
+if ($isFullAccess) {
     $customerList = $customerListBase . " ORDER BY ac.certification_date DESC";
+} else {
+    $customerList = $customerListBase . " AND (
+        (ac.certification_date IS NOT NULL AND ac.certification_date != '0000-00-00' AND ac.certification_date >= DATE_FORMAT(CURDATE() - INTERVAL 2 YEAR, '%Y-%m-01'))
+        OR
+        ((ac.certification_date IS NULL OR ac.certification_date = '0000-00-00') AND (ci.certification_stage_date IS NULL OR ci.certification_stage_date = '0000-00-00' OR ci.certification_stage_date >= DATE_FORMAT(CURDATE() - INTERVAL 2 YEAR, '%Y-%m-01')))
+    ) ORDER BY ac.certification_date DESC";
 }
     $statement = $db->prepare($customerList);
     $statement->execute();
