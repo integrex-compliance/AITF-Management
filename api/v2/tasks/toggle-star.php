@@ -18,7 +18,7 @@ if ($taskId <= 0) {
 }
 
 // Check task
-$taskStmt = $db->prepare("SELECT id, is_important, assigned_to_user_id, assigned_by_user_id FROM aitf_tasks WHERE id = :id AND system_code = :system_code AND is_deleted = 0 LIMIT 1");
+$taskStmt = $db->prepare("SELECT id, is_important, assigned_to_user_id, assigned_by_user_id FROM aitf_tasks WHERE id = :id AND (system_code = :system_code OR system_code IS NULL OR system_code = '') AND is_deleted = 0 LIMIT 1");
 $taskStmt->execute([':id' => $taskId, ':system_code' => $user['system_code']]);
 $task = $taskStmt->fetch(PDO::FETCH_ASSOC);
 

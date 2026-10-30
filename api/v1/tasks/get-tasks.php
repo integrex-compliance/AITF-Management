@@ -18,7 +18,7 @@ $scope        = strtolower(trim($_GET['scope'] ?? 'assigned_to_me'));
 // By default, show tasks assigned to the current user (exact same as web myDashboard.php).
 // If scope is 'my_assigned', show tasks assigned by the user to others.
 // If scope is 'all' and user is manager, show all company tasks.
-$where = ["t.is_deleted = 0", "t.system_code = :system_code"];
+$where = ["t.is_deleted = 0", "(t.system_code = :system_code OR t.system_code IS NULL OR t.system_code = '')"];
 $params = [':system_code' => $user['system_code']];
 
 if (!$canManageTasks || $scope === 'assigned_to_me' || $scope === 'only_me') {
@@ -105,7 +105,7 @@ foreach ($tasks as $task) {
 }
 
 // 2. Fetch Task Counts (aligned with current scope)
-$countWhere = ["is_deleted = 0", "system_code = :system_code"];
+$countWhere = ["is_deleted = 0", "(system_code = :system_code OR system_code IS NULL OR system_code = '')"];
 $countParams = [':system_code' => $user['system_code']];
 
 if (!$canManageTasks || $scope === 'assigned_to_me' || $scope === 'only_me') {

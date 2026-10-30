@@ -44,7 +44,7 @@ $assignedToName = $currentUserName;
 $assignedToRole = $currentUserRole;
 
 if (!$isSelfAssign) {
-    $assigneeStmt = $GLOBALS['aitf_identity_db']->prepare("SELECT user_id, user_name, role FROM user WHERE user_id = :uid AND is_deleted = 0 AND account_status = 'active' LIMIT 1");
+    $assigneeStmt = $GLOBALS['aitf_identity_db']->prepare("SELECT user_id, user_name, role FROM user WHERE user_id = :uid AND (is_deleted = '0' OR is_deleted = 0 OR is_deleted IS NULL) AND (account_status != 'inactive' OR account_status IS NULL) LIMIT 1");
     $assigneeStmt->execute([':uid' => $assignedToUserId]);
     $assignee = $assigneeStmt->fetch(PDO::FETCH_ASSOC);
 
