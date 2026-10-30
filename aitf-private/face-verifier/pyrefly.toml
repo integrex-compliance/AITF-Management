@@ -1,0 +1,13 @@
+search-path = [
+    "C:/apk_devlopment/.tools/face-python",
+    "C:/apk_devlopment/.venv/Lib/site-packages"
+]
+site-packages-path = [
+    "C:/apk_devlopment/.tools/face-python",
+    "C:/apk_devlopment/.venv/Lib/site-packages"
+]
+python-interpreter-path = "C:/apk_devlopment/.venv/Scripts/python.exe"
+
+[errors]
+missing-import = "ignore"
+

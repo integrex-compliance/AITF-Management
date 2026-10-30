@@ -13,8 +13,21 @@ function attendanceConfig(): array {
     static $config;
     if ($config !== null) return $config;
     $publicRoot = dirname(__DIR__, 3);
-    $path = getenv('AITF_SECURITY_CONFIG') ?: dirname($publicRoot, 2) . '/aitf-private/security.php';
-    if (!is_file($path)) throw new AttendanceRejected('Attendance verification is not configured. Contact your administrator.', 503);
+    $path = getenv('AITF_SECURITY_CONFIG');
+    if (!$path || !is_file($path)) {
+        $candidates = [
+            $publicRoot . '/aitf-private/security.php',             // Inside repo (public_html/aitf-private/security.php)
+            dirname($publicRoot) . '/aitf-private/security.php',    // Linux cPanel outside webroot (/home/aitfgroup/aitf-private/security.php)
+            dirname($publicRoot, 2) . '/aitf-private/security.php', // Windows XAMPP (C:/xampp/aitf-private/security.php)
+        ];
+        foreach ($candidates as $cand) {
+            if (is_file($cand)) {
+                $path = $cand;
+                break;
+            }
+        }
+    }
+    if (!$path || !is_file($path)) throw new AttendanceRejected('Attendance verification is not configured. Contact your administrator.', 503);
     $config = require $path;
     if (!is_array($config) || empty($config['python']) || empty($config['verifier']) || empty($config['storage'])) {
         throw new AttendanceRejected('Attendance verification configuration is invalid.', 503);
