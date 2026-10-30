@@ -20,7 +20,7 @@ if (isset($_GET['customerid']) && is_numeric($_GET['customerid'])) {
     $earlyRequestedCustomerId = (int) $_POST['customerid'];
 } elseif (isset($_SESSION['current_customer_id']) && is_numeric($_SESSION['current_customer_id'])) {
     $earlyRequestedCustomerId = (int) $_SESSION['current_customer_id'];
-}
+}d
 
 if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCustomerId)) {
     unset($_SESSION['current_customer_id']);

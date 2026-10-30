@@ -404,28 +404,31 @@ if (!isset($targetAttendanceRole)) {
 .att-summary-content {
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: 10px;
 }
 
 .att-summary-item-line {
     display: flex;
-    align-items: center;
-    padding: 11px 16px;
+    flex-direction: column;
+    padding: 0;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-left: 4px solid #cbd5e1;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 13.5px;
-    line-height: 1.5;
-    gap: 16px;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
-    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+    transition: all 0.2s ease;
+    overflow: hidden;
 }
 
 .att-summary-item-line:hover {
-    background: #fbfcfe;
     border-color: #cbd5e1;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+}
+
+.att-summary-item-line.is-open {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
 }
 
 .att-summary-item-line.line-late {
@@ -442,25 +445,44 @@ if (!isset($targetAttendanceRole)) {
 }
 .att-summary-item-line.line-working {
     border-left-color: #2563eb;
-    background: #fafafa;
+}
+
+.att-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    cursor: pointer;
+    user-select: none;
+    background: #ffffff;
+    transition: background 0.15s ease;
+    gap: 12px;
+}
+
+.att-card-header:hover {
+    background: #fbfcfe;
+}
+
+.att-summary-item-line.is-open .att-card-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #edf2f7;
 }
 
 .att-line-head {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    min-width: 175px;
+    gap: 12px;
     flex-shrink: 0;
 }
 
 .att-row-icon-wrap {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: 14px;
     flex-shrink: 0;
 }
 .icon-late { background: #fef3c7; color: #b45309; }
@@ -472,13 +494,13 @@ if (!isset($targetAttendanceRole)) {
 .att-line-label {
     color: #0f172a;
     font-weight: 700;
-    font-size: 13.5px;
+    font-size: 14px;
 }
 
 .att-count-badge {
     font-size: 12px;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 12px;
     display: inline-block;
     line-height: 1.4;
@@ -489,44 +511,338 @@ if (!isset($targetAttendanceRole)) {
 .badge-present { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
 .badge-working { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
 
-.att-line-details {
-    color: #334155;
-    flex: 1;
-    min-width: 0;
-}
-
-.att-empty-hint {
-    color: #94a3b8;
-    font-style: italic;
-    font-size: 13px;
-}
-
-.att-date-tag {
+.att-card-action {
     display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-right: 14px;
-    margin-bottom: 2px;
+    gap: 10px;
 }
 
-.att-date-pill {
-    background: #f1f5f9;
-    color: #0f172a;
-    font-weight: 700;
+.att-action-hint {
     font-size: 12.5px;
-    padding: 2px 8px;
-    border-radius: 5px;
+    color: #64748b;
+    font-weight: 500;
+}
+.att-action-hint .hint-muted {
+    color: #94a3b8;
+    font-style: italic;
+}
+.att-action-hint .hint-active {
+    color: #334155;
+    font-weight: 600;
+}
+
+.att-chevron {
+    color: #94a3b8;
+    font-size: 12px;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.15s ease, background 0.15s ease;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #f1f5f9;
+}
+.att-card-header:hover .att-chevron {
+    color: #1d4ed8;
+    background: #e0e7ff;
+}
+.att-summary-item-line.is-open .att-chevron {
+    transform: rotate(180deg);
+    color: #2563eb;
+    background: #dbeafe;
+}
+
+.att-card-body {
+    padding: 14px 18px 16px;
+    background: #f8fafc;
+}
+
+.att-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.att-detail-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    gap: 12px;
+}
+.att-detail-item:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.att-detail-item.item-late {
+    border-left: 3px solid #d97706;
+}
+.att-detail-item.item-halfday {
+    border-left: 3px solid #ea580c;
+}
+.att-detail-item.item-leave {
+    border-left: 3px solid #7c3aed;
+}
+
+.att-detail-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.att-detail-date-badge {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.att-detail-note {
+    font-size: 12.5px;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 320px;
+}
+
+.att-detail-item-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.att-time-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.3;
+}
+.att-time-pill.in-time {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+.att-time-pill.in-time-late {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.att-time-pill.out-time {
+    background: #f1f5f9;
+    color: #334155;
     border: 1px solid #e2e8f0;
 }
+.att-time-pill .time-label {
+    font-weight: 600;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    opacity: 0.8;
+}
+.att-time-pill .time-val {
+    font-weight: 700;
+    font-size: 12.5px;
+}
 
-.att-date-tag .tag-note {
+.att-btn-view-day {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    color: #2563eb;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.att-btn-view-day:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+}
+
+.att-empty-state-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
     color: #475569;
     font-size: 13px;
 }
 
-.att-date-tag .tag-note strong {
+.att-present-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 8px;
+}
+.att-present-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #10b981;
+    border-radius: 8px;
+    padding: 9px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+.att-present-card:hover {
+    border-color: #86efac;
+    border-left-color: #10b981;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.08);
+}
+.pres-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.pres-date {
+    font-size: 12.5px;
+    font-weight: 700;
     color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.pres-card-times {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: #475569;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 5px;
+}
+.pres-card-times strong {
+    color: #0f172a;
+}
+
+.att-working-breakdown-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.att-wb-stats-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.att-wb-stat-box {
+    flex: 1;
+    min-width: 140px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+.att-wb-stat-box .wb-num {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+}
+.att-wb-stat-box .wb-lbl {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+}
+.att-wb-stat-box.off-box .wb-num {
+    color: #d97706;
+}
+.att-wb-stat-box.net-box {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+.att-wb-stat-box.net-box .wb-num {
+    color: #1d4ed8;
+}
+.att-sundays-list-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+.sundays-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.sundays-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sunday-chip {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+.sunday-chip:hover {
+    background: #ea580c;
+    color: #ffffff;
+    border-color: #ea580c;
+}
+.att-toggle-all-btn {
+    font-size: 12px;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-weight: 600;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: all 0.15s ease;
+}
+.att-toggle-all-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
 }
 
 /* 5. Responsive Styles */
@@ -662,78 +978,113 @@ if (!isset($targetAttendanceRole)) {
         </div>
     </div>
 
-    <!-- 4. Monthly Attendance Summary (Text-based, Clean, Eye-catching) -->
+    <!-- 4. Monthly Attendance Summary (Collapsible Cards, Clean & Detailed on Click) -->
     <div class="att-text-summary-section">
         <div class="att-summary-header-row">
-            <h4 class="att-summary-title-text">
-                <i class="fa fa-file-text-o" style="color: #2563eb;"></i>
-                Monthly Attendance Summary &mdash; <span id="attSummaryMonthTitle" style="color: #2563eb;">October 2026</span>
-            </h4>
-            <span class="att-summary-subtext">
-                <i class="fa fa-info-circle" style="color: #6366f1;"></i> Click any date on the calendar above to mark status
-            </span>
+            <div>
+                <h4 class="att-summary-title-text">
+                    <i class="fa fa-file-text-o" style="color: #2563eb;"></i>
+                    Monthly Attendance Summary &mdash; <span id="attSummaryMonthTitle" style="color: #2563eb;">October 2026</span>
+                </h4>
+                <div class="att-summary-subtext" style="margin-top: 4px;">
+                    <i class="fa fa-info-circle" style="color: #6366f1;"></i> Click any section card below to view detailed breakdown (Clock In / Clock Out)
+                </div>
+            </div>
+            <div class="att-summary-header-actions">
+                <button type="button" class="btn btn-xs btn-default att-toggle-all-btn" id="attToggleAllCards" title="Expand or collapse all summary sections">
+                    <i class="fa fa-angle-double-down"></i> Expand All
+                </button>
+            </div>
         </div>
 
         <div class="att-summary-content">
-            <!-- Late Login Line -->
-            <div class="att-summary-item-line line-late">
-                <div class="att-line-head">
-                    <span class="att-row-icon-wrap icon-late"><i class="fa fa-clock-o"></i></span>
-                    <span class="att-line-label">Late Login</span>
-                    <span class="att-count-badge badge-late" id="sumLateCount">0</span>
+            <!-- 1. Late Login Line / Card -->
+            <div class="att-summary-item-line line-late" id="attCardLate">
+                <div class="att-card-header" role="button" tabindex="0" title="Click to view/hide Late Login breakdown">
+                    <div class="att-line-head">
+                        <span class="att-row-icon-wrap icon-late"><i class="fa fa-clock-o"></i></span>
+                        <span class="att-line-label">Late Login</span>
+                        <span class="att-count-badge badge-late" id="sumLateCount">0</span>
+                    </div>
+                    <div class="att-card-action">
+                        <span class="att-action-hint" id="sumLateActionHint">Click to view</span>
+                        <i class="fa fa-chevron-down att-chevron"></i>
+                    </div>
                 </div>
-                <div class="att-line-details" id="sumLateDetails">
-                    <span class="att-empty-hint">None marked</span>
-                </div>
-            </div>
-
-            <!-- Half Day Line -->
-            <div class="att-summary-item-line line-halfday">
-                <div class="att-line-head">
-                    <span class="att-row-icon-wrap icon-halfday"><i class="fa fa-hourglass-half"></i></span>
-                    <span class="att-line-label">Half Day</span>
-                    <span class="att-count-badge badge-halfday" id="sumHalfDayCount">0</span>
-                </div>
-                <div class="att-line-details" id="sumHalfDayDetails">
-                    <span class="att-empty-hint">None marked</span>
+                <div class="att-card-body" id="sumLateDetails" style="display: none;">
+                    <!-- Expanded breakdown rendered by JS -->
                 </div>
             </div>
 
-            <!-- Leave Line -->
-            <div class="att-summary-item-line line-leave">
-                <div class="att-line-head">
-                    <span class="att-row-icon-wrap icon-leave"><i class="fa fa-calendar-minus-o"></i></span>
-                    <span class="att-line-label">Leave</span>
-                    <span class="att-count-badge badge-leave" id="sumLeaveCount">0</span>
+            <!-- 2. Half Day Line / Card -->
+            <div class="att-summary-item-line line-halfday" id="attCardHalfDay">
+                <div class="att-card-header" role="button" tabindex="0" title="Click to view/hide Half Day breakdown">
+                    <div class="att-line-head">
+                        <span class="att-row-icon-wrap icon-halfday"><i class="fa fa-hourglass-half"></i></span>
+                        <span class="att-line-label">Half Day</span>
+                        <span class="att-count-badge badge-halfday" id="sumHalfDayCount">0</span>
+                    </div>
+                    <div class="att-card-action">
+                        <span class="att-action-hint" id="sumHalfDayActionHint">Click to view</span>
+                        <i class="fa fa-chevron-down att-chevron"></i>
+                    </div>
                 </div>
-                <div class="att-line-details" id="sumLeaveDetails">
-                    <span class="att-empty-hint">None marked</span>
-                </div>
-            </div>
-
-            <!-- Present Line -->
-            <div class="att-summary-item-line line-present">
-                <div class="att-line-head">
-                    <span class="att-row-icon-wrap icon-present"><i class="fa fa-check-circle"></i></span>
-                    <span class="att-line-label">Present</span>
-                    <span class="att-count-badge badge-present" id="sumPresentCount">0 Days</span>
-                </div>
-                <div class="att-line-details" id="sumPresentDetails">
-                    <span class="att-empty-hint">0 Days recorded</span>
+                <div class="att-card-body" id="sumHalfDayDetails" style="display: none;">
+                    <!-- Expanded breakdown rendered by JS -->
                 </div>
             </div>
 
-            <!-- Total Working Days Line -->
-            <div class="att-summary-item-line line-working">
-                <div class="att-line-head">
-                    <span class="att-row-icon-wrap icon-working"><i class="fa fa-briefcase"></i></span>
-                    <span class="att-line-label">Working Days</span>
-                    <span class="att-count-badge badge-working" id="sumWorkingDays">27</span>
+            <!-- 3. Leave Line / Card -->
+            <div class="att-summary-item-line line-leave" id="attCardLeave">
+                <div class="att-card-header" role="button" tabindex="0" title="Click to view/hide Leave breakdown">
+                    <div class="att-line-head">
+                        <span class="att-row-icon-wrap icon-leave"><i class="fa fa-calendar-minus-o"></i></span>
+                        <span class="att-line-label">Leave</span>
+                        <span class="att-count-badge badge-leave" id="sumLeaveCount">0</span>
+                    </div>
+                    <div class="att-card-action">
+                        <span class="att-action-hint" id="sumLeaveActionHint">Click to view</span>
+                        <i class="fa fa-chevron-down att-chevron"></i>
+                    </div>
                 </div>
-                <div class="att-line-details">
-                    <span style="font-size: 13px; color: #475569;">
-                        Sundays (Off): <strong style="color: #0f172a;" id="sumSundayCount">4</strong> days &bull; Total Month Days: <strong style="color: #0f172a;" id="sumTotalMonthDays">31</strong> days
-                    </span>
+                <div class="att-card-body" id="sumLeaveDetails" style="display: none;">
+                    <!-- Expanded breakdown rendered by JS -->
+                </div>
+            </div>
+
+            <!-- 4. Present Line / Card -->
+            <div class="att-summary-item-line line-present" id="attCardPresent">
+                <div class="att-card-header" role="button" tabindex="0" title="Click to view/hide Present breakdown">
+                    <div class="att-line-head">
+                        <span class="att-row-icon-wrap icon-present"><i class="fa fa-check-circle"></i></span>
+                        <span class="att-line-label">Present</span>
+                        <span class="att-count-badge badge-present" id="sumPresentCount">0 Days</span>
+                    </div>
+                    <div class="att-card-action">
+                        <span class="att-action-hint" id="sumPresentActionHint">Click to view</span>
+                        <i class="fa fa-chevron-down att-chevron"></i>
+                    </div>
+                </div>
+                <div class="att-card-body" id="sumPresentDetails" style="display: none;">
+                    <!-- Expanded breakdown rendered by JS -->
+                </div>
+            </div>
+
+            <!-- 5. Total Working Days Line / Card -->
+            <div class="att-summary-item-line line-working" id="attCardWorking">
+                <div class="att-card-header" role="button" tabindex="0" title="Click to view/hide Working Days breakdown">
+                    <div class="att-line-head">
+                        <span class="att-row-icon-wrap icon-working"><i class="fa fa-briefcase"></i></span>
+                        <span class="att-line-label">Working Days</span>
+                        <span class="att-count-badge badge-working"><span id="sumWorkingDays">27</span> Days</span>
+                    </div>
+                    <div class="att-card-action">
+                        <span class="att-action-hint" id="sumWorkingActionHint">Sundays: <strong id="sumSundayCount">4</strong> &bull; Total: <strong id="sumTotalMonthDays">31</strong></span>
+                        <i class="fa fa-chevron-down att-chevron"></i>
+                    </div>
+                </div>
+                <div class="att-card-body" id="sumWorkingDetails" style="display: none;">
+                    <!-- Expanded breakdown rendered by JS -->
                 </div>
             </div>
         </div>
@@ -779,6 +1130,10 @@ if (!isset($targetAttendanceRole)) {
                     <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; font-size: 12px;">
                         <span style="color: #64748b;">Note / Shift Status:</span>
                         <strong id="modalPunchNoteVal" style="color: #0f172a;">--</strong>
+                    </div>
+                    <div id="modalAttLocationRow" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: none; font-size: 12px; color: #475569;">
+                        <span><i class="fa fa-map-marker" style="color: #ef4444; margin-right: 4px;"></i><strong>Selfie GPS Location:</strong></span>
+                        <div id="modalPunchLocationVal" style="margin-top: 3px; color: #0f172a; font-weight: 600;">--</div>
                     </div>
                 </div>
 
@@ -851,7 +1206,7 @@ if (!isset($targetAttendanceRole)) {
     if (isset($db) && $db instanceof PDO && !empty($targetAttendanceUid)) {
         try {
             $attStmt = $db->prepare("
-                SELECT attendance_date, status, in_time, out_time, remarks, punch_in_selfie_url 
+                SELECT attendance_date, status, in_time, out_time, remarks, punch_in_selfie_url, in_address, in_latitude, in_longitude 
                 FROM aitf_attendance 
                 WHERE user_id = :uid 
                   AND attendance_date >= DATE_SUB(CURDATE(), INTERVAL 120 DAY)
@@ -867,7 +1222,8 @@ if (!isset($targetAttendanceRole)) {
                     'inTime' => !empty($r['in_time']) ? date('h:i A', strtotime($r['in_time'])) : '--',
                     'outTime' => !empty($r['out_time']) ? date('h:i A', strtotime($r['out_time'])) : '--',
                     'note' => $r['remarks'] ?? '',
-                    'selfieUrl' => $r['punch_in_selfie_url'] ?? ''
+                    'selfieUrl' => $r['punch_in_selfie_url'] ?? '',
+                    'inAddress' => $r['in_address'] ?? ''
                 ];
             }
         } catch (Exception $e) {
@@ -982,7 +1338,59 @@ if (!isset($targetAttendanceRole)) {
         updateMonthlySummary(year, month);
     }
 
-    // Update the Text-Based Summary Section below Calendar
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function updateExpandAllBtnState() {
+        var totalCards = $('.att-summary-item-line').length;
+        var openCards = $('.att-summary-item-line.is-open').length;
+        if (openCards === totalCards && totalCards > 0) {
+            $('#attToggleAllCards').html('<i class="fa fa-angle-double-up"></i> Collapse All');
+        } else {
+            $('#attToggleAllCards').html('<i class="fa fa-angle-double-down"></i> Expand All');
+        }
+    }
+
+    // Open Day Details & Action Modal for a given date string (YYYY-MM-DD)
+    function openDayModalByDate(dateStr) {
+        if (!dateStr) return;
+        var dParts = dateStr.split('-');
+        var y = parseInt(dParts[0], 10);
+        var m = parseInt(dParts[1], 10) - 1;
+        var d = parseInt(dParts[2], 10);
+        var dObj = new Date(y, m, d);
+        var dayName = dayNames[dObj.getDay()];
+        var isSun = (dObj.getDay() === 0);
+
+        $('#attDayDetailModal').data('active-date', dateStr);
+        var formattedDate = dayName + ', ' + d + ' ' + monthNames[m] + ' ' + y;
+        $('#modalAttFullDate').text(formattedDate);
+
+        if (isSun) {
+            $('#modalAttDayType').text('Weekend (Sunday - Official Off)');
+            $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-off" style="font-size: 12px; padding: 4px 10px;"><i class="fa fa-coffee"></i> Weekend / Off</span>');
+            $('#modalPunchInVal').text('--');
+            $('#modalPunchOutVal').text('--');
+            $('#modalPunchNoteVal').text('Weekly Off (Sunday)');
+            $('#modalMarkActionsBox').hide();
+        } else {
+            $('#modalAttDayType').text('Standard Working Day');
+            $('#modalMarkActionsBox').show();
+            updateModalStatusBadge(dateStr);
+        }
+
+        $('#markFeedbackMsg').hide();
+        $('#attDayDetailModal').modal('show');
+    }
+
+    // Update the Collapsible Monthly Summary Section below Calendar
     function updateMonthlySummary(year, month) {
         var daysInCurrentMonth = new Date(year, month + 1, 0).getDate();
         var lateList = [];
@@ -990,24 +1398,65 @@ if (!isset($targetAttendanceRole)) {
         var leaveList = [];
         var presentList = [];
         var totalSundays = 0;
+        var sundayList = [];
 
         for (var d = 1; d <= daysInCurrentMonth; d++) {
             var dateObj = new Date(year, month, d);
             var isSun = (dateObj.getDay() === 0);
-            if (isSun) totalSundays++;
-
             var dateStr = year + '-' + padZero(month + 1) + '-' + padZero(d);
+
+            if (isSun) {
+                totalSundays++;
+                sundayList.push({
+                    dateStr: dateStr,
+                    dayNum: d,
+                    dayLabel: 'Sun, ' + d + ' ' + monthNames[month].substring(0, 3)
+                });
+            }
+
             var rec = window.AITF_ATTENDANCE_CACHE[dateStr];
             if (rec) {
-                var dayLabel = dayNames[dateObj.getDay()].substring(0, 3) + ', ' + d + ' ' + monthNames[month].substring(0, 3);
+                var dayLabel = dayNames[dateObj.getDay()].substring(0, 3) + ', ' + d + ' ' + monthNames[month].substring(0, 3) + ' ' + year;
+                var shortLabel = dayNames[dateObj.getDay()].substring(0, 3) + ', ' + d + ' ' + monthNames[month].substring(0, 3);
                 if (rec.status === 'late') {
-                    lateList.push({ dayLabel: dayLabel, inTime: rec.inTime, outTime: rec.outTime, note: rec.note || 'Late login' });
+                    lateList.push({
+                        dateStr: dateStr,
+                        dayLabel: dayLabel,
+                        shortLabel: shortLabel,
+                        inTime: rec.inTime || '--:--',
+                        outTime: rec.outTime || '--:--',
+                        note: rec.note || 'Late login recorded',
+                        inAddress: rec.inAddress || '',
+                        selfieUrl: rec.selfieUrl || ''
+                    });
                 } else if (rec.status === 'halfday') {
-                    halfDayList.push({ dayLabel: dayLabel, inTime: rec.inTime, outTime: rec.outTime, note: rec.note || 'Half day shift' });
+                    halfDayList.push({
+                        dateStr: dateStr,
+                        dayLabel: dayLabel,
+                        shortLabel: shortLabel,
+                        inTime: rec.inTime || '--:--',
+                        outTime: rec.outTime || '--:--',
+                        note: rec.note || 'Half day shift',
+                        inAddress: rec.inAddress || '',
+                        selfieUrl: rec.selfieUrl || ''
+                    });
                 } else if (rec.status === 'leave') {
-                    leaveList.push({ dayLabel: dayLabel, note: rec.note || 'Casual Leave' });
+                    leaveList.push({
+                        dateStr: dateStr,
+                        dayLabel: dayLabel,
+                        shortLabel: shortLabel,
+                        note: rec.note || 'Leave'
+                    });
                 } else if (rec.status === 'present') {
-                    presentList.push({ dayLabel: dayLabel, inTime: rec.inTime, outTime: rec.outTime });
+                    presentList.push({
+                        dateStr: dateStr,
+                        dayLabel: dayLabel,
+                        shortLabel: shortLabel,
+                        inTime: rec.inTime || '--:--',
+                        outTime: rec.outTime || '--:--',
+                        note: rec.note || 'Full day attendance',
+                        inAddress: rec.inAddress || ''
+                    });
                 }
             }
         }
@@ -1019,56 +1468,181 @@ if (!isset($targetAttendanceRole)) {
         $('#sumWorkingDays').text(workingDays);
         $('#sumSundayCount').text(totalSundays);
 
-        // 1. Late Login Text Line
+        // 1. Late Login Line / Card
         $('#sumLateCount').text(lateList.length);
         if (lateList.length === 0) {
-            $('#sumLateDetails').html('<span class="att-empty-hint">None marked this month</span>');
+            $('#sumLateActionHint').html('<span class="hint-muted">0 recorded</span>');
+            $('#sumLateDetails').html(
+                '<div class="att-empty-state-box">' +
+                    '<i class="fa fa-check-circle" style="color: #16a34a; font-size: 16px;"></i> ' +
+                    '<span>No late logins recorded for <strong>' + monthNames[month] + ' ' + year + '</strong>. Excellent punctuality!</span>' +
+                '</div>'
+            );
         } else {
-            var lateHtml = '';
+            $('#sumLateActionHint').html('<span class="hint-active"><i class="fa fa-clock-o" style="color: #d97706;"></i> ' + lateList.length + ' ' + (lateList.length === 1 ? 'late day' : 'late days') + ' &bull; Click to view</span>');
+            var lateHtml = '<div class="att-details-list">';
             for (var i = 0; i < lateList.length; i++) {
                 var item = lateList[i];
-                lateHtml += '<span class="att-date-tag"><span class="att-date-pill">' + item.dayLabel + '</span><span class="tag-note">(In: <strong>' + item.inTime + '</strong> | Out: <strong>' + item.outTime + '</strong> &mdash; ' + item.note + ')</span></span>';
+                lateHtml += '<div class="att-detail-item item-late">' +
+                    '<div class="att-detail-item-left">' +
+                        '<span class="att-detail-date-badge">' +
+                            '<i class="fa fa-calendar-check-o" style="color: #d97706;"></i> ' + item.dayLabel +
+                        '</span>' +
+                        (item.note ? '<span class="att-detail-note" title="' + escapeHtml(item.note) + '"><i class="fa fa-info-circle"></i> ' + escapeHtml(item.note) + '</span>' : '') +
+                    '</div>' +
+                    '<div class="att-detail-item-right">' +
+                        '<div class="att-time-pill in-time-late">' +
+                            '<span class="time-label"><i class="fa fa-sign-in"></i> Clock In</span>' +
+                            '<span class="time-val">' + item.inTime + '</span>' +
+                        '</div>' +
+                        '<div class="att-time-pill out-time">' +
+                            '<span class="time-label"><i class="fa fa-sign-out"></i> Clock Out</span>' +
+                            '<span class="time-val">' + item.outTime + '</span>' +
+                        '</div>' +
+                        '<button type="button" class="btn att-btn-view-day" data-date="' + item.dateStr + '" title="View on calendar">' +
+                            '<i class="fa fa-calendar"></i> View Day' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
             }
+            lateHtml += '</div>';
             $('#sumLateDetails').html(lateHtml);
         }
 
-        // 2. Half Day Text Line
+        // 2. Half Day Line / Card
         $('#sumHalfDayCount').text(halfDayList.length);
         if (halfDayList.length === 0) {
-            $('#sumHalfDayDetails').html('<span class="att-empty-hint">None marked this month</span>');
+            $('#sumHalfDayActionHint').html('<span class="hint-muted">0 recorded</span>');
+            $('#sumHalfDayDetails').html(
+                '<div class="att-empty-state-box">' +
+                    '<i class="fa fa-check-circle" style="color: #16a34a; font-size: 16px;"></i> ' +
+                    '<span>No half day shifts marked for <strong>' + monthNames[month] + ' ' + year + '</strong>.</span>' +
+                '</div>'
+            );
         } else {
-            var hdHtml = '';
+            $('#sumHalfDayActionHint').html('<span class="hint-active"><i class="fa fa-hourglass-half" style="color: #ea580c;"></i> ' + halfDayList.length + ' ' + (halfDayList.length === 1 ? 'half day' : 'half days') + ' &bull; Click to view</span>');
+            var hdHtml = '<div class="att-details-list">';
             for (var i = 0; i < halfDayList.length; i++) {
                 var item = halfDayList[i];
-                hdHtml += '<span class="att-date-tag"><span class="att-date-pill">' + item.dayLabel + '</span><span class="tag-note">(In: <strong>' + item.inTime + '</strong> | Out: <strong>' + item.outTime + '</strong> &mdash; ' + item.note + ')</span></span>';
+                hdHtml += '<div class="att-detail-item item-halfday">' +
+                    '<div class="att-detail-item-left">' +
+                        '<span class="att-detail-date-badge">' +
+                            '<i class="fa fa-hourglass-half" style="color: #ea580c;"></i> ' + item.dayLabel +
+                        '</span>' +
+                        (item.note ? '<span class="att-detail-note" title="' + escapeHtml(item.note) + '"><i class="fa fa-info-circle"></i> ' + escapeHtml(item.note) + '</span>' : '') +
+                    '</div>' +
+                    '<div class="att-detail-item-right">' +
+                        '<div class="att-time-pill in-time">' +
+                            '<span class="time-label"><i class="fa fa-sign-in"></i> Clock In</span>' +
+                            '<span class="time-val">' + item.inTime + '</span>' +
+                        '</div>' +
+                        '<div class="att-time-pill out-time">' +
+                            '<span class="time-label"><i class="fa fa-sign-out"></i> Clock Out</span>' +
+                            '<span class="time-val">' + item.outTime + '</span>' +
+                        '</div>' +
+                        '<button type="button" class="btn att-btn-view-day" data-date="' + item.dateStr + '" title="View on calendar">' +
+                            '<i class="fa fa-calendar"></i> View Day' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
             }
+            hdHtml += '</div>';
             $('#sumHalfDayDetails').html(hdHtml);
         }
 
-        // 3. Leave Text Line
+        // 3. Leave Line / Card
         $('#sumLeaveCount').text(leaveList.length);
         if (leaveList.length === 0) {
-            $('#sumLeaveDetails').html('<span class="att-empty-hint">None marked this month</span>');
+            $('#sumLeaveActionHint').html('<span class="hint-muted">0 recorded</span>');
+            $('#sumLeaveDetails').html(
+                '<div class="att-empty-state-box">' +
+                    '<i class="fa fa-check-circle" style="color: #16a34a; font-size: 16px;"></i> ' +
+                    '<span>No leaves taken in <strong>' + monthNames[month] + ' ' + year + '</strong>.</span>' +
+                '</div>'
+            );
         } else {
-            var leaveHtml = '';
+            $('#sumLeaveActionHint').html('<span class="hint-active"><i class="fa fa-calendar-minus-o" style="color: #7c3aed;"></i> ' + leaveList.length + ' ' + (leaveList.length === 1 ? 'leave' : 'leaves') + ' &bull; Click to view</span>');
+            var leaveHtml = '<div class="att-details-list">';
             for (var i = 0; i < leaveList.length; i++) {
                 var item = leaveList[i];
-                leaveHtml += '<span class="att-date-tag"><span class="att-date-pill">' + item.dayLabel + '</span><span class="tag-note">(' + item.note + ')</span></span>';
+                leaveHtml += '<div class="att-detail-item item-leave">' +
+                    '<div class="att-detail-item-left">' +
+                        '<span class="att-detail-date-badge">' +
+                            '<i class="fa fa-calendar-minus-o" style="color: #7c3aed;"></i> ' + item.dayLabel +
+                        '</span>' +
+                        (item.note ? '<span class="att-detail-note" title="' + escapeHtml(item.note) + '"><i class="fa fa-tag"></i> ' + escapeHtml(item.note) + '</span>' : '') +
+                    '</div>' +
+                    '<div class="att-detail-item-right">' +
+                        '<button type="button" class="btn att-btn-view-day" data-date="' + item.dateStr + '" title="View on calendar">' +
+                            '<i class="fa fa-calendar"></i> View Day' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
             }
+            leaveHtml += '</div>';
             $('#sumLeaveDetails').html(leaveHtml);
         }
 
-        // 4. Present Text Line
+        // 4. Present Line / Card
         $('#sumPresentCount').text(presentList.length + ' Days');
         if (presentList.length === 0) {
-            $('#sumPresentDetails').html('<span class="att-empty-hint">No present records marked yet</span>');
+            $('#sumPresentActionHint').html('<span class="hint-muted">0 Days recorded</span>');
+            $('#sumPresentDetails').html(
+                '<div class="att-empty-state-box">' +
+                    '<i class="fa fa-info-circle" style="color: #64748b; font-size: 16px;"></i> ' +
+                    '<span>No present records marked yet for <strong>' + monthNames[month] + ' ' + year + '</strong>.</span>' +
+                '</div>'
+            );
         } else {
-            var presHtml = '';
+            $('#sumPresentActionHint').html('<span class="hint-active"><i class="fa fa-check-circle" style="color: #10b981;"></i> ' + presentList.length + ' Days marked &bull; Click to view</span>');
+            var presHtml = '<div class="att-present-grid">';
             for (var i = 0; i < presentList.length; i++) {
-                presHtml += '<span class="att-date-tag"><span class="att-date-pill">' + presentList[i].dayLabel + '</span></span>';
+                var item = presentList[i];
+                presHtml += '<div class="att-present-card">' +
+                    '<div class="pres-card-head">' +
+                        '<span class="pres-date"><i class="fa fa-calendar-check-o" style="color: #10b981;"></i> ' + item.shortLabel + '</span>' +
+                        '<button type="button" class="btn att-btn-view-day" data-date="' + item.dateStr + '" title="View on calendar"><i class="fa fa-calendar"></i></button>' +
+                    '</div>' +
+                    '<div class="pres-card-times">' +
+                        '<span class="pres-time-in"><i class="fa fa-sign-in"></i> In: <strong>' + item.inTime + '</strong></span>' +
+                        '<span class="pres-time-out"><i class="fa fa-sign-out"></i> Out: <strong>' + item.outTime + '</strong></span>' +
+                    '</div>' +
+                '</div>';
             }
+            presHtml += '</div>';
             $('#sumPresentDetails').html(presHtml);
         }
+
+        // 5. Working Days Line / Card
+        $('#sumWorkingActionHint').html('Sundays (Off): <strong>' + totalSundays + '</strong> &bull; Total: <strong>' + daysInCurrentMonth + '</strong> days &bull; Click to view');
+        var workingHtml = '<div class="att-working-breakdown-card">' +
+            '<div class="att-wb-stats-row">' +
+                '<div class="att-wb-stat-box">' +
+                    '<span class="wb-num">' + daysInCurrentMonth + '</span>' +
+                    '<span class="wb-lbl">Total Month Days</span>' +
+                '</div>' +
+                '<div class="att-wb-stat-box off-box">' +
+                    '<span class="wb-num">' + totalSundays + '</span>' +
+                    '<span class="wb-lbl">Sundays (Off)</span>' +
+                '</div>' +
+                '<div class="att-wb-stat-box net-box">' +
+                    '<span class="wb-num">' + workingDays + '</span>' +
+                    '<span class="wb-lbl">Net Working Days</span>' +
+                '</div>' +
+            '</div>';
+        if (sundayList.length > 0) {
+            workingHtml += '<div class="att-sundays-list-wrap">' +
+                '<div class="sundays-title"><i class="fa fa-coffee" style="color: #c2410c;"></i> Weekly Off Days (Sundays) this month:</div>' +
+                '<div class="sundays-chips">';
+            for (var s = 0; s < sundayList.length; s++) {
+                workingHtml += '<span class="sunday-chip att-btn-view-day" data-date="' + sundayList[s].dateStr + '" role="button" title="View in calendar modal"><i class="fa fa-calendar-o"></i> ' + sundayList[s].dayLabel + '</span>';
+            }
+            workingHtml += '</div></div>';
+        }
+        workingHtml += '</div>';
+        $('#sumWorkingDetails').html(workingHtml);
+
+        updateExpandAllBtnState();
     }
 
     function updateModalStatusBadge(dateStr) {
@@ -1086,11 +1660,18 @@ if (!isset($targetAttendanceRole)) {
             $('#modalPunchInVal').text(rec.inTime || '--:--');
             $('#modalPunchOutVal').text(rec.outTime || '--:--');
             $('#modalPunchNoteVal').text(rec.note || rec.label);
+            if (rec.inAddress) {
+                $('#modalAttLocationRow').show();
+                $('#modalPunchLocationVal').text(rec.inAddress);
+            } else {
+                $('#modalAttLocationRow').hide();
+            }
         } else {
             $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-empty" style="font-size: 12px; padding: 4px 10px;"><i class="fa fa-circle-o"></i> Not Marked</span>');
             $('#modalPunchInVal').text('--:--');
             $('#modalPunchOutVal').text('--:--');
             $('#modalPunchNoteVal').text('--');
+            $('#modalAttLocationRow').hide();
         }
     }
 
@@ -1146,37 +1727,54 @@ if (!isset($targetAttendanceRole)) {
         // Day cell click: Open Modal
         $(document).on('click', '.att-day-cell:not(.is-other-month)', function() {
             var dateStr = $(this).data('date');
-            var dayNum = $(this).data('day');
-            var dayName = $(this).data('day-name');
-            var isSun = $(this).data('is-sun') === 1 || $(this).data('is-sun') === '1';
-
-            if (!dateStr) return;
-
-            $('#attDayDetailModal').data('active-date', dateStr);
-
-            var dParts = dateStr.split('-');
-            var y = parseInt(dParts[0], 10);
-            var m = parseInt(dParts[1], 10) - 1;
-            var d = parseInt(dParts[2], 10);
-
-            var formattedDate = dayName + ', ' + d + ' ' + monthNames[m] + ' ' + y;
-            $('#modalAttFullDate').text(formattedDate);
-
-            if (isSun) {
-                $('#modalAttDayType').text('Weekend (Sunday - Official Off)');
-                $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-off" style="font-size: 12px; padding: 4px 10px;"><i class="fa fa-coffee"></i> Weekend / Off</span>');
-                $('#modalPunchInVal').text('--');
-                $('#modalPunchOutVal').text('--');
-                $('#modalPunchNoteVal').text('Weekly Off (Sunday)');
-                $('#modalMarkActionsBox').hide();
-            } else {
-                $('#modalAttDayType').text('Standard Working Day');
-                $('#modalMarkActionsBox').show();
-                updateModalStatusBadge(dateStr);
+            if (dateStr) {
+                openDayModalByDate(dateStr);
             }
+        });
 
-            $('#markFeedbackMsg').hide();
-            $('#attDayDetailModal').modal('show');
+        // Collapsible summary card header click
+        $(document).on('click', '.att-card-header', function(e) {
+            e.preventDefault();
+            var $card = $(this).closest('.att-summary-item-line');
+            var $body = $card.find('.att-card-body');
+            if ($card.hasClass('is-open')) {
+                $card.removeClass('is-open');
+                $body.stop(true, true).slideUp(180, function() {
+                    updateExpandAllBtnState();
+                });
+            } else {
+                $card.addClass('is-open');
+                $body.stop(true, true).slideDown(180, function() {
+                    updateExpandAllBtnState();
+                });
+            }
+        });
+
+        // View Day button inside details click
+        $(document).on('click', '.att-btn-view-day', function(e) {
+            e.stopPropagation();
+            var dateStr = $(this).data('date');
+            if (dateStr) {
+                openDayModalByDate(dateStr);
+            }
+        });
+
+        // Toggle Expand/Collapse All summary cards
+        $(document).on('click', '#attToggleAllCards', function(e) {
+            e.preventDefault();
+            var totalCards = $('.att-summary-item-line').length;
+            var openCards = $('.att-summary-item-line.is-open').length;
+            if (openCards === totalCards && totalCards > 0) {
+                // Collapse all
+                $('.att-summary-item-line').removeClass('is-open');
+                $('.att-card-body').slideUp(180);
+                $(this).html('<i class="fa fa-angle-double-down"></i> Expand All');
+            } else {
+                // Expand all
+                $('.att-summary-item-line').addClass('is-open');
+                $('.att-card-body').slideDown(180);
+                $(this).html('<i class="fa fa-angle-double-up"></i> Collapse All');
+            }
         });
 
         // Mark Attendance Action (Late Login, Half Day, Leave, Present, Clear)

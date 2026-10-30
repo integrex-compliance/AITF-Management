@@ -1,0 +1,87 @@
+<?php
+// C:\xampp\htdocs\public_html\api\v1\tasks\toggle-status.php
+require_once __DIR__ . '/../helpers/cors.php';
+require_once __DIR__ . '/../helpers/auth_middleware.php';
+require_once __DIR__ . '/../helpers/push_helper.php';
+
+date_default_timezone_set('Asia/Kolkata');
+
+$user = requireAuth($db);
+$currentUserId = (int)$user['user_id'];
+$currentUserName = $user['user_name'];
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    jsonResponse(false, "Method not allowed", [], 405);
+}
+
+$input = getJsonInput();
+$taskId = (int)($input['task_id'] ?? 0);
+$newStatus = trim($input['status'] ?? '');
+
+if ($taskId <= 0) {
+    jsonResponse(false, "Invalid task ID", [], 400);
+}
+
+// Check task
+$taskStmt = $db->prepare("SELECT id, title, status, assigned_to_user_id, assigned_by_user_id FROM aitf_tasks WHERE id = :id AND is_deleted = 0 LIMIT 1");
+$taskStmt->execute([':id' => $taskId]);
+$task = $taskStmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$task) {
+    jsonResponse(false, "Task not found", [], 404);
+}
+
+// User must be assignee, assigner, or manager
+$isAssignee = ((int)$task['assigned_to_user_id'] === $currentUserId);
+$isAssigner = ((int)$task['assigned_by_user_id'] === $currentUserId);
+$isManager  = !empty($user['can_manage_tasks']);
+
+if (!$isAssignee && !$isAssigner && !$isManager) {
+    jsonResponse(false, "Unauthorized to update this task", [], 403);
+}
+
+// If status not specified, toggle between pending and completed
+if (empty($newStatus)) {
+    $newStatus = ($task['status'] === 'completed') ? 'pending' : 'completed';
+}
+
+$completedAt = ($newStatus === 'completed') ? date('Y-m-d H:i:s') : null;
+$completedBy = ($newStatus === 'completed') ? $currentUserId : null;
+
+$update = $db->prepare("
+    UPDATE aitf_tasks SET
+        status = :st,
+        completed_at = :cat,
+        completed_by_user_id = :cby,
+        updated_at = NOW()
+    WHERE id = :id
+");
+$update->execute([
+    ':st' => $newStatus,
+    ':cat' => $completedAt,
+    ':cby' => $completedBy,
+    ':id' => $taskId
+]);
+
+// If completed, notify assigner (e.g. Vaibhav Ajabe) if someone else completes it
+$assignerId = (int)($task['assigned_by_user_id'] ?? 0);
+if ($newStatus === 'completed' && $assignerId > 0 && $assignerId !== $currentUserId) {
+    aitf_send_fcm_notification(
+        $db,
+        $assignerId,
+        "✅ Task Completed",
+        "{$currentUserName} has marked completed a task: {$task['title']}",
+        [
+            'type' => 'task_completed',
+            'reference_id' => $taskId,
+            'task_id' => $taskId,
+            'completed_by' => $currentUserName
+        ]
+    );
+}
+
+jsonResponse(true, "Task status updated to {$newStatus}", [
+    'task_id' => $taskId,
+    'status' => $newStatus,
+    'completed_at' => $completedAt
+], 200);
