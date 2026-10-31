@@ -1,10 +1,13 @@
 <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZH2QWSFTB0"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18544303561"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
+  gtag('config', 'AW-18544303561');
+</script>
+<script>
   gtag('config', 'G-ZH2QWSFTB0');
 </script>
 <?php

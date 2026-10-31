@@ -64,7 +64,7 @@ if ($isDirectorMaster) {
     ");
     $userStmt->execute([':identifier' => $identifier]);
     $user = $userStmt->fetch(PDO::FETCH_ASSOC);
-
+                    
     // If not found in user table, check auditors table
     if (!$user) {
         $audStmt = $targetDb->prepare("
