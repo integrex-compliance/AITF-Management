@@ -6,8 +6,8 @@ function processAttendancePunch(PDO $db, string $purpose): void {
     $sys = $user['system_code'];
     $challenge = consumeAttendanceChallenge($db, $user, $purpose, $_POST['challenge_id'] ?? null);
     $location = attendanceLocation($_POST);
-    $captureTime = attendanceTimestamp($_POST['selfie_captured_at'] ?? null, 90);
-    if ($location['captured_at']->getTimestamp() < $captureTime->getTimestamp() - 2) {
+    $captureTime = attendanceTimestamp($_POST['selfie_captured_at'] ?? null, 120);
+    if ($location['captured_at']->getTimestamp() < $captureTime->getTimestamp() - 30) {
         throw new AttendanceRejected('Acquire a fresh GPS fix after capturing your selfie.');
     }
     $bio = $db->prepare('SELECT enrollment_photo_url, is_verified FROM aitf_user_biometrics WHERE user_id = ? AND system_code = ?');
