@@ -370,18 +370,44 @@ if (!function_exists('aitf_create_task')) {
 
                 // Notify assignee if assigned to another user
                 if ($assignedToId > 0 && $assignedToId !== (int)$assignedById) {
-                    try {
-                        $nStmt = $db->prepare("
-                            INSERT INTO aitf_notifications (user_id, title, body, notification_type, reference_id, is_read, created_at)
-                            VALUES (:uid, :title, :body, 'task_assigned', :ref, 0, NOW())
-                        ");
-                        $nStmt->execute([
-                            ':uid' => $assignedToId,
-                            ':title' => '📋 New Task Assigned',
-                            ':body' => "{$assignedByName} has assigned a task for you: {$title}",
-                            ':ref' => (int)($task['id'] ?? $newId)
-                        ]);
-                    } catch (Throwable $ne) {}
+                    $dueText = (!empty($task['due_date']) && $task['due_date'] !== '0000-00-00') ? " | Due: " . date('d M Y', strtotime($task['due_date'])) : "";
+                    $descText = !empty($task['description']) ? "\n\"" . trim($task['description']) . "\"" : "";
+                    $notifTitle = "New Task: {$title}";
+                    $notifBody = "Assigned by {$assignedByName}{$dueText}{$descText}";
+
+                    $pushHelper = __DIR__ . '/../api/v1/helpers/push_helper.php';
+                    if (file_exists($pushHelper)) {
+                        require_once $pushHelper;
+                        if (function_exists('aitf_send_fcm_notification')) {
+                            aitf_send_fcm_notification(
+                                $db,
+                                $assignedToId,
+                                $notifTitle,
+                                $notifBody,
+                                [
+                                    'type' => 'task_assigned',
+                                    'reference_id' => (int)($task['id'] ?? $newId),
+                                    'task_id' => (int)($task['id'] ?? $newId),
+                                    'title' => $title,
+                                    'assigned_by' => $assignedByName
+                                ],
+                                $task['system_code'] ?? 'AITF_MAIN'
+                            );
+                        }
+                    } else {
+                        try {
+                            $nStmt = $db->prepare("
+                                INSERT INTO aitf_notifications (user_id, title, body, notification_type, reference_id, is_read, created_at)
+                                VALUES (:uid, :title, :body, 'task_assigned', :ref, 0, NOW())
+                            ");
+                            $nStmt->execute([
+                                ':uid' => $assignedToId,
+                                ':title' => $notifTitle,
+                                ':body' => $notifBody,
+                                ':ref' => (int)($task['id'] ?? $newId)
+                            ]);
+                        } catch (Throwable $ne) {}
+                    }
                 }
             }
 
@@ -460,16 +486,39 @@ if (!function_exists('aitf_toggle_task_status')) {
                         $uStmt->execute([':uid' => $currentUserId]);
                         $completerName = $uStmt->fetchColumn() ?: 'A team member';
                     }
-                    $nStmt = $db->prepare("
-                        INSERT INTO aitf_notifications (user_id, title, body, notification_type, reference_id, is_read, created_at)
-                        VALUES (:uid, :title, :body, 'task_completed', :ref, 0, NOW())
-                    ");
-                    $nStmt->execute([
-                        ':uid' => $assignerId,
-                        ':title' => '✅ Task Completed',
-                        ':body' => "{$completerName} has marked completed a task: {$task['title']}",
-                        ':ref' => $taskId
-                    ]);
+                    $notifTitle = "Task Completed: {$task['title']}";
+                    $notifBody = "Marked completed by {$completerName}";
+
+                    $pushHelper = __DIR__ . '/../api/v1/helpers/push_helper.php';
+                    if (file_exists($pushHelper)) {
+                        require_once $pushHelper;
+                        if (function_exists('aitf_send_fcm_notification')) {
+                            aitf_send_fcm_notification(
+                                $db,
+                                $assignerId,
+                                $notifTitle,
+                                $notifBody,
+                                [
+                                    'type' => 'task_completed',
+                                    'reference_id' => $taskId,
+                                    'task_id' => $taskId,
+                                    'title' => $task['title']
+                                ],
+                                $task['system_code'] ?? 'AITF_MAIN'
+                            );
+                        }
+                    } else {
+                        $nStmt = $db->prepare("
+                            INSERT INTO aitf_notifications (user_id, title, body, notification_type, reference_id, is_read, created_at)
+                            VALUES (:uid, :title, :body, 'task_completed', :ref, 0, NOW())
+                        ");
+                        $nStmt->execute([
+                            ':uid' => $assignerId,
+                            ':title' => $notifTitle,
+                            ':body' => $notifBody,
+                            ':ref' => $taskId
+                        ]);
+                    }
                 } catch (Throwable $ne) {}
             }
 

@@ -22,6 +22,22 @@ if (empty($fcmToken)) {
     jsonResponse(false, "fcm_token is required", [], 400);
 }
 
+// Ensure table exists on server
+try {
+    $db->exec("CREATE TABLE IF NOT EXISTS `aitf_user_devices` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `user_id` INT NOT NULL,
+        `system_code` VARCHAR(50) DEFAULT 'AITF_MAIN',
+        `fcm_token` VARCHAR(500) NOT NULL,
+        `device_model` VARCHAR(100) NULL,
+        `os_version` VARCHAR(50) NULL,
+        `app_version` VARCHAR(30) NULL,
+        `last_active` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY `uk_user_device_fcm` (`user_id`, `fcm_token`(191)),
+        INDEX `idx_dev_user` (`user_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+} catch (Exception $e) {}
+
 // Upsert into aitf_user_devices
 $stmt = $db->prepare("
     INSERT INTO aitf_user_devices (
