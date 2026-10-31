@@ -1,0 +1,4 @@
+# Deny direct browser access to private service account keys
+Require all denied
+Deny from all
+

@@ -92,11 +92,12 @@ $taskId = (int)$db->lastInsertId();
 
 // Trigger push notification to assignee if not self
 if (!$isSelfAssign && $assignedToUserId > 0) {
+    $dueText = $dueDate ? "  Due: " . date('d M Y', strtotime($dueDate)) : "";
     aitf_send_fcm_notification(
         $db,
         $assignedToUserId,
-        "Ã°Å¸â€œâ€¹ New Task Assigned",
-        "{$currentUserName} has assigned a task for you: {$title}" . ($dueDate ? " (Due: " . date('d M Y', strtotime($dueDate)) . ")" : ''),
+        "New Task: {$title}",
+        "Assigned by {$currentUserName}{$dueText}" . (!empty($description) ? "\n\"{$description}\"" : ""),
         [
             'type' => 'task_assigned',
             'reference_id' => $taskId,

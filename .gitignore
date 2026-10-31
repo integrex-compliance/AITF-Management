@@ -19,6 +19,7 @@ test/
 dbConnect.php
 .env
 /config/mail_config.php
+*firebase-service-account.json
 
 # Logs & temp downloads
 *.log

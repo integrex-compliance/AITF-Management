@@ -987,7 +987,7 @@ if (!isset($targetAttendanceRole)) {
                     Monthly Attendance Summary &mdash; <span id="attSummaryMonthTitle" style="color: #2563eb;">October 2026</span>
                 </h4>
                 <div class="att-summary-subtext" style="margin-top: 4px;">
-                    <i class="fa fa-info-circle" style="color: #6366f1;"></i> Click any section card below to view detailed breakdown (Clock In / Clock Out)
+                    <i class="fa fa-info-circle" style="color: #6366f1;"></i> Click any section card below to view detailed breakdown (Sign In / Sign Out)
                 </div>
             </div>
             <div class="att-summary-header-actions">
@@ -1119,11 +1119,11 @@ if (!isset($targetAttendanceRole)) {
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div>
-                            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600;">Punch In</div>
+                            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600;">Sign In</div>
                             <div id="modalPunchInVal" style="font-size: 14.5px; font-weight: 700; color: #0f172a; margin-top: 2px;">--:--</div>
                         </div>
                         <div>
-                            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600;">Punch Out</div>
+                            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600;">Sign Out</div>
                             <div id="modalPunchOutVal" style="font-size: 14.5px; font-weight: 700; color: #0f172a; margin-top: 2px;">--:--</div>
                         </div>
                     </div>
@@ -1137,13 +1137,13 @@ if (!isset($targetAttendanceRole)) {
                     </div>
                 </div>
 
-                <!-- Both Locations: Clock In & Clock Out Locations -->
+                <!-- Both Locations: Sign In & Sign Out Locations -->
                 <div id="modalLocationsSection">
-                    <!-- 1. Clock In Location (Punch In) -->
+                    <!-- 1. Sign In Location -->
                     <div id="modalInLocationBox" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                             <span style="font-size: 11.5px; font-weight: 700; color: #15803d; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa fa-map-marker" style="color: #16a34a; font-size: 14px;"></i> Clock In Location (Punch In)
+                                <i class="fa fa-map-marker" style="color: #16a34a; font-size: 14px;"></i> Sign In Location
                             </span>
                             <span id="modalInTimeSmall" style="font-size: 11px; font-weight: 600; color: #166534; background: #dcfce7; padding: 2px 7px; border-radius: 4px;">--:--</span>
                         </div>
@@ -1155,11 +1155,11 @@ if (!isset($targetAttendanceRole)) {
                         </div>
                     </div>
 
-                    <!-- 2. Clock Out Location (Punch Out) -->
+                    <!-- 2. Sign Out Location -->
                     <div id="modalOutLocationBox" style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                             <span style="font-size: 11.5px; font-weight: 700; color: #c2410c; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa fa-map-marker" style="color: #ea580c; font-size: 14px;"></i> Clock Out Location (Punch Out)
+                                <i class="fa fa-map-marker" style="color: #ea580c; font-size: 14px;"></i> Sign Out Location
                             </span>
                             <span id="modalOutTimeSmall" style="font-size: 11px; font-weight: 600; color: #9a3412; background: #ffedd5; padding: 2px 7px; border-radius: 4px;">--:--</span>
                         </div>
@@ -1171,16 +1171,16 @@ if (!isset($targetAttendanceRole)) {
                         </div>
                     </div>
 
-                    <!-- Punch Out Pending Notice -->
+                    <!-- Sign Out Pending Notice -->
                     <div id="modalOutPendingBox" style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: none; align-items: center; gap: 8px; font-size: 12px; color: #64748b;">
                         <i class="fa fa-hourglass-half" style="color: #d97706; font-size: 14px;"></i>
-                        <span><strong>Clock Out Pending:</strong> Not clocked out yet for this shift.</span>
+                        <span><strong>Sign Out Pending:</strong> Not signed out yet for this shift.</span>
                     </div>
 
                     <!-- Empty Day Notice -->
                     <div id="modalNoPunchBox" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center; color: #64748b; font-size: 12.5px; display: none;">
                         <i class="fa fa-info-circle" style="color: #94a3b8; font-size: 18px; margin-bottom: 4px; display: block;"></i>
-                        <span id="modalNoPunchText">No punch activity recorded for this date.</span>
+                        <span id="modalNoPunchText">No sign-in activity recorded for this date.</span>
                     </div>
                 </div>
             </div>
@@ -1535,11 +1535,11 @@ if (!isset($targetAttendanceRole)) {
                     '</div>' +
                     '<div class="att-detail-item-right">' +
                         '<div class="att-time-pill in-time-late">' +
-                            '<span class="time-label"><i class="fa fa-sign-in"></i> Clock In</span>' +
+                            '<span class="time-label"><i class="fa fa-sign-in"></i> Sign In</span>' +
                             '<span class="time-val">' + item.inTime + '</span>' +
                         '</div>' +
                         '<div class="att-time-pill out-time">' +
-                            '<span class="time-label"><i class="fa fa-sign-out"></i> Clock Out</span>' +
+                            '<span class="time-label"><i class="fa fa-sign-out"></i> Sign Out</span>' +
                             '<span class="time-val">' + item.outTime + '</span>' +
                         '</div>' +
                         '<button type="button" class="btn att-btn-view-day" data-date="' + item.dateStr + '" title="View on calendar">' +
@@ -1576,11 +1576,11 @@ if (!isset($targetAttendanceRole)) {
                     '</div>' +
                     '<div class="att-detail-item-right">' +
                         '<div class="att-time-pill in-time">' +
-                            '<span class="time-label"><i class="fa fa-sign-in"></i> Clock In</span>' +
+                            '<span class="time-label"><i class="fa fa-sign-in"></i> Sign In</span>' +
                             '<span class="time-val">' + item.inTime + '</span>' +
                         '</div>' +
                         '<div class="att-time-pill out-time">' +
-                            '<span class="time-label"><i class="fa fa-sign-out"></i> Clock Out</span>' +
+                            '<span class="time-label"><i class="fa fa-sign-out"></i> Sign Out</span>' +
                             '<span class="time-val">' + item.outTime + '</span>' +
                         '</div>' +
                         '<button type="button" class="btn att-btn-view-day" data-date="' + item.dateStr + '" title="View on calendar">' +
