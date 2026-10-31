@@ -1092,13 +1092,13 @@ if (!isset($targetAttendanceRole)) {
 
 </div>
 
-<!-- 5. Day Details & Interactive Marking Modal -->
+<!-- 5. Day Details Modal -->
 <div class="modal fade" id="attDayDetailModal" tabindex="-1" role="dialog" aria-labelledby="attDayDetailModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document" style="max-width: 480px; margin-top: 60px;">
         <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
             <div class="modal-header" style="background: linear-gradient(135deg, #0d4d8b 0%, #2563eb 100%); color: #ffffff; padding: 16px 20px;">
                 <h5 class="modal-title" id="attDayDetailModalLabel" style="font-weight: 700; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa fa-calendar-check-o"></i> Attendance Details & Action
+                    <i class="fa fa-calendar-check-o"></i> Attendance Details
                 </h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #ffffff; opacity: 0.85; text-shadow: none; font-size: 20px;">
                     <span aria-hidden="true">&times;</span>
@@ -1131,44 +1131,56 @@ if (!isset($targetAttendanceRole)) {
                         <span style="color: #64748b;">Note / Shift Status:</span>
                         <strong id="modalPunchNoteVal" style="color: #0f172a;">--</strong>
                     </div>
-                    <div id="modalAttLocationRow" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: none; font-size: 12px; color: #475569;">
-                        <span><i class="fa fa-map-marker" style="color: #ef4444; margin-right: 4px;"></i><strong>Selfie GPS Location:</strong></span>
-                        <div id="modalPunchLocationVal" style="margin-top: 3px; color: #0f172a; font-weight: 600;">--</div>
+                    <div id="modalAttHoursRow" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: none; justify-content: space-between; font-size: 12px;">
+                        <span style="color: #64748b;">Total Working Hours:</span>
+                        <strong id="modalPunchHoursVal" style="color: #0f172a;">--</strong>
                     </div>
                 </div>
 
-                <!-- Interactive Mark Attendance Controls -->
-                <div class="att-mark-actions-box" id="modalMarkActionsBox" style="margin-bottom: 16px;">
-                    <label style="font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 0.3px;">
-                        <i class="fa fa-pencil-square-o" style="color: #2563eb;"></i> Mark / Change Status for this Date:
-                    </label>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                        <button type="button" class="btn btn-sm btn-mark-att" data-mark="present" style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 600; border-radius: 6px; padding: 5px 11px; font-size: 12px;">
-                            <i class="fa fa-check"></i> Present
-                        </button>
-                        <button type="button" class="btn btn-sm btn-mark-att" data-mark="late" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 600; border-radius: 6px; padding: 5px 11px; font-size: 12px;">
-                            <i class="fa fa-clock-o"></i> Late Login
-                        </button>
-                        <button type="button" class="btn btn-sm btn-mark-att" data-mark="halfday" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-weight: 600; border-radius: 6px; padding: 5px 11px; font-size: 12px;">
-                            <i class="fa fa-hourglass-half"></i> Half Day
-                        </button>
-                        <button type="button" class="btn btn-sm btn-mark-att" data-mark="leave" style="background: #faf5ff; color: #6b21a8; border: 1px solid #e9d5ff; font-weight: 600; border-radius: 6px; padding: 5px 11px; font-size: 12px;">
-                            <i class="fa fa-calendar-minus-o"></i> Leave
-                        </button>
-                        <button type="button" class="btn btn-sm btn-mark-att" data-mark="clear" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-weight: 600; border-radius: 6px; padding: 5px 11px; font-size: 12px;">
-                            <i class="fa fa-eraser"></i> Clear
-                        </button>
+                <!-- Both Locations: Clock In & Clock Out Locations -->
+                <div id="modalLocationsSection">
+                    <!-- 1. Clock In Location (Punch In) -->
+                    <div id="modalInLocationBox" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 11.5px; font-weight: 700; color: #15803d; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa fa-map-marker" style="color: #16a34a; font-size: 14px;"></i> Clock In Location (Punch In)
+                            </span>
+                            <span id="modalInTimeSmall" style="font-size: 11px; font-weight: 600; color: #166534; background: #dcfce7; padding: 2px 7px; border-radius: 4px;">--:--</span>
+                        </div>
+                        <div id="modalPunchInLocationVal" style="font-size: 12.5px; color: #0f172a; font-weight: 600; line-height: 1.45;">--</div>
+                        <div id="modalInMapLinkWrap" style="margin-top: 6px; display: none;">
+                            <a id="modalInMapLink" href="#" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #15803d; font-weight: 600; text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa fa-external-link"></i> View on Google Maps
+                            </a>
+                        </div>
                     </div>
-                    <div id="markFeedbackMsg" style="display: none; margin-top: 8px; font-size: 12px; font-weight: 600; color: #16a34a;">
-                        <i class="fa fa-check-circle"></i> Status marked successfully! Summary updated.
-                    </div>
-                </div>
 
-                <!-- Info Notice -->
-                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; font-size: 12px; color: #1e40af; line-height: 1.5; display: flex; gap: 10px;">
-                    <i class="fa fa-info-circle" style="font-size: 15px; margin-top: 2px; color: #2563eb; flex-shrink: 0;"></i>
-                    <div>
-                        <strong>Real-time Sync Ready:</strong> Status marks will automatically reflect in the calendar days and in the monthly summary below.
+                    <!-- 2. Clock Out Location (Punch Out) -->
+                    <div id="modalOutLocationBox" style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 11.5px; font-weight: 700; color: #c2410c; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa fa-map-marker" style="color: #ea580c; font-size: 14px;"></i> Clock Out Location (Punch Out)
+                            </span>
+                            <span id="modalOutTimeSmall" style="font-size: 11px; font-weight: 600; color: #9a3412; background: #ffedd5; padding: 2px 7px; border-radius: 4px;">--:--</span>
+                        </div>
+                        <div id="modalPunchOutLocationVal" style="font-size: 12.5px; color: #0f172a; font-weight: 600; line-height: 1.45;">--</div>
+                        <div id="modalOutMapLinkWrap" style="margin-top: 6px; display: none;">
+                            <a id="modalOutMapLink" href="#" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #c2410c; font-weight: 600; text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa fa-external-link"></i> View on Google Maps
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Punch Out Pending Notice -->
+                    <div id="modalOutPendingBox" style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: none; align-items: center; gap: 8px; font-size: 12px; color: #64748b;">
+                        <i class="fa fa-hourglass-half" style="color: #d97706; font-size: 14px;"></i>
+                        <span><strong>Clock Out Pending:</strong> Not clocked out yet for this shift.</span>
+                    </div>
+
+                    <!-- Empty Day Notice -->
+                    <div id="modalNoPunchBox" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center; color: #64748b; font-size: 12.5px; display: none;">
+                        <i class="fa fa-info-circle" style="color: #94a3b8; font-size: 18px; margin-bottom: 4px; display: block;"></i>
+                        <span id="modalNoPunchText">No punch activity recorded for this date.</span>
                     </div>
                 </div>
             </div>
@@ -1206,24 +1218,44 @@ if (!isset($targetAttendanceRole)) {
     if (isset($db) && $db instanceof PDO && !empty($targetAttendanceUid)) {
         try {
             $attStmt = $db->prepare("
-                SELECT attendance_date, status, in_time, out_time, remarks, punch_in_selfie_url, in_address, in_latitude, in_longitude 
+                SELECT attendance_date, status, in_time, out_time, total_working_hours, remarks, 
+                       punch_in_selfie_url, punch_out_selfie_url, 
+                       in_address, in_latitude, in_longitude, 
+                       out_address, out_latitude, out_longitude 
                 FROM aitf_attendance 
                 WHERE user_id = :uid 
                   AND attendance_date >= DATE_SUB(CURDATE(), INTERVAL 120 DAY)
-                ORDER BY attendance_date ASC
+                ORDER BY attendance_date ASC, id ASC
             ");
             $attStmt->execute([':uid' => $targetAttendanceUid]);
             $rawRecords = $attStmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($rawRecords as $r) {
                 $d = $r['attendance_date'];
+                // Robust location address fallbacks
+                $inAddr = trim($r['in_address'] ?? '');
+                if ($inAddr === '' && !empty($r['in_latitude']) && !empty($r['in_longitude'])) {
+                    $inAddr = $r['in_latitude'] . ', ' . $r['in_longitude'];
+                }
+                $outAddr = trim($r['out_address'] ?? '');
+                if ($outAddr === '' && !empty($r['out_latitude']) && !empty($r['out_longitude'])) {
+                    $outAddr = $r['out_latitude'] . ', ' . $r['out_longitude'];
+                }
                 $dbAttendanceMap[$d] = [
                     'status' => $r['status'],
                     'label' => ($r['status'] === 'late') ? 'Late Login' : (($r['status'] === 'halfday') ? 'Half Day' : ucfirst($r['status'])),
-                    'inTime' => !empty($r['in_time']) ? date('h:i A', strtotime($r['in_time'])) : '--',
-                    'outTime' => !empty($r['out_time']) ? date('h:i A', strtotime($r['out_time'])) : '--',
+                    'inTime' => !empty($r['in_time']) ? date('h:i A', strtotime($r['in_time'])) : '--:--',
+                    'outTime' => !empty($r['out_time']) ? date('h:i A', strtotime($r['out_time'])) : '--:--',
+                    'workingHours' => !empty($r['total_working_hours']) ? (float)$r['total_working_hours'] : 0,
                     'note' => $r['remarks'] ?? '',
                     'selfieUrl' => $r['punch_in_selfie_url'] ?? '',
-                    'inAddress' => $r['in_address'] ?? ''
+                    'punchInSelfieUrl' => $r['punch_in_selfie_url'] ?? '',
+                    'punchOutSelfieUrl' => $r['punch_out_selfie_url'] ?? '',
+                    'inAddress' => $inAddr,
+                    'inLat' => $r['in_latitude'] !== null ? (float)$r['in_latitude'] : null,
+                    'inLng' => $r['in_longitude'] !== null ? (float)$r['in_longitude'] : null,
+                    'outAddress' => $outAddr,
+                    'outLat' => $r['out_latitude'] !== null ? (float)$r['out_latitude'] : null,
+                    'outLng' => $r['out_longitude'] !== null ? (float)$r['out_longitude'] : null
                 ];
             }
         } catch (Exception $e) {
@@ -1358,7 +1390,7 @@ if (!isset($targetAttendanceRole)) {
         }
     }
 
-    // Open Day Details & Action Modal for a given date string (YYYY-MM-DD)
+    // Open Day Details Modal for a given date string (YYYY-MM-DD)
     function openDayModalByDate(dateStr) {
         if (!dateStr) return;
         var dParts = dateStr.split('-');
@@ -1375,18 +1407,26 @@ if (!isset($targetAttendanceRole)) {
 
         if (isSun) {
             $('#modalAttDayType').text('Weekend (Sunday - Official Off)');
-            $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-off" style="font-size: 12px; padding: 4px 10px;"><i class="fa fa-coffee"></i> Weekend / Off</span>');
-            $('#modalPunchInVal').text('--');
-            $('#modalPunchOutVal').text('--');
-            $('#modalPunchNoteVal').text('Weekly Off (Sunday)');
-            $('#modalMarkActionsBox').hide();
+            var rec = window.AITF_ATTENDANCE_CACHE[dateStr] || null;
+            if (rec) {
+                updateModalStatusBadge(dateStr);
+            } else {
+                $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-off" style="font-size: 12px; padding: 4px 10px;"><i class="fa fa-coffee"></i> Weekend / Off</span>');
+                $('#modalPunchInVal').text('--:--');
+                $('#modalPunchOutVal').text('--:--');
+                $('#modalPunchNoteVal').text('Weekly Off (Sunday)');
+                $('#modalAttHoursRow').hide();
+                $('#modalInLocationBox').hide();
+                $('#modalOutLocationBox').hide();
+                $('#modalOutPendingBox').hide();
+                $('#modalNoPunchText').text('Weekly Off (Sunday) - Official holiday.');
+                $('#modalNoPunchBox').show();
+            }
         } else {
             $('#modalAttDayType').text('Standard Working Day');
-            $('#modalMarkActionsBox').show();
             updateModalStatusBadge(dateStr);
         }
 
-        $('#markFeedbackMsg').hide();
         $('#attDayDetailModal').modal('show');
     }
 
@@ -1427,6 +1467,7 @@ if (!isset($targetAttendanceRole)) {
                         outTime: rec.outTime || '--:--',
                         note: rec.note || 'Late login recorded',
                         inAddress: rec.inAddress || '',
+                        outAddress: rec.outAddress || '',
                         selfieUrl: rec.selfieUrl || ''
                     });
                 } else if (rec.status === 'halfday') {
@@ -1438,6 +1479,7 @@ if (!isset($targetAttendanceRole)) {
                         outTime: rec.outTime || '--:--',
                         note: rec.note || 'Half day shift',
                         inAddress: rec.inAddress || '',
+                        outAddress: rec.outAddress || '',
                         selfieUrl: rec.selfieUrl || ''
                     });
                 } else if (rec.status === 'leave') {
@@ -1455,7 +1497,8 @@ if (!isset($targetAttendanceRole)) {
                         inTime: rec.inTime || '--:--',
                         outTime: rec.outTime || '--:--',
                         note: rec.note || 'Full day attendance',
-                        inAddress: rec.inAddress || ''
+                        inAddress: rec.inAddress || '',
+                        outAddress: rec.outAddress || ''
                     });
                 }
             }
@@ -1656,22 +1699,75 @@ if (!isset($targetAttendanceRole)) {
                 $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-halfday" style="font-size: 12px; padding: 4px 10px;"><i class="fa fa-hourglass-half"></i> Half Day</span>');
             } else if (rec.status === 'leave') {
                 $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-leave" style="font-size: 12px; padding: 4px 10px;"><i class="fa fa-calendar-minus-o"></i> Leave</span>');
-            }
-            $('#modalPunchInVal').text(rec.inTime || '--:--');
-            $('#modalPunchOutVal').text(rec.outTime || '--:--');
-            $('#modalPunchNoteVal').text(rec.note || rec.label);
-            if (rec.inAddress) {
-                $('#modalAttLocationRow').show();
-                $('#modalPunchLocationVal').text(rec.inAddress);
+            } else if (rec.status === 'holiday') {
+                $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-off" style="font-size: 12px; padding: 4px 10px;"><i class="fa fa-star"></i> Holiday</span>');
             } else {
-                $('#modalAttLocationRow').hide();
+                $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-empty" style="font-size: 12px; padding: 4px 10px;">' + escapeHtml(rec.label || 'Marked') + '</span>');
+            }
+
+            var inTimeVal = (rec.inTime && rec.inTime !== '--') ? rec.inTime : '--:--';
+            var outTimeVal = (rec.outTime && rec.outTime !== '--') ? rec.outTime : '--:--';
+
+            $('#modalPunchInVal').text(inTimeVal);
+            $('#modalPunchOutVal').text(outTimeVal);
+            $('#modalPunchNoteVal').text(rec.note || rec.label || '--');
+
+            if (rec.workingHours && parseFloat(rec.workingHours) > 0) {
+                $('#modalPunchHoursVal').text(rec.workingHours + ' hrs');
+                $('#modalAttHoursRow').css('display', 'flex');
+            } else {
+                $('#modalAttHoursRow').hide();
+            }
+
+            $('#modalNoPunchBox').hide();
+
+            // 1. Clock In Location (Punch In)
+            if (rec.inAddress) {
+                $('#modalInLocationBox').show();
+                $('#modalPunchInLocationVal').text(rec.inAddress);
+                $('#modalInTimeSmall').text(inTimeVal);
+                if (rec.inLat && rec.inLng) {
+                    $('#modalInMapLink').attr('href', 'https://www.google.com/maps?q=' + encodeURIComponent(rec.inLat + ',' + rec.inLng));
+                    $('#modalInMapLinkWrap').show();
+                } else {
+                    $('#modalInMapLinkWrap').hide();
+                }
+            } else {
+                $('#modalInLocationBox').hide();
+            }
+
+            // 2. Clock Out Location (Punch Out)
+            if (rec.outAddress) {
+                $('#modalOutLocationBox').show();
+                $('#modalPunchOutLocationVal').text(rec.outAddress);
+                $('#modalOutTimeSmall').text(outTimeVal);
+                if (rec.outLat && rec.outLng) {
+                    $('#modalOutMapLink').attr('href', 'https://www.google.com/maps?q=' + encodeURIComponent(rec.outLat + ',' + rec.outLng));
+                    $('#modalOutMapLinkWrap').show();
+                } else {
+                    $('#modalOutMapLinkWrap').hide();
+                }
+                $('#modalOutPendingBox').hide();
+            } else {
+                $('#modalOutLocationBox').hide();
+                // If user clocked in but punch out not done yet
+                if (inTimeVal !== '--:--' && outTimeVal === '--:--') {
+                    $('#modalOutPendingBox').css('display', 'flex');
+                } else {
+                    $('#modalOutPendingBox').hide();
+                }
             }
         } else {
             $('#modalAttStatusBadge').html('<span class="att-pill-status att-pill-empty" style="font-size: 12px; padding: 4px 10px;"><i class="fa fa-circle-o"></i> Not Marked</span>');
             $('#modalPunchInVal').text('--:--');
             $('#modalPunchOutVal').text('--:--');
             $('#modalPunchNoteVal').text('--');
-            $('#modalAttLocationRow').hide();
+            $('#modalAttHoursRow').hide();
+            $('#modalInLocationBox').hide();
+            $('#modalOutLocationBox').hide();
+            $('#modalOutPendingBox').hide();
+            $('#modalNoPunchText').text('No punch activity recorded for this date.');
+            $('#modalNoPunchBox').show();
         }
     }
 
@@ -1775,56 +1871,6 @@ if (!isset($targetAttendanceRole)) {
                 $('.att-card-body').slideDown(180);
                 $(this).html('<i class="fa fa-angle-double-up"></i> Collapse All');
             }
-        });
-
-        // Mark Attendance Action (Late Login, Half Day, Leave, Present, Clear)
-        $(document).on('click', '.btn-mark-att', function(e) {
-            e.preventDefault();
-            var markType = $(this).data('mark');
-            var activeDateStr = $('#attDayDetailModal').data('active-date');
-            if (!activeDateStr) return;
-
-            if (markType === 'clear') {
-                delete window.AITF_ATTENDANCE_CACHE[activeDateStr];
-            } else {
-                var label = 'Present';
-                var inTime = '09:30 AM';
-                var outTime = '06:30 PM';
-                var note = 'Full day attendance';
-
-                if (markType === 'late') {
-                    label = 'Late Login';
-                    inTime = '10:15 AM';
-                    outTime = '06:30 PM';
-                    note = '15 mins late login';
-                } else if (markType === 'halfday') {
-                    label = 'Half Day';
-                    inTime = '09:30 AM';
-                    outTime = '02:00 PM';
-                    note = 'First half shift';
-                } else if (markType === 'leave') {
-                    label = 'Leave';
-                    inTime = '--';
-                    outTime = '--';
-                    note = 'Casual / Sick Leave';
-                }
-
-                window.AITF_ATTENDANCE_CACHE[activeDateStr] = {
-                    status: markType,
-                    label: label,
-                    inTime: inTime,
-                    outTime: outTime,
-                    note: note
-                };
-            }
-
-            // Re-render calendar and update summary
-            renderCalendar(viewedYear, viewedMonth);
-
-            // Update modal state
-            updateModalStatusBadge(activeDateStr);
-
-            $('#markFeedbackMsg').stop(true, true).fadeIn().delay(1400).fadeOut();
         });
     });
 })();

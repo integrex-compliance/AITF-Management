@@ -58,7 +58,7 @@ if (empty($_SESSION['username']) || in_array(strtolower($_SESSION['role'] ?? '')
 
 require_once __DIR__ . '/include/rbac_matrix.php';
 if (!aitf_has_access("Payment Due")) {
-    echo json_encode(['success' => false, 'message' => 'Access Denied. Only Top Mgmt and Finance roles can send reminders.']);
+    echo json_encode(['success' => false, 'message' => 'Access Denied. You do not have permission to send reminders.']);
     exit;
 }
 

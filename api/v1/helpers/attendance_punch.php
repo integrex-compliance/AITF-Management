@@ -22,7 +22,7 @@ function processAttendancePunch(PDO $db, string $purpose): void {
         $db->beginTransaction();
         $date = date('Y-m-d');
         $time = date('H:i:s');
-        $stmt = $db->prepare('SELECT id, in_time, out_time, status FROM aitf_attendance
+        $stmt = $db->prepare('SELECT id, in_time, out_time, status, in_address, in_latitude, in_longitude FROM aitf_attendance
             WHERE user_id = ? AND system_code = ? AND attendance_date = ? FOR UPDATE');
         $stmt->execute([$uid, $sys, $date]);
         $record = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -56,8 +56,16 @@ function processAttendancePunch(PDO $db, string $purpose): void {
             }
             $stmt->execute($params);
             if ($stmt->rowCount() !== 1) throw new AttendanceRejected('Attendance changed. Refresh today\'s status.', 409);
-            $response = ['date' => $date, 'in_time' => date('h:i A', strtotime($time)),
-                'status' => $status, 'status_label' => $label];
+            $response = [
+                'date' => $date, 
+                'in_time' => date('h:i A', strtotime($time)),
+                'status' => $status, 
+                'status_label' => $label,
+                'in_address' => $location['address'],
+                'clock_in_location' => $location['address'],
+                'in_latitude' => $location['latitude'],
+                'in_longitude' => $location['longitude']
+            ];
         } else {
             $seconds = time() - strtotime($date . ' ' . $record['in_time']);
             if ($seconds < 0) throw new AttendanceRejected('Punch-in time is invalid. Contact your administrator.', 409);
@@ -67,8 +75,21 @@ function processAttendancePunch(PDO $db, string $purpose): void {
                 WHERE id = ? AND out_time IS NULL');
             $stmt->execute([$time, $hours, $location['latitude'], $location['longitude'], $location['address'], $photoUrl, $record['id']]);
             if ($stmt->rowCount() !== 1) throw new AttendanceRejected('Attendance changed. Refresh today\'s status.', 409);
-            $response = ['date' => $date, 'out_time' => date('h:i A', strtotime($time)),
-                'working_hours' => $hours, 'status' => $record['status'], 'status_label' => 'Clocked Out'];
+            $response = [
+                'date' => $date, 
+                'out_time' => date('h:i A', strtotime($time)),
+                'working_hours' => $hours, 
+                'status' => $record['status'], 
+                'status_label' => 'Clocked Out',
+                'out_address' => $location['address'],
+                'clock_out_location' => $location['address'],
+                'out_latitude' => $location['latitude'],
+                'out_longitude' => $location['longitude'],
+                'in_address' => $record['in_address'] ?? null,
+                'clock_in_location' => $record['in_address'] ?? null,
+                'in_latitude' => isset($record['in_latitude']) ? (float)$record['in_latitude'] : null,
+                'in_longitude' => isset($record['in_longitude']) ? (float)$record['in_longitude'] : null
+            ];
         }
         $db->commit();
         $committed = true;

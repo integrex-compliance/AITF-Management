@@ -6,7 +6,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/include/rbac_matrix.php';
 if (!aitf_has_access("Payment Due")) {
-    echo json_encode(['success' => false, 'message' => 'Access Denied. Only Top Mgmt and Finance roles are authorized.']);
+    echo json_encode(['success' => false, 'message' => 'Access Denied. You do not have permission to email payment reports.']);
     exit;
 }
 

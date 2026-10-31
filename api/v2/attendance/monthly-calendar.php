@@ -27,7 +27,10 @@ $endDate   = date('Y-m-t', strtotime($startDate));
 
 // Fetch attendance records for this month
 $stmt = $db->prepare("
-    SELECT attendance_date, status, in_time, out_time, total_working_hours, remarks, punch_in_selfie_url, punch_out_selfie_url
+    SELECT attendance_date, status, in_time, out_time, total_working_hours, remarks, 
+           punch_in_selfie_url, punch_out_selfie_url, 
+           in_latitude, in_longitude, in_address, 
+           out_latitude, out_longitude, out_address
     FROM aitf_attendance
     WHERE user_id = :uid 
       AND system_code = :sys
@@ -67,6 +70,18 @@ foreach ($rows as $r) {
         $summary['holidays']++;
     }
 
+    $inAddr = trim($r['in_address'] ?? '');
+    if ($inAddr === '' && !empty($r['in_latitude']) && !empty($r['in_longitude'])) {
+        $inAddr = $r['in_latitude'] . ', ' . $r['in_longitude'];
+    }
+    if ($inAddr === '') $inAddr = null;
+
+    $outAddr = trim($r['out_address'] ?? '');
+    if ($outAddr === '' && !empty($r['out_latitude']) && !empty($r['out_longitude'])) {
+        $outAddr = $r['out_latitude'] . ', ' . $r['out_longitude'];
+    }
+    if ($outAddr === '') $outAddr = null;
+
     $records[$dateKey] = [
         'status' => $st,
         'label' => ucfirst($st),
@@ -75,7 +90,15 @@ foreach ($rows as $r) {
         'working_hours' => (float)$r['total_working_hours'],
         'note' => $r['remarks'] ?? '',
         'punch_in_selfie_url' => $r['punch_in_selfie_url'] ?? '',
-        'punch_out_selfie_url' => $r['punch_out_selfie_url'] ?? ''
+        'punch_out_selfie_url' => $r['punch_out_selfie_url'] ?? '',
+        'in_address' => $inAddr,
+        'clock_in_location' => $inAddr,
+        'in_latitude' => $r['in_latitude'] !== null ? (float)$r['in_latitude'] : null,
+        'in_longitude' => $r['in_longitude'] !== null ? (float)$r['in_longitude'] : null,
+        'out_address' => $outAddr,
+        'clock_out_location' => $outAddr,
+        'out_latitude' => $r['out_latitude'] !== null ? (float)$r['out_latitude'] : null,
+        'out_longitude' => $r['out_longitude'] !== null ? (float)$r['out_longitude'] : null,
     ];
 }
 
