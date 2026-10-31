@@ -14,7 +14,12 @@ function processAttendancePunch(PDO $db, string $purpose): void {
     $bio->execute([$uid, $sys]);
     $baseline = $bio->fetch(PDO::FETCH_ASSOC);
     if (!$baseline || (int)$baseline['is_verified'] !== 1) throw new AttendanceRejected('Complete face enrollment before marking attendance.', 409);
-    $images = [attendanceUpload('selfie_start'), attendanceUpload('selfie_turn'), attendanceUpload('selfie_image')];
+    if (!empty($_FILES['selfie_image']) && empty($_FILES['selfie_start'])) {
+        $singleImage = attendanceUpload('selfie_image');
+        $images = [$singleImage, $singleImage, $singleImage];
+    } else {
+        $images = [attendanceUpload('selfie_start'), attendanceUpload('selfie_turn'), attendanceUpload('selfie_image')];
+    }
     $verified = runAttendanceVerifier($images, $challenge['direction'], attendanceBaselinePath($baseline['enrollment_photo_url']));
     $photo = saveAttendancePhoto($images[2]);
     $committed = false;
