@@ -6,8 +6,14 @@ require_once __DIR__ . '/../helpers/auth_middleware.php';
 date_default_timezone_set('Asia/Kolkata');
 
 $user = requireAuth($db);
-$userId = (int)$user['user_id'];
+$currentUserId = (int)$user['user_id'];
 $systemCode = $user['system_code'] ?? 'AITF_MAIN';
+
+// Allow viewing other users if manager/admin
+$targetUserId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : $currentUserId;
+if ($targetUserId !== $currentUserId && empty($user['can_manage_tasks'])) {
+    $targetUserId = $currentUserId;
+}
 
 $todayDate = date('Y-m-d');
 
@@ -20,7 +26,7 @@ $stmt = $db->prepare("
     WHERE user_id = :uid AND attendance_date = :dt AND system_code = :sys
     ORDER BY id DESC LIMIT 1
 ");
-$stmt->execute([':uid' => $userId, ':dt' => $todayDate, ':sys' => $systemCode]);
+$stmt->execute([':uid' => $targetUserId, ':dt' => $todayDate, ':sys' => $systemCode]);
 $record = $stmt->fetch(PDO::FETCH_ASSOC);
 
 $hasPunchedIn = false;
