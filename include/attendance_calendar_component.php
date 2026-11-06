@@ -16,7 +16,7 @@ if (!isset($targetAttendanceRole)) {
     $targetAttendanceRole = $userRole ?? ($_SESSION['role'] ?? 'Staff');
 }
 ?>
-
+ 
 <!-- Clean White Theme - Attendance Calendar Styles -->
 <style>
 .attendance-app-wrapper {

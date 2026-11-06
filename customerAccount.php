@@ -6303,6 +6303,8 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                     }
 
                     $availableServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit', 'Generic Training', 'Other'];
+                    require_once __DIR__ . '/include/bad_debts_helper.php';
+                    $canAccessBadDebts = aitf_can_access_bad_debts();
 
                     // Check if client has completed multi-cycle history (multiple Contract Reviews / RC cycles)
                     $isMultiCycleClient = false;
@@ -6676,6 +6678,138 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                             gap: 4px;
                             white-space: nowrap;
                         }
+
+                        /* ========================================================
+                           BAD DEBT / LOSS SETTLEMENT STYLING (Prominent Red Theme)
+                           ======================================================== */
+                        .service-payment-block.has-bad-debt {
+                            background: #fffcfc !important;
+                            border: 2px solid #ef4444 !important;
+                            border-radius: 8px !important;
+                            padding: 8px 8px 6px 8px !important;
+                            box-shadow: 0 2px 12px rgba(239, 68, 68, 0.16) !important;
+                            transition: all 0.25s ease;
+                        }
+                        .service-payment-block.has-bad-debt.service-block-matched {
+                            border: 2px solid #ef4444 !important;
+                            background: #fffcfc !important;
+                        }
+                        .service-payment-block.has-bad-debt .service-block-summary-bar {
+                            background-color: #fef2f2 !important;
+                            border: 1.5px solid #fca5a5 !important;
+                            box-shadow: 0 1px 4px rgba(239, 68, 68, 0.1) !important;
+                        }
+                        .service-payment-block.has-bad-debt .totalInvoiceTableSum {
+                            background-color: #fee2e2 !important;
+                            color: #991b1b !important;
+                            border: 1.5px solid #fca5a5 !important;
+                            font-weight: 800 !important;
+                        }
+                        .service-payment-block.has-bad-debt .serviceBlockBadDebtWrapper {
+                            background: #fee2e2 !important;
+                            border: 1px solid #fca5a5 !important;
+                            padding: 2px 8px !important;
+                            border-radius: 4px !important;
+                        }
+                        .service-payment-block.has-bad-debt .serviceBlockBadDebtWrapper span {
+                            color: #991b1b !important;
+                            font-weight: 800 !important;
+                        }
+                        .service-payment-block.has-bad-debt .serviceBlockBadDebtWrapper strong {
+                            color: #dc2626 !important;
+                            font-weight: 800 !important;
+                        }
+
+                        /* Bad Debt Row Styles (takes absolute precedence) */
+                        .service-details-table tbody tr.bad-debt-settlement-row {
+                            background-color: #fef2f2 !important;
+                            border-left: 4px solid #ef4444 !important;
+                        }
+                        .service-details-table tbody tr.bad-debt-settlement-row td {
+                            background-color: #fef2f2 !important;
+                            border-color: #fecaca !important;
+                        }
+                        .service-details-table tbody tr.bad-debt-settlement-row input {
+                            background-color: #fef2f2 !important;
+                            color: #991b1b !important;
+                            font-weight: 700 !important;
+                        }
+                        .service-details-table tbody tr.bad-debt-settlement-row .serviceDiscountDisplay {
+                            background-color: #fee2e2 !important;
+                            color: #dc2626 !important;
+                            border: 1.5px solid #fca5a5 !important;
+                            border-radius: 4px !important;
+                            font-weight: 800 !important;
+                            text-align: right !important;
+                            font-size: 12px !important;
+                            letter-spacing: -0.2px !important;
+                        }
+                        .service-details-table tbody tr.bad-debt-settlement-row .serviceChequeDetails {
+                            background-color: #fee2e2 !important;
+                            color: #dc2626 !important;
+                            border: 1.5px solid #fca5a5 !important;
+                            border-radius: 4px !important;
+                            font-weight: 800 !important;
+                            text-align: center !important;
+                            font-size: 11.5px !important;
+                        }
+                        .service-details-table tbody tr.bad-debt-settlement-row .paymentDepositDate {
+                            background-color: #ffffff !important;
+                            color: #991b1b !important;
+                            border: 1px solid #fca5a5 !important;
+                            border-radius: 4px !important;
+                            font-weight: 600 !important;
+                            text-align: center !important;
+                        }
+                        .service-details-table tbody tr.bad-debt-settlement-row .infoDelete {
+                            border: 1px solid #fca5a5 !important;
+                            background: #fee2e2 !important;
+                            color: #dc2626 !important;
+                            padding: 2px 6px !important;
+                            border-radius: 4px !important;
+                            display: inline-block !important;
+                            cursor: pointer !important;
+                        }
+                        .service-details-table tbody tr.bad-debt-settlement-row .infoDelete i {
+                            color: #dc2626 !important;
+                            padding-right: 0 !important;
+                        }
+                        .service-details-table tbody tr.bad-debt-settlement-row .infoDelete:hover {
+                            background: #fecaca !important;
+                        }
+
+                        .block-bad-debt-badge {
+                            color: #ffffff !important;
+                            background: #ef4444 !important;
+                            border: 1px solid #dc2626 !important;
+                            font-size: 10px !important;
+                            font-weight: 800 !important;
+                            padding: 2px 8px !important;
+                            border-radius: 4px !important;
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            gap: 4px !important;
+                            vertical-align: middle !important;
+                            margin-left: 6px !important;
+                            letter-spacing: 0.3px !important;
+                            text-transform: uppercase !important;
+                            box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3) !important;
+                        }
+                        .block-bad-debt-badge i {
+                            color: #ffffff !important;
+                            font-size: 10px !important;
+                        }
+
+                        /* Centered SweetAlert2 for Bad Debt & Validation */
+                        .bd-swal-center-container {
+                            z-index: 9999999 !important;
+                        }
+                        .bd-swal-center-popup {
+                            border-radius: 16px !important;
+                            padding: 24px 22px !important;
+                            max-width: 440px !important;
+                            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.4) !important;
+                        }
                         /* Keep the payment summary inside the panel at normal zoom. */
                         .payment-tables-row > .table-responsive {
                             overflow-x: hidden !important;
@@ -6850,10 +6984,12 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                             $blockRcvSum = 0;
                             $blockTdsSum = 0;
                             $blockDiscountSum = 0;
+                            $blockBadDebtSum = 0;
                             $blockValidCount = 0;
 
                             foreach ($servicePayments as $pay) {
-                                $isDisc = (!empty($pay['settlement_kind']) || stripos($pay['service_type'] ?? '', 'discount') !== false || stripos($pay['service_type'] ?? '', 'short') !== false);
+                                $isBadDebtRow = (!empty($pay['settlement_kind']) && $pay['settlement_kind'] === 'bad_debt') || stripos($pay['service_type'] ?? '', 'bad debt') !== false;
+                                $isDisc = (!empty($pay['settlement_kind']) || stripos($pay['service_type'] ?? '', 'discount') !== false || stripos($pay['service_type'] ?? '', 'short') !== false || $isBadDebtRow);
                                 $isTds = (stripos($pay['service_type'] ?? '', 'tds') !== false && floatval($pay['tds_amount'] ?? 0) == 0 && !$isDisc);
 
                                 $discVal = floatval($pay['discount_amount'] ?? 0);
@@ -6863,7 +6999,11 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                 $rcvVal = ($isTds || $isDisc) ? 0 : floatval($pay['payment_received'] ?? 0);
                                 $tdsVal = floatval($pay['tds_amount'] ?? 0) > 0 ? floatval($pay['tds_amount'] ?? 0) : ($isTds ? floatval($pay['payment_received'] ?? 0) : 0);
 
-                                $blockDiscountSum += $discVal;
+                                if ($isBadDebtRow) {
+                                    $blockBadDebtSum += $discVal;
+                                } else {
+                                    $blockDiscountSum += $discVal;
+                                }
                                 $blockRcvSum += $rcvVal;
                                 $blockTdsSum += $tdsVal;
 
@@ -6874,8 +7014,9 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                     $blockValidCount++;
                                 }
                             }
-                            $blockCombined = $blockRcvSum + $blockTdsSum + $blockDiscountSum;
+                            $blockCombined = $blockRcvSum + $blockTdsSum + $blockDiscountSum + $blockBadDebtSum;
                             $blockRemaining = $blockInvoiceSum - $blockCombined;
+                            $hasBadDebt = ($blockBadDebtSum > 0);
                             $isBlockMatched = ($blockInvoiceSum > 0 && abs($blockRemaining) < 0.01);
                             ?>
 
@@ -6888,7 +7029,7 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                 </div>
                             <?php } ?>
 
-                            <div class="service-payment-block <?php echo $isBlockMatched ? 'service-block-matched' : ''; ?>" data-service="<?php echo htmlspecialchars($svcName); ?>" data-header-name="<?php echo htmlspecialchars($svcLabel); ?>" data-block-id="<?php echo $blockIdx; ?>" style="margin-bottom: 22px;">
+                            <div class="service-payment-block <?php echo ($isBlockMatched && !$hasBadDebt) ? 'service-block-matched' : ''; ?> <?php echo $hasBadDebt ? 'has-bad-debt' : ''; ?>" data-has-bad-debt="<?php echo $hasBadDebt ? '1' : '0'; ?>" data-service="<?php echo htmlspecialchars($svcName); ?>" data-header-name="<?php echo htmlspecialchars($svcLabel); ?>" data-block-id="<?php echo $blockIdx; ?>" style="margin-bottom: 22px;">
                                 <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">
                                     <!-- Left: Invoices Column (38%) -->
                                     <div class="col-xs-4 table-responsive invoice-container-col" style="flex: 38 38 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
@@ -6923,7 +7064,9 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                                         }
                                                         ?>
                                                     </select>
-                                                    <?php if ($isBlockMatched) { ?>
+                                                    <?php if ($hasBadDebt) { ?>
+                                                        <span class="block-bad-debt-badge" title="Bad Debt Settled"><i class="fa fa-ban"></i> Bad Debt</span>
+                                                    <?php } elseif ($isBlockMatched) { ?>
                                                         <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>
                                                     <?php } ?>
                                                 </span>
@@ -7027,14 +7170,21 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
                                                 <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
                                                     <i class="fa ">Received Payment</i> (<span class="col-service-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcLabel); ?></span>)
-                                                    <?php if ($isBlockMatched) { ?>
+                                                    <?php if ($hasBadDebt) { ?>
+                                                        <span class="block-bad-debt-badge payment-bad-debt-label" title="Bad Debt Settled"><i class="fa fa-ban"></i> Bad Debt</span>
+                                                    <?php } elseif ($isBlockMatched) { ?>
                                                         <span class="block-matched-badge payment-match-label" title="Matched"><i class="fa fa-check-circle"></i> Matched</span>
                                                     <?php } ?>
                                                 </span>
-                                                <div style="display: inline-flex; align-items: center; gap: 70px;">
-                                                    <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="<?php echo htmlspecialchars($svcName); ?>" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">
+                                                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                                    <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="<?php echo htmlspecialchars($svcName); ?>" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 7px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">
                                                         (-+)
                                                     </button>
+                                                    <?php if ($canAccessBadDebts) { ?>
+                                                    <button type="button" class="btn btn-xs openBadDebtModalBtn" data-service="<?php echo htmlspecialchars($svcName); ?>" style="background: #ffffff; color: #dc2626; border: 1px solid #fca5a5; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 7px; box-shadow: 0 1px 2px rgba(220,38,38,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Loss Payment / Mark as Bad Debt">
+                                                        <i class="fa fa-ban" style="color: #dc2626; font-size: 10px;"></i> Loss
+                                                    </button>
+                                                    <?php } ?>
                                                     <a class="btn btn-xs btn-info cbAddLink" data-service="<?php echo htmlspecialchars($svcName); ?>" data-row-id="<?php if (isset($payId)) echo $payId; ?>" data-row-count="<?php echo count($servicePayments); ?>" title="Add new row" style="padding: 1px 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">
                                                         <i class="fa fa-plus-circle fa-lg" style="padding: 2px 0;"></i>
                                                     </a>
@@ -7057,7 +7207,8 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                                     if (!empty($servicePayments)) {
                                                         foreach ($servicePayments as $payInfo) {
                                                             $isSettlement = !empty($payInfo['settlement_kind']);
-                                                            $isDiscountRow = ($isSettlement || stripos($payInfo['service_type'] ?? '', 'discount') !== false || stripos($payInfo['service_type'] ?? '', 'short') !== false);
+                                                            $isBadDebtRow = (!empty($payInfo['settlement_kind']) && $payInfo['settlement_kind'] === 'bad_debt') || stripos($payInfo['service_type'] ?? '', 'bad debt') !== false;
+                                                            $isDiscountRow = ($isSettlement || stripos($payInfo['service_type'] ?? '', 'discount') !== false || stripos($payInfo['service_type'] ?? '', 'short') !== false || $isBadDebtRow);
                                                             $isLegacyTdsRow = (stripos($payInfo['service_type'] ?? '', 'tds') !== false && floatval($payInfo['tds_amount'] ?? 0) == 0 && !$isDiscountRow);
 
                                                             $discountVal = floatval($payInfo['discount_amount'] ?? 0);
@@ -7077,14 +7228,14 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                                             $isRowReconciled = $isVerified || $isTdsLocked;
                                                             $isRowFullyLocked = $isVerified && ($isTdsLocked || $isSettlement);
                                                             ?>
-                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?> <?php echo $isRowFullyLocked ? 'row-reconciled-locked' : ''; ?>" data-settlement-kind="<?php echo htmlspecialchars($payInfo['settlement_kind'] ?? ''); ?>" data-preserve-details="<?php echo (aitf_payment_text_meaningful($payInfo['comment'] ?? '') || ((float)($payInfo['amount_decided'] ?? 0) > 0 && (float)($payInfo['payment_received'] ?? 0) + (float)($payInfo['tds_amount'] ?? 0) + (float)($payInfo['discount_amount'] ?? 0) == 0)) ? '1' : '0'; ?>" data-version="<?php echo (int)($payInfo['row_version'] ?? 0); ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ($isRowReconciled ? 'background-color: #f8fafc !important;' : ''); ?>">
-                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
+                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isBadDebtRow ? 'bad-debt-settlement-row discount-settlement-row' : ($isDiscountRow ? 'discount-settlement-row' : ''); ?> <?php echo $isRowFullyLocked ? 'row-reconciled-locked' : ''; ?>" data-settlement-kind="<?php echo htmlspecialchars($payInfo['settlement_kind'] ?? ''); ?>" data-preserve-details="<?php echo (aitf_payment_text_meaningful($payInfo['comment'] ?? '') || ((float)($payInfo['amount_decided'] ?? 0) > 0 && (float)($payInfo['payment_received'] ?? 0) + (float)($payInfo['tds_amount'] ?? 0) + (float)($payInfo['discount_amount'] ?? 0) == 0)) ? '1' : '0'; ?>" data-version="<?php echo (int)($payInfo['row_version'] ?? 0); ?>" id="cb_subsection_0" style="<?php echo $isBadDebtRow ? 'background-color: #fef2f2 !important; border-left: 4px solid #ef4444 !important;' : ($isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ($isRowReconciled ? 'background-color: #f8fafc !important;' : '')); ?>">
+                                                                <td style="padding: 0px; <?php echo $isBadDebtRow ? 'background-color: #fef2f2;' : ($isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : '')); ?>">
                                                                     <div class="table-edit-control" style="position: relative;"><label></label>
                                                                         <input type="hidden" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="<?php echo htmlspecialchars($payInfo['service_type'] ?? $svcName); ?>" />
                                                                         <input type="hidden" data_row_id="" class="serviceAmountDecided" name="serviceAmountDecided" value="<?php echo htmlspecialchars((floatval($displayRcv) + floatval($displayTds) + floatval($displayDiscount)) ?: ($payInfo['amount_decided'] ?? '')); ?>" />
                                                                         <input type="hidden" data_row_id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="<?php echo htmlspecialchars($displayDiscount); ?>" />
                                                                         <?php if ($isDiscountRow) { ?>
-                                                                            <input type="number" min="0" step="0.01" <?php echo (!$isSettlement || $isRowReconciled) ? 'readonly="readonly"' : ''; ?> class="serviceDiscountDisplay" value="<?php echo number_format(abs($discountVal), 2, '.', ''); ?>" title="Settlement: ₹<?php echo number_format($discountVal, 2, '.', ''); ?>" style="background-color: #faf5ff; border-bottom: 1px solid #8b5cf6; color: #6d28d9; font-weight: 700; text-align: right;" />
+                                                                            <input type="number" min="0" step="0.01" <?php echo (!$isSettlement || $isRowReconciled) ? 'readonly="readonly"' : ''; ?> class="serviceDiscountDisplay" value="<?php echo number_format(abs($discountVal), 2, '.', ''); ?>" title="<?php echo $isBadDebtRow ? 'Bad Debt Loss' : 'Settlement'; ?>: ₹<?php echo number_format($discountVal, 2, '.', ''); ?>" style="<?php echo $isBadDebtRow ? 'background-color: #fef2f2; border-bottom: 1px solid #ef4444; color: #dc2626;' : 'background-color: #faf5ff; border-bottom: 1px solid #8b5cf6; color: #6d28d9;'; ?> font-weight: 700; text-align: right;" />
                                                                             <?php if ($isSettlement) { ?><input type="hidden" class="settlementNote" value="<?php echo htmlspecialchars($payInfo['comment'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" /><?php } ?>
                                                                             <input type="hidden" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="0" />
                                                                         <?php } else { ?>
@@ -7093,7 +7244,7 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                                                         <?php } ?>
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isTdsLocked ? '#f0fdf4' : '#ffffff'); ?>; position: relative;">
+                                                                <td style="padding: 0px; background-color: <?php echo $isBadDebtRow ? '#fef2f2' : ($isDiscountRow ? '#faf5ff' : ($isTdsLocked ? '#f0fdf4' : '#ffffff')); ?>; position: relative;">
                                                                     <div class="table-edit-control" style="position: relative; display: flex; align-items: center; width: 100%;"><label></label>
                                                                         <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount <?php echo $isTdsLocked ? 'tds-locked-input reconciled-locked-input' : ''; ?>" name="serviceTdsAmount" <?php echo $isSettlement ? 'readonly="readonly"' : ''; ?> value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" <?php echo $isTdsLocked ? 'readonly="readonly" data-tds-locked="1" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isTdsLocked ? '#f0fdf4' : '#ffffff'); ?>; border-bottom: 1px solid <?php echo ($isTdsLocked) ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo ($isTdsLocked) ? '#15803d' : '#b45309'; ?>; font-weight: 700; text-align: right; <?php echo ($isTdsLocked) ? 'padding-right: 20px !important; cursor: not-allowed;' : ''; ?>" title="<?php echo $isTdsLocked ? 'TDS verified - Cannot edit verified TDS amount' : ''; ?>" />
                                                                         <?php if ($isTdsLocked) { ?>
@@ -7103,21 +7254,21 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                                                         <?php } ?>
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
+                                                                <td style="padding: 0px; <?php echo $isBadDebtRow ? 'background-color: #fef2f2;' : ($isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : '')); ?>">
                                                                     <div class="table-edit-control"><label></label>
-                                                                        <input type="text" data_row_id="" class="paymentDepositDate <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="paymentDepositDate" value="<?php if (isset($payInfo['payment_date']) && !empty($payInfo['payment_date']) && $payInfo['payment_date'] != '0000-00-00') echo date("d.m.Y", strtotime($payInfo['payment_date'])) ?>" placeholder="DD.MM.YYYY" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; color: <?php echo $isRowReconciled ? '#334155' : '#0f172a'; ?>; <?php echo $isRowReconciled ? 'cursor: not-allowed; font-weight: 600;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>">
+                                                                        <input type="text" data_row_id="" class="paymentDepositDate <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="paymentDepositDate" value="<?php if (isset($payInfo['payment_date']) && !empty($payInfo['payment_date']) && $payInfo['payment_date'] != '0000-00-00') echo date("d.m.Y", strtotime($payInfo['payment_date'])) ?>" placeholder="DD.MM.YYYY" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isBadDebtRow ? '#fee2e2' : ($isRowReconciled ? '#f8fafc' : '#ffffff'); ?>; color: <?php echo $isBadDebtRow ? '#dc2626' : ($isRowReconciled ? '#334155' : '#0f172a'); ?>; font-weight: <?php echo $isBadDebtRow ? '700' : 'normal'; ?>; text-align: <?php echo $isBadDebtRow ? 'center' : 'left'; ?>; <?php echo $isRowReconciled ? 'cursor: not-allowed; font-weight: 600;' : ''; ?>" title="<?php echo $isBadDebtRow ? 'Bad Debt Date' : ($isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''); ?>">
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
+                                                                <td style="padding: 0px; <?php echo $isBadDebtRow ? 'background-color: #fef2f2;' : ($isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : '')); ?>">
                                                                     <div class="table-edit-control"><label></label>
-                                                                        <input type="text" data_row_id="" class="serviceChequeDetails <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="serviceChequeDetails" value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; color: <?php echo $isSettlement ? '#6d28d9' : ($isRowReconciled ? '#334155' : '#0f172a'); ?>; <?php echo $isRowReconciled ? 'cursor: not-allowed; font-weight: 600;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
+                                                                        <input type="text" data_row_id="" class="serviceChequeDetails <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="serviceChequeDetails" value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>" placeholder="" <?php echo ($isRowReconciled || $isBadDebtRow) ? 'readonly="readonly"' : ''; ?> style="background-color: <?php echo $isBadDebtRow ? '#fee2e2' : ($isRowReconciled ? '#f8fafc' : '#ffffff'); ?>; color: <?php echo $isBadDebtRow ? '#dc2626' : ($isSettlement ? '#6d28d9' : ($isRowReconciled ? '#334155' : '#0f172a')); ?>; font-weight: <?php echo $isBadDebtRow ? '800' : 'normal'; ?>; text-align: <?php echo $isBadDebtRow ? 'center' : 'left'; ?>; <?php echo $isRowReconciled ? 'cursor: not-allowed; font-weight: 600;' : ''; ?>" title="<?php echo $isBadDebtRow ? 'Bad Debt Loss Settlement' : ($isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''); ?>" />
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
+                                                                <td style="padding: 0px; <?php echo $isBadDebtRow ? 'background-color: #fef2f2;' : ($isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : '')); ?>">
                                                                     <div class="table-edit-control">
                                                                         <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="<?php echo $recStatusText; ?>" />
                                                                         <input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="<?php echo htmlspecialchars($payInfo['balance'] ?? '0.00'); ?>" />
-                                                                        <a class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" data-tds-locked="<?php echo $isTdsLocked ? '1' : '0'; ?>" data-reconciled="<?php echo $isRowReconciled ? '1' : '0'; ?>" value="<?php echo $payInfo['payment_id'] ?>"><i class="fa fa-trash-o pull-right " style="padding-right: 10px; color: <?php echo $isRowReconciled ? '#94a3b8' : '#ef4444'; ?>;" title="<?php echo $isRowReconciled ? 'Cannot delete reconciled payment entry' : 'Delete Row Details'; ?>"></i></a>
+                                                                        <a class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" data-tds-locked="<?php echo $isTdsLocked ? '1' : '0'; ?>" data-reconciled="<?php echo $isRowReconciled ? '1' : '0'; ?>" data-is-bad-debt="<?php echo $isBadDebtRow ? '1' : '0'; ?>" value="<?php echo $payInfo['payment_id'] ?>"><i class="fa <?php echo $isBadDebtRow ? 'fa-undo' : 'fa-trash-o'; ?> pull-right " style="padding-right: 10px; color: <?php echo $isBadDebtRow ? '#dc2626' : ($isRowReconciled ? '#94a3b8' : '#ef4444'); ?>;" title="<?php echo $isBadDebtRow ? 'Revert Bad Debt back to payment' : ($isRowReconciled ? 'Cannot delete reconciled payment entry' : 'Delete Row Details'); ?>"></i></a>
                                                                         <input type="hidden" data-row-id="" class="row-id" name="row-id" value="<?php echo $payInfo['payment_id'] ?>">
                                                                     </div>
                                                                 </td>
@@ -7177,17 +7328,23 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                                     <span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px;"><span class="serviceBlockSettlementLabel"><?php echo $blockDiscountSum < 0 ? 'Excess settle:' : 'Short settle:'; ?></span></span>
                                                     <strong style="color: #7c3aed; font-size: 10.5px; font-weight: 800; letter-spacing: -0.15px;">₹<span class="serviceBlockDiscountSum"><?php echo number_format($blockDiscountSum, 2, '.', ''); ?></span></strong>
                                                 </div>
+                                                <div class="serviceBlockBadDebtWrapper" title="Bad debt loss for this service" style="display: <?php echo ($blockBadDebtSum > 0) ? 'inline-flex' : 'none'; ?>; align-items: center; gap: 2px;">
+                                                    <span style="color: #991b1b; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px;">Bad debt:</span>
+                                                    <strong style="color: #dc2626; font-size: 10.5px; font-weight: 800; letter-spacing: -0.15px;">₹<span class="serviceBlockBadDebtSum"><?php echo number_format($blockBadDebtSum, 2, '.', ''); ?></span></strong>
+                                                </div>
                                             </div>
                                             <div>
-                                                <span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 800; background: <?php echo ($isBlockMatched) ? '#dcfce7' : (($blockRemaining <= 0) ? '#ecfdf5' : '#fef2f2'); ?>; border: 1px solid <?php echo ($isBlockMatched) ? '#4ade80' : (($blockRemaining <= 0) ? '#a7f3d0' : '#fca5a5'); ?>; white-space: nowrap;">
-                                                    <span style="color: <?php echo ($isBlockMatched) ? '#166534' : (($blockRemaining <= 0) ? '#065f46' : '#991b1b'); ?>; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px; margin-right: 2px;">
-                                                        <?php if ($isBlockMatched) { ?>
+                                                <span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 9px; padding: 1px 6px; border-radius: 4px; font-weight: 800; background: <?php echo ($hasBadDebt) ? '#fee2e2' : (($isBlockMatched) ? '#dcfce7' : (($blockRemaining <= 0) ? '#ecfdf5' : '#fef2f2')); ?>; border: 1px solid <?php echo ($hasBadDebt) ? '#fca5a5' : (($isBlockMatched) ? '#4ade80' : (($blockRemaining <= 0) ? '#a7f3d0' : '#fca5a5')); ?>; white-space: nowrap;">
+                                                    <span style="color: <?php echo ($hasBadDebt) ? '#991b1b' : (($isBlockMatched) ? '#166534' : (($blockRemaining <= 0) ? '#065f46' : '#991b1b')); ?>; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px; margin-right: 2px;">
+                                                        <?php if ($hasBadDebt) { ?>
+                                                            <i class="fa fa-ban" style="color: #dc2626; margin-right: 2px;"></i> Bad Debt Settled:
+                                                        <?php } elseif ($isBlockMatched) { ?>
                                                             <i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Matched:
                                                         <?php } else { ?>
                                                             Remaining:
                                                         <?php } ?>
                                                     </span>
-                                                    <strong class="serviceBlockRemainingSum" style="color: <?php echo ($isBlockMatched) ? '#15803d' : (($blockRemaining <= 0) ? '#16a34a' : '#dc2626'); ?>; font-size: 10.5px; letter-spacing: -0.15px;">₹<?php echo number_format($blockRemaining, 2, '.', ''); ?></strong>
+                                                    <strong class="serviceBlockRemainingSum" style="color: <?php echo ($hasBadDebt) ? '#dc2626' : (($isBlockMatched) ? '#15803d' : (($blockRemaining <= 0) ? '#16a34a' : '#dc2626')); ?>; font-size: 10.5px; letter-spacing: -0.15px;">₹<?php echo number_format($blockRemaining, 2, '.', ''); ?></strong>
                                                 </span>
                                             </div>
                                         </div>
@@ -7308,6 +7465,65 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                                         </tr>
                                     </thead>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bad Debt / Loss Payment Modal -->
+                    <div class="modal fade" id="badDebtModal" tabindex="-1" role="dialog" aria-labelledby="badDebtModalLabel" aria-hidden="true">
+                        <div class="modal-dialog" style="max-width: 480px; margin-top: 80px;">
+                            <div class="modal-content" style="border-radius: 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.25); border: none;">
+                                <div class="modal-header" style="background: linear-gradient(135deg, #7f1d1d, #991b1b); color: #ffffff; padding: 12px 18px;">
+                                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color: #ffffff; opacity: 0.9; font-size: 22px;">&times;</button>
+                                    <h4 class="modal-title" id="badDebtModalLabel" style="font-weight: 700; font-size: 15px; margin: 0; display: flex; align-items: center; gap: 8px; color: #ffffff;">
+                                        <i class="fa fa-ban" style="color: #fca5a5;"></i> Loss Payment / Mark as Bad Debt
+                                    </h4>
+                                </div>
+                                <div class="modal-body" style="padding: 20px; background-color: #f8fafc;">
+                                    <form id="badDebtForm">
+                                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; margin-bottom: 16px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                                <span style="font-size: 12px; font-weight: 700; color: #475569;">Service:</span>
+                                                <span id="badDebtModalServiceLabel" style="font-size: 12px; font-weight: 800; color: #0f172a;">-</span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                                <span style="font-size: 12px; font-weight: 700; color: #475569;">Invoices:</span>
+                                                <span id="badDebtModalInvoicesList" style="font-size: 12px; font-weight: 600; color: #2563eb;">-</span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 6px;">
+                                                <span style="font-size: 12.5px; font-weight: 700; color: #991b1b;">Total Due Amount:</span>
+                                                <span id="badDebtModalDueDisplay" style="font-size: 15px; font-weight: 800; color: #dc2626;">₹0.00</span>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" id="badDebtInvoiceId" value="" />
+                                        <input type="hidden" id="badDebtInvoiceNo" value="" />
+
+                                        <div class="form-group" style="margin-bottom: 14px;">
+                                            <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                                                Loss / Bad Debt Amount <span style="color: #ef4444;">*</span>
+                                            </label>
+                                            <div class="input-group">
+                                                <span class="input-group-addon" style="background-color: #fee2e2; border-color: #fca5a5; color: #991b1b; font-weight: 700;">₹</span>
+                                                <input type="number" step="any" min="0.01" class="form-control" id="modalBadDebtAmount" name="modalBadDebtAmount" placeholder="Enter bad debt amount" required style="font-size: 15px; font-weight: 700; color: #991b1b; border-color: #cbd5e1;" />
+                                            </div>
+                                            <small style="color: #64748b; font-size: 11px;">Automatically fetched from remaining due balance. You can edit this amount.</small>
+                                        </div>
+
+                                        <div class="form-group" style="margin-bottom: 8px;">
+                                            <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                                                Enter Note for Bad Debts <span style="color: #ef4444;">*</span>
+                                            </label>
+                                            <textarea class="form-control" id="modalBadDebtNote" rows="3" placeholder="Enter note / reason for marking as bad debts (e.g. Client refusal, company closed, dispute)..." required style="font-size: 12.5px; resize: vertical; border-color: #cbd5e1;"></textarea>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer" style="background-color: #f1f5f9; padding: 10px 18px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px;">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal" style="font-size: 12px; font-weight: 600;">Cancel</button>
+                                    <button type="button" class="btn" id="btnSaveBadDebt" style="background: linear-gradient(135deg, #dc2626, #b91c1c); color: #ffffff; border: none; font-size: 12.5px; font-weight: 700; padding: 6px 16px; border-radius: 4px; box-shadow: 0 1px 3px rgba(220, 38, 38, 0.25);">
+                                        <i class="fa fa-check-circle" style="margin-right: 4px;"></i> Mark as Bad Debt
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -13944,6 +14160,7 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
     <?php } ?>
     <script src="js/payment-ledger.js?v=20261005-2"></script>
     <script src="js/payment-settlement.js?v=20261002-2"></script>
+    <script src="js/payment-bad-debt.js?v=1793945311"></script>
     <script src="js/invoice-header-controls.js?v=20261002-2"></script>
     <script type="text/javascript">
         (function () {
@@ -22809,18 +23026,35 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                     var blockReceived = 0;
                     var blockTds = 0;
                     var blockDiscount = 0;
+                    var blockBadDebt = 0;
                     var blockValidCount = 0;
 
                     $block.find(".service-details-table tbody tr.cb_subsection").each(function () {
                         var $row = $(this);
                         var sType = ($row.find(".serviceTypeName").val() || "").trim().toLowerCase();
+                        var sKind = ($row.attr("data-settlement-kind") || "").trim().toLowerCase();
+                        var chk = ($row.find(".serviceChequeDetails").val() || "").trim().toLowerCase();
+                        var isBadDebtRow = ($row.hasClass("bad-debt-settlement-row") || sKind === "bad_debt" || sType.indexOf("bad debt") !== -1 || chk.indexOf("bad debt") !== -1);
+
                         var received = parseFloat($row.find(".servicePaymentReceived").val()) || 0;
                         var tds = parseFloat($row.find(".serviceTdsAmount").val()) || 0;
                         var discount = parseFloat($row.find(".serviceDiscountAmount").val()) || 0;
+                        if (discount === 0 && (isBadDebtRow || $row.hasClass("discount-settlement-row"))) {
+                            discount = parseFloat($row.find(".serviceDiscountDisplay").val()) || 0;
+                        }
 
-                        var isDiscountRow = ($row.hasClass('discount-settlement-row') || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1);
+                        var isDiscountRow = ($row.hasClass("discount-settlement-row") || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1 || isBadDebtRow);
 
-                        if (isDiscountRow) {
+                        if (isBadDebtRow) {
+                            $row.addClass("bad-debt-settlement-row");
+                            if (discount === 0 && received > 0) discount = received;
+                            received = 0;
+                            $row.find(".servicePaymentReceived").val(0);
+                            $row.find(".serviceDiscountAmount").val(discount);
+                            $row.find(".serviceAmountDecided").val(discount.toFixed(2));
+                            $row.find(".serviceBalance").val("0.00");
+                            blockBadDebt += discount;
+                        } else if (isDiscountRow) {
                             if (discount === 0 && received > 0) {
                                 discount = received;
                             }
@@ -22839,18 +23073,17 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                             $row.find(".serviceBalance").val("0.00");
                             blockReceived += received;
                             blockTds += tds;
-                            blockDiscount += discount;
                         }
 
                         var dt = ($row.find(".paymentDepositDate").val() || "").trim();
-                        var chk = ($row.find(".serviceChequeDetails").val() || "").trim();
+                        var chkVal = ($row.find(".serviceChequeDetails").val() || "").trim();
                         var rec = ($row.find(".serviceReconciliation").val() || "").trim();
-                        if (received > 0 || tds > 0 || dt !== "" || chk !== "" || rec.toLowerCase() === "verified") {
+                        if (received > 0 || tds > 0 || discount > 0 || dt !== "" || chkVal !== "" || rec.toLowerCase() === "verified") {
                             blockValidCount++;
                         }
                     });
 
-                    var blockCombined = blockReceived + blockTds + blockDiscount;
+                    var blockCombined = blockReceived + blockTds + blockDiscount + blockBadDebt;
                     var blockRemaining = blockInvoiceSum - blockCombined;
 
                     $block.find(".totalPaymentReceivedSum").val(blockReceived.toFixed(2));
@@ -22868,23 +23101,49 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
                     } else {
                         $block.find(".serviceBlockDiscountWrapper").hide();
                     }
+
+                    $block.find(".serviceBlockBadDebtSum").text(blockBadDebt.toFixed(2));
+                    if (blockBadDebt > 0) {
+                        $block.find(".serviceBlockBadDebtWrapper").css("display", "inline-flex");
+                    } else {
+                        $block.find(".serviceBlockBadDebtWrapper").hide();
+                    }
                     $block.find(".serviceBlockRemainingSum").text('₹' + blockRemaining.toFixed(2));
 
                     var isBlockMatched = (blockInvoiceSum > 0 && Math.abs(blockRemaining) < 0.01);
-                    if (isBlockMatched) {
+                    var hasBadDebt = (blockBadDebt > 0);
+
+                    if (hasBadDebt) {
+                        $block.addClass("has-bad-debt");
+                        $block.removeClass("service-block-matched");
+                        $block.find(".block-matched-badge, .payment-match-label").remove();
+                        $block.find(".block-bad-debt-badge, .payment-bad-debt-label").remove();
+                        $block.find(".invoice-container-col .qms_complete_btn > span").append(' <span class="block-bad-debt-badge" title="Bad Debt Settled"><i class="fa fa-ban"></i> Bad Debt</span>');
+                        $block.find(".payments-container-col .qms_complete_btn > span").append(' <span class="block-bad-debt-badge payment-bad-debt-label" title="Bad Debt Settled"><i class="fa fa-ban"></i> Bad Debt</span>');
+                        $block.find(".serviceBlockRemainingWrapper").css({
+                            "background": "#fee2e2",
+                            "border-color": "#fca5a5"
+                        });
+                        $block.find(".serviceBlockRemainingWrapper span").html('<i class="fa fa-ban" style="color: #dc2626; margin-right: 2px;"></i> Bad Debt Settled:').css("color", "#991b1b");
+                        $block.find(".serviceBlockRemainingSum").css("color", "#dc2626");
+                    } else if (isBlockMatched) {
+                        $block.removeClass("has-bad-debt");
                         $block.addClass("service-block-matched");
-                        $block.find(".block-matched-badge").remove();
+                        $block.find(".block-bad-debt-badge, .payment-bad-debt-label").remove();
+                        $block.find(".block-matched-badge, .payment-match-label").remove();
                         $block.find(".invoice-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>');
                         $block.find(".payments-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge payment-match-label" title="Matched"><i class="fa fa-check-circle"></i> Matched</span>');
                         $block.find(".serviceBlockRemainingWrapper").css({
                             "background": "#dcfce7",
                             "border-color": "#4ade80"
                         });
-                        $block.find(".serviceBlockRemainingWrapper span").css("color", "#166534").text("Remaining:");
+                        $block.find(".serviceBlockRemainingWrapper span").html('<i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Matched:').css("color", "#166534");
                         $block.find(".serviceBlockRemainingSum").css("color", "#15803d");
                     } else {
+                        $block.removeClass("has-bad-debt");
                         $block.removeClass("service-block-matched");
-                        $block.find(".block-matched-badge").remove();
+                        $block.find(".block-bad-debt-badge, .payment-bad-debt-label").remove();
+                        $block.find(".block-matched-badge, .payment-match-label").remove();
                         if (blockRemaining <= 0) {
                             $block.find(".serviceBlockRemainingWrapper").css({
                                 "background": "#ecfdf5",
@@ -23083,8 +23342,9 @@ if ($earlyRequestedCustomerId > 0 && !aitf_can_access_customer($earlyRequestedCu
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
             html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + blockNumber + '. ' + svcLabel + '</span>)</span>';
-            html += '                    <div style="display: inline-flex; align-items: center; gap: 70px;">';
-            html += '                        <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">(-+)</button>';
+            html += '                    <div style="display: inline-flex; align-items: center; gap: 6px;">';
+            html += '                        <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 7px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">(-+)</button>';
+            html += '                        <button type="button" class="btn btn-xs openBadDebtModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #dc2626; border: 1px solid #fca5a5; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 7px; box-shadow: 0 1px 2px rgba(220,38,38,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Loss Payment / Mark as Bad Debt"><i class="fa fa-ban" style="color: #dc2626; font-size: 10px;"></i> Loss</button>';
             html += '                        <a class="btn btn-xs btn-info cbAddLink" data-service="' + svcName + '" data-row-id="" data-row-count="1" title="Add new row" style="padding: 1px 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;"><i class="fa fa-plus-circle fa-lg" style="padding: 2px 0;"></i></a>';
             html += '                    </div>';
             html += '                </div>';

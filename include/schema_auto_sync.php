@@ -16,6 +16,7 @@
 
 require_once __DIR__ . '/agreement_sync_helper.php';
 require_once __DIR__ . '/payment_ledger.php';
+require_once __DIR__ . '/bad_debts_helper.php';
 
 if (!function_exists('aitf_ensure_user_profile_columns')) {
     function aitf_ensure_user_profile_columns($db) {
@@ -63,6 +64,7 @@ if (!function_exists('aitf_auto_sync_schema')) {
         if (!$db) return;
         aitf_ensure_user_profile_columns($db);
         if (function_exists('aitf_payment_schema')) aitf_payment_schema($db);
+        if (function_exists('aitf_bad_debts_schema')) aitf_bad_debts_schema($db);
 
         // Also ensure guidelines schema if library is available
         if (function_exists('aitf_ensure_guidelines_schema')) {

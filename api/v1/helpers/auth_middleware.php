@@ -54,8 +54,8 @@ function requireAuth($db) {
     $stmt->execute([$user['user_id'], $user['system_code']]);
     $user['is_face_enrolled'] = (bool)$stmt->fetchColumn();
     $role = trim($user['role'] ?? '');
-    $user['can_manage_tasks'] = in_array($role, ['Director', 'Admin', 'Top Mgmt', 'Mgmt', 'Finance'], true);
-    $user['can_delete_tasks'] = in_array($role, ['Director', 'Admin', 'Top Mgmt'], true);
+    $user['can_manage_tasks'] = in_array($role, ['Director', 'Admin', 'Top Mgmt', 'Mgmt', 'Finance', 'Main Admin'], true);
+    $user['can_delete_tasks'] = in_array($role, ['Director', 'Admin', 'Top Mgmt', 'Main Admin'], true);
     $GLOBALS['aitf_identity_db'] = $identityDb;
     return $user;
 }

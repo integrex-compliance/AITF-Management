@@ -90,6 +90,59 @@ $insert->execute([
 
 $taskId = (int)$db->lastInsertId();
 
+// Sync task to tenant database (e.g. qmscare)
+if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instanceof PDO && ($user['system_code'] ?? '') !== 'AITF_MAIN') {
+    try {
+        $tenantDb = $GLOBALS['aitf_identity_db'];
+        $insTenant = $tenantDb->prepare("
+            INSERT INTO aitf_tasks (
+                title, description, system_code,
+                assigned_to_user_id, assigned_to_user_type, assigned_to_user_key,
+                assigned_to_name, assigned_to_role,
+                assigned_by_user_id, assigned_by_name, assigned_by_role,
+                status, is_important, due_date, created_at
+            ) VALUES (
+                :title, :desc, :system_code,
+                :to_id, 'user', :to_key,
+                :to_name, :to_role,
+                :by_id, :by_name, :by_role,
+                'pending', :imp, :due, NOW()
+            )
+        ");
+        $insTenant->execute([
+            ':title' => $title,
+            ':system_code' => $user['system_code'],
+            ':desc' => $description,
+            ':to_id' => $assignedToUserId,
+            ':to_key' => 'user_' . $assignedToUserId,
+            ':to_name' => $assignedToName,
+            ':to_role' => $assignedToRole,
+            ':by_id' => $currentUserId,
+            ':by_name' => $currentUserName,
+            ':by_role' => $currentUserRole,
+            ':imp' => $isImportant,
+            ':due' => $dueDate
+        ]);
+        // Also sync to legacy task_manager table if present
+        $tmStmt = $tenantDb->prepare("
+            INSERT INTO task_manager (userid, task, comment, date, update_date, status, priority, due_date, is_important, assigned_by, assigned_by_name, is_deleted)
+            VALUES (:uid, :task, :comment, NOW(), CURDATE(), 'Pending', :priority, :due, :imp, :by_id, :by_name, 'N')
+        ");
+        $tmStmt->execute([
+            ':uid' => $assignedToUserId,
+            ':task' => $title,
+            ':comment' => $description,
+            ':priority' => $isImportant ? 'High' : 'Normal',
+            ':due' => $dueDate,
+            ':imp' => $isImportant,
+            ':by_id' => $currentUserId,
+            ':by_name' => $currentUserName
+        ]);
+    } catch (Throwable $e) {
+        error_log("Tenant task sync error: " . $e->getMessage());
+    }
+}
+
 // Trigger push notification to assignee if not self
 if (!$isSelfAssign && $assignedToUserId > 0) {
     $dueText = $dueDate ? "  Due: " . date('d M Y', strtotime($dueDate)) : "";

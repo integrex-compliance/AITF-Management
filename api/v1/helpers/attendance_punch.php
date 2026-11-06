@@ -98,6 +98,34 @@ function processAttendancePunch(PDO $db, string $purpose): void {
         }
         $db->commit();
         $committed = true;
+
+        // Sync with tenant database (e.g. qmscare) so web dashboard updates instantly
+        if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instanceof PDO && $sys !== 'AITF_MAIN') {
+            try {
+                $tenantDb = $GLOBALS['aitf_identity_db'];
+                if ($purpose === 'punch_in') {
+                    $tStmt = $tenantDb->prepare("
+                        INSERT INTO aitf_attendance 
+                        (user_id, system_code, attendance_date, status, in_time, in_latitude, in_longitude, in_address, punch_in_selfie_url, face_match_score, remarks)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE
+                        status = VALUES(status), in_time = VALUES(in_time), in_latitude = VALUES(in_latitude),
+                        in_longitude = VALUES(in_longitude), in_address = VALUES(in_address),
+                        punch_in_selfie_url = VALUES(punch_in_selfie_url), face_match_score = VALUES(face_match_score)
+                    ");
+                    $tStmt->execute([$uid, $sys, $date, $status, $time, $location['latitude'], $location['longitude'], $location['address'], $photoUrl, $verified['similarity_score'], 'Mobile punch in']);
+                } else {
+                    $tStmt = $tenantDb->prepare("
+                        UPDATE aitf_attendance SET
+                        out_time = ?, total_working_hours = ?, out_latitude = ?, out_longitude = ?, out_address = ?, punch_out_selfie_url = ?, updated_at = NOW()
+                        WHERE user_id = ? AND attendance_date = ?
+                    ");
+                    $tStmt->execute([$time, $hours, $location['latitude'], $location['longitude'], $location['address'], $photoUrl, $uid, $date]);
+                }
+            } catch (Throwable $e) {
+                error_log("Tenant attendance sync notice: " . $e->getMessage());
+            }
+        }
     } finally {
         if (!$committed) {
             if ($db->inTransaction()) $db->rollBack();

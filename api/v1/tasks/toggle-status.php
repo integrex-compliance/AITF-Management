@@ -71,6 +71,18 @@ $update->execute([
     ':id' => $taskId
 ]);
 
+// Sync with tenant database if present
+if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instanceof PDO && ($user['system_code'] ?? '') !== 'AITF_MAIN') {
+    try {
+        $tenantDb = $GLOBALS['aitf_identity_db'];
+        $tenantDb->prepare("UPDATE aitf_tasks SET status = :st, completed_at = :cat, completed_by_user_id = :cby, updated_at = NOW() WHERE title = :title AND assigned_to_user_id = :uid")->execute([':st' => $newStatus, ':cat' => $completedAt, ':cby' => $completedBy, ':title' => $task['title'], ':uid' => $task['assigned_to_user_id']]);
+        $qmsStatus = ($newStatus === 'completed') ? 'Completed' : 'Pending';
+        $tenantDb->prepare("UPDATE task_manager SET status = :st, complete_date = CURDATE(), completed_at = :cat, update_date = CURDATE() WHERE task = :title AND userid = :uid")->execute([':st' => $qmsStatus, ':cat' => $completedAt, ':title' => $task['title'], ':uid' => $task['assigned_to_user_id']]);
+    } catch (Throwable $e) {}
+}
+
+
+
 // If completed, notify assigner (e.g. Vaibhav Ajabe) if someone else completes it
 $assignerId = (int)($task['assigned_by_user_id'] ?? 0);
 if ($newStatus === 'completed' && $assignerId > 0 && $assignerId !== $currentUserId) {
@@ -94,3 +106,4 @@ jsonResponse(true, "Task status updated to {$newStatus}", [
     'status' => $newStatus,
     'completed_at' => $completedAt
 ], 200);
+

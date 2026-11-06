@@ -842,6 +842,16 @@ if (!Utitlity::checkIfLoggedIn()) {
         }
         exit;
     }
+} else if (isset($pageIdentifier) && ($pageIdentifier == "Bad Debts" || $pageIdentifier == "Bad Debt")) {
+    $addBadDebtsClass = "active";
+    if (!aitf_has_access("Bad Debts")) {
+        if (isset($_SESSION['username'])) {
+            header("Location: homePage.php");
+        } else {
+            header("Location: login.php?reason=login_required");
+        }
+        exit;
+    }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Due letter") {
     $adddueClass = "active";
     if (!aitf_has_access("Intimation Due")) {
@@ -1277,13 +1287,15 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
         $canAccessBills = aitf_has_access('Bills');
         $canAccessCreditors = aitf_has_access('Creditors');
 
-        $canAccessSales = $canAccessInvoices || $canAccessReceivedPayment || $canAccessPaymentDue || $canAccessTds;
+        $canAccessBadDebts = aitf_has_access('Bad Debts');
+
+        $canAccessSales = $canAccessInvoices || $canAccessReceivedPayment || $canAccessPaymentDue || $canAccessTds || $canAccessBadDebts;
         $canAccessPurchase = $canAccessBills || $canAccessCreditors;
         $canAccessFinance = $canAccessSales || $canAccessPurchase;
 
-        $isSalesActive = !empty($addInvoiceClass) || !empty($addReceivedPaymentClass) || !empty($addFinanceClass) || !empty($addtds);
+        $isSalesActive = !empty($addInvoiceClass) || !empty($addReceivedPaymentClass) || !empty($addFinanceClass) || !empty($addtds) || !empty($addBadDebtsClass);
         $isPurchaseActive = !empty($addBillsClass) || !empty($addSuppliersClass);
-        $isFinanceGroupActive = $isSalesActive || $isPurchaseActive || in_array($currentScript, ['finance_dashboard.php', 'invoicePage.php', 'proforma_invoices.php', 'receivedPayments.php', 'paymentPage.php', 'listOfTds.php', 'bills.php', 'suppliers.php']);
+        $isFinanceGroupActive = $isSalesActive || $isPurchaseActive || in_array($currentScript, ['finance_dashboard.php', 'invoicePage.php', 'proforma_invoices.php', 'receivedPayments.php', 'paymentPage.php', 'listOfTds.php', 'badDebts.php', 'bills.php', 'suppliers.php']);
         ?>
         <?php if ($canAccessFinance) { ?>
         <li class="sidebar-dropdown-group finance-group <?php echo $isFinanceGroupActive ? 'active' : ''; ?>">
@@ -1338,6 +1350,14 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                             <a href="listOfTds.php" class="subflyout-link <?php echo $addtds ?? ''; ?>">
                                 <i class="fa fa-list subflyout-ico" style="color: #a78bfa;"></i>
                                 <span class="subflyout-text">TDS DEDUCTED</span>
+                            </a>
+                        </li>
+                        <?php } ?>
+                        <?php if ($canAccessBadDebts) { ?>
+                        <li class="subflyout-item">
+                            <a href="badDebts.php" class="subflyout-link <?php echo $addBadDebtsClass ?? ''; ?>">
+                                <i class="fa fa-ban subflyout-ico" style="color: #f87171;"></i>
+                                <span class="subflyout-text">BAD DEBTS</span>
                             </a>
                         </li>
                         <?php } ?>
@@ -1694,6 +1714,9 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                         <?php } ?>
                         <?php if ($canAccessTds) { ?>
                         <li style="padding-left: 8px;"><a href="listOfTds.php" style="color: #fff;"><i class="fa fa-list" style="color: #a78bfa; margin-right: 6px;"></i> TDS DEDUCTED</a></li>
+                        <?php } ?>
+                        <?php if ($canAccessBadDebts) { ?>
+                        <li style="padding-left: 8px;"><a href="badDebts.php" style="color: #fff;"><i class="fa fa-ban" style="color: #f87171; margin-right: 6px;"></i> BAD DEBTS</a></li>
                         <?php } ?>
                         <?php } ?>
 

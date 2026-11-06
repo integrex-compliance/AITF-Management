@@ -31,6 +31,8 @@ function aitf_has_access($module) {
         'TDS list' => ['Finance', 'finance', 'Office Staff-A', 'Office Staff-B', 'BDM'],
         'Intimation Due' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive', 'BDM'],
         'Invoices' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive', 'BDM'],
+        'Bad Debts' => ['Admin', 'Finance'],
+        'Bad Debt' => ['Admin', 'Finance'],
         'Bills' => ['Admin', 'Finance'],
         'Creditors' => ['Admin', 'Finance'],
         'Quotations' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive', 'BDM'],

@@ -125,10 +125,10 @@ $bioStmt->execute([':uid' => (int)$user['user_id'], ':sys' => $systemCode]);
 $isFaceEnrolled = (bool)$bioStmt->fetchColumn();
 
 // 7. Role & Permission Flags
-$mgmtRoles = ['Director', 'Admin', 'Top Mgmt', 'Mgmt', 'Finance'];
+$mgmtRoles = ['Director', 'Admin', 'Top Mgmt', 'Mgmt', 'Finance', 'Main Admin'];
 $userRole = trim($user['role'] ?? '');
 $canManageTasks = in_array($userRole, $mgmtRoles);
-$canDeleteTasks = in_array($userRole, ['Director', 'Admin', 'Top Mgmt']);
+$canDeleteTasks = in_array($userRole, ['Director', 'Admin', 'Top Mgmt', 'Main Admin']);
 
 $responseData = [
     'token' => $token,
