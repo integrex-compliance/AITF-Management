@@ -20,6 +20,17 @@ try {
     ");
     $systems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Normalize any QMS Care firm code so the mobile app always receives 'QMS_CARE'
+    foreach ($systems as &$sys) {
+        $name = strtolower($sys['system_name'] ?? '');
+        $code = strtoupper(trim($sys['system_code'] ?? ''));
+        if ($code === '01' || strpos($name, 'qms') !== false) {
+            $sys['system_code'] = 'QMS_CARE';
+            $sys['system_name'] = 'QMS Care';
+        }
+    }
+    unset($sys);
+
     jsonResponse(true, "Active firms retrieved successfully", $systems, 200);
 } catch (Throwable $e) {
     jsonResponse(false, 'Firms are temporarily unavailable.', [], 503);

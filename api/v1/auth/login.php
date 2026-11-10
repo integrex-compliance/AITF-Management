@@ -28,7 +28,14 @@ if (empty($identifier) || empty($password)) {
 }
 
 // 1. Validate System Code
-$sysStmt = $db->prepare("SELECT id, system_code, system_name, is_active, db_host, db_name, db_user, db_password FROM aitf_systems WHERE system_code = :sys LIMIT 1");
+$sysStmt = $db->prepare("
+    SELECT id, system_code, system_name, is_active, db_host, db_name, db_user, db_password 
+    FROM aitf_systems 
+    WHERE system_code = :sys 
+       OR (:sys IN ('QMS_CARE', '01') AND (system_code = '01' OR system_code = 'QMS_CARE' OR system_name LIKE '%QMS%'))
+    ORDER BY CASE WHEN system_code = :sys THEN 0 ELSE 1 END
+    LIMIT 1
+");
 $sysStmt->execute([':sys' => $systemCode]);
 $system = $sysStmt->fetch(PDO::FETCH_ASSOC);
 

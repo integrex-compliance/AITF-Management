@@ -7,6 +7,11 @@ function identityDatabase(PDO $db, array $system): PDO {
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES => true,
              PDO::ATTR_TIMEOUT => 5]);
     } catch (Throwable $e) {
+        // Fallback to primary database if user table exists in $db
+        try {
+            $check = $db->query("SELECT 1 FROM user LIMIT 1");
+            if ($check) return $db;
+        } catch (Throwable $t) {}
         jsonResponse(false, 'The firm database is unavailable. Contact your administrator.', [], 503);
     }
 }

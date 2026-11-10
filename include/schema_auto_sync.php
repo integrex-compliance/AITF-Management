@@ -899,6 +899,36 @@ if (!function_exists('aitf_migrate_legacy_tds_to_payment_columns')) {
                        VALUES ('AITF_MAIN', 'AITF-Management Certification Limited', SHA2('AITF_SECURE_2026', 256), 1)
                        ON DUPLICATE KEY UPDATE `system_name` = 'AITF-Management Certification Limited'");
 
+            try {
+                $db->exec("UPDATE `aitf_systems` SET `system_code` = 'QMS_CARE', `system_name` = 'QMS Care', `db_name` = NULL, `db_user` = NULL, `db_password` = NULL WHERE `system_code` = '01' OR `system_name` LIKE '%QMS%'");
+            } catch (Throwable $ignore) {}
+
+            // Ensure QMS Care users exist in main tenant database for seamless mobile attendance
+            try {
+                $qmsUsers = [
+                    ['Gaurav Oli', 'GO', 'gaurav@qmscare.com', '$2y$10$6ScAizpe.w2/BzsQZzN7t.lqWOwS9D0Lc/zJJsKHuBdG9ytqEUpYC', 'Main Admin'],
+                    ['Kajal', 'KJ', 'ks@qmscare.com', '$2y$10$ExNRd7x7v1aUp6WeYu6Ixuoai3Bz.U8GSWv2WQrR7GDAvSG8FsDSW', 'Main Admin'],
+                    ['Bhagyashree', 'BH', 'bh@qmscare.com', '$2y$10$Gm8WaOeRSIpkzwkW43gTjOYtTYdttR8sqRibjSdF7hOlHytDYoNay', 'Office Staff']
+                ];
+                $chkStmt = $db->prepare("SELECT user_id FROM user WHERE email_id = :email LIMIT 1");
+                $insStmt = $db->prepare("
+                    INSERT INTO user (user_name, abbreviation, email_id, password, role, is_deleted, account_status)
+                    VALUES (:name, :abbr, :email, :pwd, :role, '0', 'active')
+                ");
+                foreach ($qmsUsers as $u) {
+                    $chkStmt->execute([':email' => $u[2]]);
+                    if (!$chkStmt->fetch()) {
+                        $insStmt->execute([
+                            ':name'  => $u[0],
+                            ':abbr'  => $u[1],
+                            ':email' => $u[2],
+                            ':pwd'   => $u[3],
+                            ':role'  => $u[4]
+                        ]);
+                    }
+                }
+            } catch (Throwable $ignore) {}
+
             $db->exec("CREATE TABLE IF NOT EXISTS `aitf_mobile_tokens` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
                 `user_id` INT NOT NULL,
