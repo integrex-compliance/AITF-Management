@@ -8,7 +8,7 @@ function aitf_payment_json($data) {
 }
 
 $ledgerAction = $req['action'] ?? '';
-$ledgerActions = ['autoSavePayments', 'deletePayment', 'createPaymentHeader', 'renamePaymentHeader', 'removePaymentHeader', 'updateInvoiceServiceType', 'updatePaymentServiceType', 'getPaymentSettlement', 'saveDiscount', 'markBadDebt', 'revertBadDebt'];
+$ledgerActions = ['autoSavePayments', 'deletePayment', 'createPaymentHeader', 'renamePaymentHeader', 'removePaymentHeader', 'updateInvoiceServiceType', 'updatePaymentServiceType', 'getPaymentSettlement', 'saveDiscount', 'markBadDebt', 'revertBadDebt', 'approveBadDebt'];
 if (in_array($ledgerAction, $ledgerActions, true)) {
     try {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('Use POST for payment changes.');
@@ -25,6 +25,12 @@ if (in_array($ledgerAction, $ledgerActions, true)) {
             if ($customer <= 0) throw new InvalidArgumentException('Invalid customer.');
             $username = $_SESSION['username'] ?? 'staff';
             aitf_payment_json(aitf_mark_bad_debt($db, $customer, $req, $username));
+        }
+        if ($ledgerAction === 'approveBadDebt') {
+            require_once __DIR__ . '/bad_debts_helper.php';
+            $badDebtId = (int)($req['bad_debt_id'] ?? 0);
+            $username = $_SESSION['username'] ?? 'Finance';
+            aitf_payment_json(aitf_approve_bad_debt($db, $badDebtId, $username));
         }
         if ($ledgerAction === 'revertBadDebt') {
             require_once __DIR__ . '/bad_debts_helper.php';

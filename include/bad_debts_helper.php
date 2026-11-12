@@ -21,14 +21,40 @@ function aitf_bad_debts_schema(PDO $db) {
             `amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
             `note` TEXT NOT NULL,
             `status` ENUM('active', 'reverted') NOT NULL DEFAULT 'active',
+            `approval_status` ENUM('pending', 'approved') NOT NULL DEFAULT 'pending',
+            `approved_by` VARCHAR(100) NULL,
+            `approved_at` DATETIME NULL,
             `created_by` VARCHAR(100) NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `reverted_by` VARCHAR(100) NULL,
             `reverted_at` DATETIME NULL,
             INDEX `idx_cust` (`customer_id`),
             INDEX `idx_payment` (`payment_id`),
-            INDEX `idx_status` (`status`)
+            INDEX `idx_status` (`status`),
+            INDEX `idx_approval` (`approval_status`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Ensure approval workflow columns exist in existing table
+        try {
+            $stmtCol = $db->query("SHOW COLUMNS FROM `bad_debts` LIKE 'approval_status'");
+            if (!$stmtCol || !$stmtCol->fetch()) {
+                $db->exec("ALTER TABLE `bad_debts` ADD COLUMN `approval_status` ENUM('pending', 'approved') NOT NULL DEFAULT 'pending' AFTER `status`");
+            }
+        } catch (Throwable $e) {}
+
+        try {
+            $stmtCol = $db->query("SHOW COLUMNS FROM `bad_debts` LIKE 'approved_by'");
+            if (!$stmtCol || !$stmtCol->fetch()) {
+                $db->exec("ALTER TABLE `bad_debts` ADD COLUMN `approved_by` VARCHAR(100) NULL AFTER `approval_status`");
+            }
+        } catch (Throwable $e) {}
+
+        try {
+            $stmtCol = $db->query("SHOW COLUMNS FROM `bad_debts` LIKE 'approved_at'");
+            if (!$stmtCol || !$stmtCol->fetch()) {
+                $db->exec("ALTER TABLE `bad_debts` ADD COLUMN `approved_at` DATETIME NULL AFTER `approved_by`");
+            }
+        } catch (Throwable $e) {}
 
         // Ensure payment_id is PRIMARY KEY AUTO_INCREMENT in payment_system
         try {
@@ -59,9 +85,36 @@ function aitf_bad_debts_schema(PDO $db) {
 }
 
 /**
- * Access check for Bad Debts: Only Finance, Top Mgmt, and Admin have access
+ * Access check for Bad Debts page view:
+ * Accessible to all logged-in staff and management accounts EXCEPT Auditor.
  */
-function aitf_can_access_bad_debts($role = null) {
+function aitf_can_view_bad_debts($role = null) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    if (empty($_SESSION['username']) && empty($_SESSION['role'])) {
+        return false;
+    }
+    $role = $role === null ? ($_SESSION['role'] ?? '') : $role;
+    $cleanRole = strtolower(trim((string)$role));
+    $cleanRoleNoSpace = str_replace(array(' ', '-', '_'), '', $cleanRole);
+
+    if ($cleanRole === 'auditor' || $cleanRole === 'auditors' || $cleanRoleNoSpace === 'auditor' || $cleanRoleNoSpace === 'auditors') {
+        return false;
+    }
+
+    if (in_array($cleanRole, array('client', 'external'), true)) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Access check for Action Buttons (Approve / Accept and Revert):
+ * Strictly restricted to Top Management and Finance only.
+ */
+function aitf_can_manage_bad_debts($role = null) {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
@@ -70,24 +123,38 @@ function aitf_can_access_bad_debts($role = null) {
     $cleanRoleNoSpace = str_replace(array(' ', '-', '_'), '', $cleanRole);
 
     $isTopMgmt = (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($role))
-        || in_array($cleanRole, array('top mgmt', 'director', 'main admin', 'mgmt', 'top management', 'management'), true)
-        || in_array($cleanRoleNoSpace, array('topmgmt', 'mainadmin', 'topmanagement'), true);
+        || in_array($cleanRole, array('top mgmt', 'director', 'main admin', 'mgmt', 'top management', 'management', 'admin'), true)
+        || in_array($cleanRoleNoSpace, array('topmgmt', 'mainadmin', 'topmanagement', 'admin'), true);
 
-    $isAdmin = ($cleanRole === 'admin') || (class_exists('Utitlity') && Utitlity::checkForUserAdmin());
     $isFinance = ($cleanRole === 'finance') || (class_exists('Utitlity') && Utitlity::checkForUserFinance());
 
     $username = strtolower(trim($_SESSION['username'] ?? ''));
     $isSuperUser = in_array($username, array('admin', 'mainadmin', 'director', 'finance'), true);
 
-    return ($isTopMgmt || $isAdmin || $isFinance || $isSuperUser);
+    return ($isTopMgmt || $isFinance || $isSuperUser);
+}
+
+/**
+ * Access check to mark Bad Debt from payment system:
+ * Accessible to any staff member allowed on payment system except Auditor.
+ */
+function aitf_can_mark_bad_debts($role = null) {
+    return aitf_can_view_bad_debts($role);
+}
+
+/**
+ * Backwards compatibility alias for existing code
+ */
+function aitf_can_access_bad_debts($role = null) {
+    return aitf_can_view_bad_debts($role);
 }
 
 /**
  * Mark a service remaining due balance as Bad Debt (Loss Payment)
  */
 function aitf_mark_bad_debt(PDO $db, $customer, array $req, string $username) {
-    if (!aitf_can_access_bad_debts()) {
-        throw new RuntimeException('Unauthorized: Only Finance, Admin, or Top Management can manage Bad Debts.');
+    if (!aitf_can_mark_bad_debts()) {
+        throw new RuntimeException('Unauthorized: Auditor or unauthorized accounts cannot mark Bad Debts.');
     }
 
     $customer = (int)$customer;
@@ -186,11 +253,11 @@ function aitf_mark_bad_debt(PDO $db, $customer, array $req, string $username) {
         $stmtPay->execute([$payid, $customer, $header, $formattedAmt, $formattedAmt, $date, $paymentComment, $key]);
         $paymentId = (int)$db->lastInsertId();
 
-        // 2. Insert into bad_debts table
+        // 2. Insert into bad_debts table with approval_status = 'pending'
         $stmtBd = $db->prepare("INSERT INTO bad_debts (
             customer_id, payment_id, service_type, invoice_id, invoice_no,
-            amount, note, status, created_by, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW())");
+            amount, note, status, approval_status, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'pending', ?, NOW())");
         $stmtBd->execute([
             $customer, $paymentId, $header, $invoiceId ?: null, $invoiceNo ?: null,
             $formattedAmt, $note, $username
@@ -203,7 +270,61 @@ function aitf_mark_bad_debt(PDO $db, $customer, array $req, string $username) {
             'bad_debt_id' => $badDebtId,
             'payment_id' => $paymentId,
             'amount' => $formattedAmt,
-            'message' => 'Loss payment marked as Bad Debt successfully.'
+            'message' => 'Loss payment marked as Bad Debt successfully (Pending Finance Approval).'
+        ];
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
+    }
+}
+
+/**
+ * Approve / Accept a Bad Debt entry by Finance or Top Management
+ */
+function aitf_approve_bad_debt(PDO $db, int $badDebtId, string $username) {
+    if (!aitf_can_manage_bad_debts()) {
+        throw new RuntimeException('Unauthorized: Only Finance or Top Management can approve Bad Debts.');
+    }
+
+    aitf_bad_debts_schema($db);
+
+    $db->beginTransaction();
+    try {
+        $stmt = $db->prepare("SELECT * FROM bad_debts WHERE id = ? FOR UPDATE");
+        $stmt->execute([$badDebtId]);
+        $bd = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$bd) {
+            throw new RuntimeException('Bad Debt record not found.');
+        }
+
+        if ($bd['status'] === 'reverted') {
+            throw new RuntimeException('Cannot approve a reverted Bad Debt.');
+        }
+
+        if (($bd['approval_status'] ?? '') === 'approved') {
+            $db->commit();
+            return [
+                'success' => true,
+                'already_approved' => true,
+                'message' => 'Bad Debt is already approved.'
+            ];
+        }
+
+        $stmtUpd = $db->prepare("UPDATE bad_debts SET approval_status = 'approved', approved_by = ?, approved_at = NOW() WHERE id = ?");
+        $stmtUpd->execute([$username, $badDebtId]);
+
+        $db->commit();
+        return [
+            'success' => true,
+            'bad_debt_id' => $badDebtId,
+            'approved_by' => $username,
+            'approved_at' => date('d.m.Y H:i'),
+            'amount' => $bd['amount'],
+            'service_type' => $bd['service_type'],
+            'message' => 'Bad Debt has been accepted and approved by Finance.'
         ];
     } catch (Throwable $e) {
         if ($db->inTransaction()) {
@@ -217,8 +338,8 @@ function aitf_mark_bad_debt(PDO $db, $customer, array $req, string $username) {
  * Revert a Bad Debt entry back to pending payment
  */
 function aitf_revert_bad_debt(PDO $db, int $badDebtId, string $username) {
-    if (!aitf_can_access_bad_debts()) {
-        throw new RuntimeException('Unauthorized: Only Finance, Admin, or Top Management can revert Bad Debts.');
+    if (!aitf_can_manage_bad_debts()) {
+        throw new RuntimeException('Unauthorized: Only Finance or Top Management can revert Bad Debts.');
     }
 
     aitf_bad_debts_schema($db);
@@ -284,13 +405,18 @@ function aitf_get_bad_debts(PDO $db, array $filters = []) {
 
     $params = [];
 
+    if (!empty($filters['approval_status']) && $filters['approval_status'] !== 'all') {
+        $sql .= " AND bd.approval_status = :approval_status";
+        $params[':approval_status'] = $filters['approval_status'];
+    }
+
     if (!empty($filters['clientSearch'])) {
         $searchWords = array_values(array_filter(explode(' ', trim($filters['clientSearch']))));
         if (!empty($searchWords)) {
             $wordConditions = [];
             foreach ($searchWords as $idx => $word) {
                 $pName = ':search_' . $idx;
-                $wordConditions[] = "(ci.customer_name LIKE $pName OR ci.unique_id LIKE $pName OR ci.id LIKE $pName OR bd.invoice_no LIKE $pName OR bd.note LIKE $pName)";
+                $wordConditions[] = "(ci.customer_name LIKE $pName OR ci.unique_id LIKE $pName OR ci.id LIKE $pName OR bd.invoice_no LIKE $pName OR bd.note LIKE $pName OR bd.created_by LIKE $pName OR bd.approved_by LIKE $pName)";
                 $params[$pName] = '%' . $word . '%';
             }
             $sql .= " AND (" . implode(' AND ', $wordConditions) . ")";

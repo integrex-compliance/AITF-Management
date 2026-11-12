@@ -392,7 +392,65 @@ echo '<script>
     .marketing-group .sidebar-flyout-menu { border-left-color: #f472b6 !important; }
     .marketing-group .sidebar-flyout-menu .flyout-header { color: #f472b6 !important; }
 
-    /* 4. Finance Group */
+    /* 4. Sales Group */
+    .sidebar-nav li.sales-group > a.sales-group-link {
+        border-left: 3.5px solid rgba(16, 185, 129, 0.6) !important;
+        background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.01) 100%) !important;
+    }
+    .sidebar-nav li.sales-group > a.sales-group-link .group-arrow-icon {
+        color: #10b981 !important;
+        border-color: rgba(16, 185, 129, 0.28) !important;
+        background: rgba(16, 185, 129, 0.1) !important;
+    }
+    .sidebar-nav li.sales-group > a.sales-group-link:hover,
+    .sidebar-nav li.sales-group.flyout-hover > a.sales-group-link {
+        background: linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
+        border-left-color: #10b981 !important;
+        color: #ffffff !important;
+    }
+    .sidebar-nav li.sales-group > a.sales-group-link.active,
+    .sidebar-nav li.sales-group.active > a.sales-group-link {
+        color: #fbbf24 !important;
+        background: #062b4f !important;
+        border-left: 3.5px solid #fbbf24 !important;
+        font-weight: 700 !important;
+    }
+    #wrapper.active .sales-sub-icon { display: none !important; }
+    #wrapper:not(.active) .sales-sub-icon { display: inline-block !important; }
+    .sales-group .sidebar-flyout-menu { border-left-color: #10b981 !important; }
+    .sales-group .sidebar-flyout-menu .flyout-header { color: #10b981 !important; }
+    .sales-group .sidebar-flyout-menu .flyout-item a.flyout-link:hover { border-left-color: #10b981 !important; }
+
+    /* 5. Purchase Group */
+    .sidebar-nav li.purchase-group > a.purchase-group-link {
+        border-left: 3.5px solid rgba(249, 115, 22, 0.6) !important;
+        background: linear-gradient(90deg, rgba(249, 115, 22, 0.08) 0%, rgba(249, 115, 22, 0.01) 100%) !important;
+    }
+    .sidebar-nav li.purchase-group > a.purchase-group-link .group-arrow-icon {
+        color: #f97316 !important;
+        border-color: rgba(249, 115, 22, 0.28) !important;
+        background: rgba(249, 115, 22, 0.1) !important;
+    }
+    .sidebar-nav li.purchase-group > a.purchase-group-link:hover,
+    .sidebar-nav li.purchase-group.flyout-hover > a.purchase-group-link {
+        background: linear-gradient(90deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.05) 100%) !important;
+        border-left-color: #f97316 !important;
+        color: #ffffff !important;
+    }
+    .sidebar-nav li.purchase-group > a.purchase-group-link.active,
+    .sidebar-nav li.purchase-group.active > a.purchase-group-link {
+        color: #fbbf24 !important;
+        background: #062b4f !important;
+        border-left: 3.5px solid #fbbf24 !important;
+        font-weight: 700 !important;
+    }
+    #wrapper.active .purchase-sub-icon { display: none !important; }
+    #wrapper:not(.active) .purchase-sub-icon { display: inline-block !important; }
+    .purchase-group .sidebar-flyout-menu { border-left-color: #f97316 !important; }
+    .purchase-group .sidebar-flyout-menu .flyout-header { color: #f97316 !important; }
+    .purchase-group .sidebar-flyout-menu .flyout-item a.flyout-link:hover { border-left-color: #f97316 !important; }
+
+    /* Legacy Finance Group Fallback */
     .sidebar-nav li.finance-group > a.finance-group-link {
         border-left: 3.5px solid rgba(16, 185, 129, 0.6) !important;
         background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.01) 100%) !important;
@@ -1284,114 +1342,108 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
         $canAccessReceivedPayment = aitf_has_access('Received Payment');
         $canAccessPaymentDue = aitf_has_access('Payment Due');
         $canAccessTds = aitf_has_access('TDS Deducted');
+        $canAccessBadDebts = aitf_has_access('Bad Debts');
         $canAccessBills = aitf_has_access('Bills');
         $canAccessCreditors = aitf_has_access('Creditors');
-
-        $canAccessBadDebts = aitf_has_access('Bad Debts');
 
         $canAccessSales = $canAccessInvoices || $canAccessReceivedPayment || $canAccessPaymentDue || $canAccessTds || $canAccessBadDebts;
         $canAccessPurchase = $canAccessBills || $canAccessCreditors;
         $canAccessFinance = $canAccessSales || $canAccessPurchase;
 
-        $isSalesActive = !empty($addInvoiceClass) || !empty($addReceivedPaymentClass) || !empty($addFinanceClass) || !empty($addtds) || !empty($addBadDebtsClass);
-        $isPurchaseActive = !empty($addBillsClass) || !empty($addSuppliersClass);
-        $isFinanceGroupActive = $isSalesActive || $isPurchaseActive || in_array($currentScript, ['finance_dashboard.php', 'invoicePage.php', 'proforma_invoices.php', 'receivedPayments.php', 'paymentPage.php', 'listOfTds.php', 'badDebts.php', 'bills.php', 'suppliers.php']);
+        $isSalesActive = !empty($addInvoiceClass) || !empty($addReceivedPaymentClass) || !empty($addFinanceClass) || !empty($addtds) || !empty($addBadDebtsClass) || in_array($currentScript, ['invoicePage.php', 'finalInvoice.php', 'receivedPayments.php', 'paymentPage.php', 'listOfTds.php', 'tdsPage.php', 'badDebts.php']);
+        $isPurchaseActive = !empty($addBillsClass) || !empty($addSuppliersClass) || in_array($currentScript, ['billsPage.php', 'suppliers.php']);
+        $isFinanceGroupActive = $isSalesActive || $isPurchaseActive;
         ?>
-        <?php if ($canAccessFinance) { ?>
-        <li class="sidebar-dropdown-group finance-group <?php echo $isFinanceGroupActive ? 'active' : ''; ?>">
-            <a href="javascript:void(0);" class="animate dropdown-group-link finance-group-link <?php echo $isFinanceGroupActive ? 'active' : ''; ?>" title="FINANCE MANAGEMENT">
+        <?php if ($canAccessSales) { ?>
+        <li class="sidebar-dropdown-group sales-group <?php echo $isSalesActive ? 'active' : ''; ?>">
+            <a href="javascript:void(0);" class="animate dropdown-group-link sales-group-link <?php echo $isSalesActive ? 'active' : ''; ?>" title="SALES">
                 <span class="dropdown-group-text">
-                    <i class="fa fa-calculator finance-group-icon" style="color: #10b981; margin-right: 4px; font-size: 11px;"></i> FINANCE MANAGEMENT
+                    <i class="fa fa-shopping-cart sales-group-icon" style="color: #10b981; margin-right: 4px; font-size: 11px;"></i> SALES
                 </span>
                 <i class="sub_icon fa fa-angle-right group-arrow-icon"></i>
-                <i class="sub_icon fa fa-calculator finance-sub-icon" style="color: #10b981;"></i>
+                <i class="sub_icon fa fa-shopping-cart sales-sub-icon" style="color: #10b981;"></i>
             </a>
-            <ul class="sidebar-flyout-menu finance-flyout">
+            <ul class="sidebar-flyout-menu sales-flyout">
                 <li class="flyout-header">
-                    <span><i class="fa fa-calculator" style="color: #10b981; margin-right: 5px;"></i> FINANCE MANAGEMENT</span>
+                    <span><i class="fa fa-shopping-cart" style="color: #10b981; margin-right: 5px;"></i> SALES / RECEIVABLE</span>
                 </li>
-                <?php if ($canAccessSales) { ?>
-                <li class="flyout-item nested-flyout-group sales-subgroup <?php echo $isSalesActive ? 'active' : ''; ?>">
-                    <a href="javascript:void(0);" class="flyout-link nested-trigger-link <?php echo $isSalesActive ? 'active' : ''; ?>" title="SALES">
-                        <i class="fa fa-shopping-cart flyout-ico" style="color: #38bdf8;"></i>
-                        <span class="flyout-text">SALES/ RECEIVABLE</span>
+                <?php if ($canAccessInvoices) { ?>
+                <li class="flyout-item">
+                    <a href="invoicePage.php" class="flyout-link <?php echo $addInvoiceClass ?? ''; ?>">
+                        <i class="fa fa-inr flyout-ico" style="color: #38bdf8;"></i>
+                        <span class="flyout-text">INVOICES</span>
                         <i class="fa fa-angle-right flyout-item-arrow"></i>
                     </a>
-                    <ul class="sidebar-subflyout-menu sales-subflyout">
-                        <li class="subflyout-header">
-                            <span><i class="fa fa-shopping-cart" style="color: #38bdf8; margin-right: 5px;"></i> SALES/ RECEIVABLE</span>
-                        </li>
-                        <?php if ($canAccessInvoices) { ?>
-                        <li class="subflyout-item">
-                            <a href="invoicePage.php" class="subflyout-link <?php echo $addInvoiceClass ?? ''; ?>">
-                                <i class="fa fa-inr subflyout-ico" style="color: #38bdf8;"></i>
-                                <span class="subflyout-text">INVOICES</span>
-                            </a>
-                        </li>
-                        <?php } ?>
-                        <?php if ($canAccessReceivedPayment) { ?>
-                        <li class="subflyout-item">
-                            <a href="receivedPayments.php" class="subflyout-link <?php echo $addReceivedPaymentClass ?? ''; ?>">
-                                <i class="fa fa-check-circle subflyout-ico" style="color: #34d399;"></i>
-                                <span class="subflyout-text">RECEIVED PAYMENT</span>
-                            </a>
-                        </li>
-                        <?php } ?>
-                        <?php if ($canAccessPaymentDue) { ?>
-                        <li class="subflyout-item">
-                            <a href="paymentPage.php" class="subflyout-link <?php echo $addFinanceClass ?? ''; ?>">
-                                <i class="fa fa-money subflyout-ico" style="color: #fbbf24;"></i>
-                                <span class="subflyout-text">DUE PAYMENT</span>
-                            </a>
-                        </li>
-                        <?php } ?>
-                        <?php if ($canAccessTds) { ?>
-                        <li class="subflyout-item">
-                            <a href="listOfTds.php" class="subflyout-link <?php echo $addtds ?? ''; ?>">
-                                <i class="fa fa-list subflyout-ico" style="color: #a78bfa;"></i>
-                                <span class="subflyout-text">TDS DEDUCTED</span>
-                            </a>
-                        </li>
-                        <?php } ?>
-                        <?php if ($canAccessBadDebts) { ?>
-                        <li class="subflyout-item">
-                            <a href="badDebts.php" class="subflyout-link <?php echo $addBadDebtsClass ?? ''; ?>">
-                                <i class="fa fa-ban subflyout-ico" style="color: #f87171;"></i>
-                                <span class="subflyout-text">BAD DEBTS</span>
-                            </a>
-                        </li>
-                        <?php } ?>
-                    </ul>
                 </li>
                 <?php } ?>
-                <?php if ($canAccessPurchase) { ?>
-                <li class="flyout-item nested-flyout-group purchase-subgroup <?php echo $isPurchaseActive ? 'active' : ''; ?>">
-                    <a href="javascript:void(0);" class="flyout-link nested-trigger-link <?php echo $isPurchaseActive ? 'active' : ''; ?>" title="PURCHASE">
-                        <i class="fa fa-truck flyout-ico" style="color: #f472b6;"></i>
-                        <span class="flyout-text">Purchase/PAYABLES</span>
+                <?php if ($canAccessReceivedPayment) { ?>
+                <li class="flyout-item">
+                    <a href="receivedPayments.php" class="flyout-link <?php echo $addReceivedPaymentClass ?? ''; ?>">
+                        <i class="fa fa-check-circle flyout-ico" style="color: #34d399;"></i>
+                        <span class="flyout-text">RECEIVED PAYMENT</span>
                         <i class="fa fa-angle-right flyout-item-arrow"></i>
                     </a>
-                    <ul class="sidebar-subflyout-menu purchase-subflyout">
-                        <li class="subflyout-header">
-                            <span><i class="fa fa-truck" style="color: #f472b6; margin-right: 5px;"></i>Purchase/PAYABLES</span>
-                        </li>
-                        <?php if ($canAccessBills) { ?>
-                        <li class="subflyout-item">
-                            <a href="billsPage.php" class="subflyout-link <?php echo $addBillsClass ?? ''; ?>">
-                                <i class="fa fa-file-text-o subflyout-ico" style="color: #f472b6;"></i>
-                                <span class="subflyout-text">BILLS</span>
-                            </a>
-                        </li>
-                        <?php } ?>
-                        <?php if ($canAccessCreditors) { ?>
-                        <li class="subflyout-item">
-                            <a href="suppliers.php" class="subflyout-link <?php echo $addSuppliersClass ?? ''; ?>">
-                                <i class="fa fa-address-card-o subflyout-ico" style="color: #fbbf24;"></i>
-                                <span class="subflyout-text">SUPPLIERS</span>
-                            </a>
-                        </li>
-                        <?php } ?>
-                    </ul>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessPaymentDue) { ?>
+                <li class="flyout-item">
+                    <a href="paymentPage.php" class="flyout-link <?php echo $addFinanceClass ?? ''; ?>">
+                        <i class="fa fa-money flyout-ico" style="color: #fbbf24;"></i>
+                        <span class="flyout-text">DUE PAYMENT</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessTds) { ?>
+                <li class="flyout-item">
+                    <a href="listOfTds.php" class="flyout-link <?php echo $addtds ?? ''; ?>">
+                        <i class="fa fa-list flyout-ico" style="color: #a78bfa;"></i>
+                        <span class="flyout-text">TDS DEDUCTED</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessBadDebts) { ?>
+                <li class="flyout-item">
+                    <a href="badDebts.php" class="flyout-link <?php echo $addBadDebtsClass ?? ''; ?>">
+                        <i class="fa fa-ban flyout-ico" style="color: #f87171;"></i>
+                        <span class="flyout-text">BAD DEBTS</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+            </ul>
+        </li>
+        <?php } ?>
+        <?php if ($canAccessPurchase) { ?>
+        <li class="sidebar-dropdown-group purchase-group <?php echo $isPurchaseActive ? 'active' : ''; ?>">
+            <a href="javascript:void(0);" class="animate dropdown-group-link purchase-group-link <?php echo $isPurchaseActive ? 'active' : ''; ?>" title="PURCHASE">
+                <span class="dropdown-group-text">
+                    <i class="fa fa-truck purchase-group-icon" style="color: #f97316; margin-right: 4px; font-size: 11px;"></i> PURCHASE
+                </span>
+                <i class="sub_icon fa fa-angle-right group-arrow-icon"></i>
+                <i class="sub_icon fa fa-truck purchase-sub-icon" style="color: #f97316;"></i>
+            </a>
+            <ul class="sidebar-flyout-menu purchase-flyout">
+                <li class="flyout-header">
+                    <span><i class="fa fa-truck" style="color: #f97316; margin-right: 5px;"></i> PURCHASE / PAYABLES</span>
+                </li>
+                <?php if ($canAccessBills) { ?>
+                <li class="flyout-item">
+                    <a href="billsPage.php" class="flyout-link <?php echo $addBillsClass ?? ''; ?>">
+                        <i class="fa fa-file-text-o flyout-ico" style="color: #f472b6;"></i>
+                        <span class="flyout-text">BILLS</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessCreditors) { ?>
+                <li class="flyout-item">
+                    <a href="suppliers.php" class="flyout-link <?php echo $addSuppliersClass ?? ''; ?>">
+                        <i class="fa fa-address-card-o flyout-ico" style="color: #fbbf24;"></i>
+                        <span class="flyout-text">SUPPLIERS</span>
+                        <i class="fa fa-angle-right flyout-item-arrow"></i>
+                    </a>
                 </li>
                 <?php } ?>
             </ul>
@@ -1693,16 +1745,12 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                     </ul>
                 </li>
                 <?php } ?>
-                <?php if ($canAccessFinance) { ?>
+                <?php if ($canAccessSales) { ?>
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="color: #10b981; font-weight: 700;">
-                        <i class="fa fa-calculator" style="color: #10b981; margin-right: 5px;"></i> FINANCE MANAGEMENT <b class="caret"></b>
+                        <i class="fa fa-shopping-cart" style="color: #10b981; margin-right: 5px;"></i> SALES <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu" style="background: #082d54; border: 1px solid rgba(255,255,255,0.15);">
-                        <?php if ($canAccessSales) { ?>
-                        <li class="dropdown-header" style="color: #38bdf8; font-weight: 700; font-size: 11px; padding: 6px 15px; letter-spacing: 0.6px; text-transform: uppercase;">
-                            <i class="fa fa-shopping-cart" style="margin-right: 4px;"></i> SALES
-                        </li>
                         <?php if ($canAccessInvoices) { ?>
                         <li style="padding-left: 8px;"><a href="invoicePage.php" style="color: #fff;"><i class="fa fa-inr" style="color: #38bdf8; margin-right: 6px;"></i> INVOICES</a></li>
                         <?php } ?>
@@ -1718,21 +1766,20 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                         <?php if ($canAccessBadDebts) { ?>
                         <li style="padding-left: 8px;"><a href="badDebts.php" style="color: #fff;"><i class="fa fa-ban" style="color: #f87171; margin-right: 6px;"></i> BAD DEBTS</a></li>
                         <?php } ?>
-                        <?php } ?>
-
-                        <?php if ($canAccessPurchase) { ?>
-                        <?php if ($canAccessSales) { ?>
-                        <li class="divider" style="margin: 5px 0; background: rgba(255,255,255,0.12);"></li>
-                        <?php } ?>
-                        <li class="dropdown-header" style="color: #f472b6; font-weight: 700; font-size: 11px; padding: 6px 15px; letter-spacing: 0.6px; text-transform: uppercase;">
-                            <i class="fa fa-truck" style="margin-right: 4px;"></i> PURCHASE
-                        </li>
+                    </ul>
+                </li>
+                <?php } ?>
+                <?php if ($canAccessPurchase) { ?>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="color: #f97316; font-weight: 700;">
+                        <i class="fa fa-truck" style="color: #f97316; margin-right: 5px;"></i> PURCHASE <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu" style="background: #082d54; border: 1px solid rgba(255,255,255,0.15);">
                         <?php if ($canAccessBills) { ?>
                         <li style="padding-left: 8px;"><a href="billsPage.php" style="color: #fff;"><i class="fa fa-file-text-o" style="color: #f472b6; margin-right: 6px;"></i> BILLS</a></li>
                         <?php } ?>
                         <?php if ($canAccessCreditors) { ?>
                         <li style="padding-left: 8px;"><a href="suppliers.php" style="color: #fff;"><i class="fa fa-address-card-o" style="color: #fbbf24; margin-right: 6px;"></i> SUPPLIERS</a></li>
-                        <?php } ?>
                         <?php } ?>
                     </ul>
                 </li>

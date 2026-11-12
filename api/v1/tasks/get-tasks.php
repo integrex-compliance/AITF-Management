@@ -10,6 +10,18 @@ $userId = (int)$user['user_id'];
 $canManageTasks = (bool)$user['can_manage_tasks'];
 $canDeleteTasks = (bool)$user['can_delete_tasks'];
 
+// Ensure bidirectional synchronization between web task_manager and mobile aitf_tasks
+$syncHelper = dirname(__DIR__, 3) . '/include/task_sync_helper.php';
+if (file_exists($syncHelper)) {
+    require_once $syncHelper;
+    if (function_exists('aitf_sync_qms_task_tables')) {
+        aitf_sync_qms_task_tables($db, $user['system_code'] ?? 'AITF_MAIN');
+        if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instanceof PDO && $GLOBALS['aitf_identity_db'] !== $db) {
+            aitf_sync_qms_task_tables($GLOBALS['aitf_identity_db'], $user['system_code'] ?? 'QMS_CARE');
+        }
+    }
+}
+
 $statusFilter = strtolower(trim($_GET['status'] ?? 'all'));
 $searchQuery  = trim($_GET['search'] ?? '');
 $scope        = strtolower(trim($_GET['scope'] ?? 'assigned_to_me'));
@@ -18,7 +30,7 @@ $scope        = strtolower(trim($_GET['scope'] ?? 'assigned_to_me'));
 // By default, show tasks assigned to the current user (exact same as web myDashboard.php).
 // If scope is 'my_assigned', show tasks assigned by the user to others.
 // If scope is 'all' and user is manager, show all company tasks.
-$where = ["t.is_deleted = 0", "(t.system_code = :system_code OR t.system_code IS NULL OR t.system_code = '')"];
+$where = ["t.is_deleted = 0", "(t.system_code = :system_code OR (t.system_code IN ('QMS_CARE', '01') AND :system_code IN ('QMS_CARE', '01')) OR t.system_code IS NULL OR t.system_code = '')"];
 $params = [':system_code' => $user['system_code']];
 
 if (!$canManageTasks || $scope === 'assigned_to_me' || $scope === 'only_me') {
@@ -105,7 +117,7 @@ foreach ($tasks as $task) {
 }
 
 // 2. Fetch Task Counts (aligned with current scope)
-$countWhere = ["is_deleted = 0", "(system_code = :system_code OR system_code IS NULL OR system_code = '')"];
+$countWhere = ["is_deleted = 0", "(system_code = :system_code OR (system_code IN ('QMS_CARE', '01') AND :system_code IN ('QMS_CARE', '01')) OR system_code IS NULL OR system_code = '')"];
 $countParams = [':system_code' => $user['system_code']];
 
 if (!$canManageTasks || $scope === 'assigned_to_me' || $scope === 'only_me') {

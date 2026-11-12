@@ -2216,7 +2216,96 @@ html.theme-dark #customerAdd .btn-default {
 }
 
 /* =======================================================================
-   SIDEBAR FLYOUT: FINANCE MANAGEMENT & NESTED CASCADING SUBFLYOUTS
+   SIDEBAR FLYOUT: SALES & PURCHASE GROUPS
+   ======================================================================= */
+.sidebar-nav li.sales-group > a.sales-group-link {
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    user-select: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border-left: 3.5px solid rgba(16, 185, 129, 0.6) !important;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.01) 100%) !important;
+}
+.sidebar-nav li.sales-group > a.sales-group-link:hover,
+.sidebar-nav li.sales-group.flyout-hover > a.sales-group-link {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
+    border-left-color: #10b981 !important;
+    color: #ffffff !important;
+}
+.sidebar-nav li.sales-group > a.sales-group-link:hover .group-arrow-icon,
+.sidebar-nav li.sales-group.flyout-hover > a.sales-group-link .group-arrow-icon {
+    transform: translateX(4px) scale(1.15) !important;
+    color: #10b981 !important;
+}
+.sidebar-nav li.sales-group > a.sales-group-link.active,
+.sidebar-nav li.sales-group.active > a.sales-group-link {
+    color: #fbbf24 !important;
+    background: #062b4f !important;
+    border-left: 3.5px solid #fbbf24 !important;
+    font-weight: 700 !important;
+}
+.sidebar-nav li.sales-group > a.sales-group-link.active .group-arrow-icon {
+    color: #fbbf24 !important;
+}
+#wrapper.active .sales-sub-icon { display: none !important; }
+#wrapper:not(.active) .sales-sub-icon { display: inline-block !important; }
+.sales-group .sidebar-flyout-menu {
+    border-left-color: #10b981 !important;
+}
+.sales-group .sidebar-flyout-menu .flyout-header {
+    color: #10b981 !important;
+}
+.sales-group .sidebar-flyout-menu .flyout-item a.flyout-link:hover {
+    border-left-color: #10b981 !important;
+}
+
+.sidebar-nav li.purchase-group > a.purchase-group-link {
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    user-select: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border-left: 3.5px solid rgba(249, 115, 22, 0.6) !important;
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.08) 0%, rgba(249, 115, 22, 0.01) 100%) !important;
+}
+.sidebar-nav li.purchase-group > a.purchase-group-link:hover,
+.sidebar-nav li.purchase-group.flyout-hover > a.purchase-group-link {
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.05) 100%) !important;
+    border-left-color: #f97316 !important;
+    color: #ffffff !important;
+}
+.sidebar-nav li.purchase-group > a.purchase-group-link:hover .group-arrow-icon,
+.sidebar-nav li.purchase-group.flyout-hover > a.purchase-group-link .group-arrow-icon {
+    transform: translateX(4px) scale(1.15) !important;
+    color: #f97316 !important;
+}
+.sidebar-nav li.purchase-group > a.purchase-group-link.active,
+.sidebar-nav li.purchase-group.active > a.purchase-group-link {
+    color: #fbbf24 !important;
+    background: #062b4f !important;
+    border-left: 3.5px solid #fbbf24 !important;
+    font-weight: 700 !important;
+}
+.sidebar-nav li.purchase-group > a.purchase-group-link.active .group-arrow-icon {
+    color: #fbbf24 !important;
+}
+#wrapper.active .purchase-sub-icon { display: none !important; }
+#wrapper:not(.active) .purchase-sub-icon { display: inline-block !important; }
+.purchase-group .sidebar-flyout-menu {
+    border-left-color: #f97316 !important;
+}
+.purchase-group .sidebar-flyout-menu .flyout-header {
+    color: #f97316 !important;
+}
+.purchase-group .sidebar-flyout-menu .flyout-item a.flyout-link:hover {
+    border-left-color: #f97316 !important;
+}
+
+/* =======================================================================
+   SIDEBAR FLYOUT: FINANCE MANAGEMENT & NESTED CASCADING SUBFLYOUTS (LEGACY)
    ======================================================================= */
 .sidebar-nav li.finance-group > a.finance-group-link {
     cursor: pointer !important;

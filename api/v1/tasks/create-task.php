@@ -90,8 +90,17 @@ $insert->execute([
 
 $taskId = (int)$db->lastInsertId();
 
-// Sync task to tenant database (e.g. qmscare)
-if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instanceof PDO && ($user['system_code'] ?? '') !== 'AITF_MAIN') {
+// Sync task to legacy task_manager table
+$syncHelper = dirname(__DIR__, 3) . '/include/task_sync_helper.php';
+if (file_exists($syncHelper)) {
+    require_once $syncHelper;
+    if (function_exists('aitf_sync_app_task_to_web')) {
+        aitf_sync_app_task_to_web($db, $taskId);
+    }
+}
+
+// Sync task to tenant database (e.g. qmscare) if separate
+if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instanceof PDO && $GLOBALS['aitf_identity_db'] !== $db && ($user['system_code'] ?? '') !== 'AITF_MAIN') {
     try {
         $tenantDb = $GLOBALS['aitf_identity_db'];
         $insTenant = $tenantDb->prepare("
@@ -123,21 +132,10 @@ if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instance
             ':imp' => $isImportant,
             ':due' => $dueDate
         ]);
-        // Also sync to legacy task_manager table if present
-        $tmStmt = $tenantDb->prepare("
-            INSERT INTO task_manager (userid, task, comment, date, update_date, status, priority, due_date, is_important, assigned_by, assigned_by_name, is_deleted)
-            VALUES (:uid, :task, :comment, NOW(), CURDATE(), 'Pending', :priority, :due, :imp, :by_id, :by_name, 'N')
-        ");
-        $tmStmt->execute([
-            ':uid' => $assignedToUserId,
-            ':task' => $title,
-            ':comment' => $description,
-            ':priority' => $isImportant ? 'High' : 'Normal',
-            ':due' => $dueDate,
-            ':imp' => $isImportant,
-            ':by_id' => $currentUserId,
-            ':by_name' => $currentUserName
-        ]);
+        $tenantTaskId = (int)$tenantDb->lastInsertId();
+        if (function_exists('aitf_sync_app_task_to_web')) {
+            aitf_sync_app_task_to_web($tenantDb, $tenantTaskId);
+        }
     } catch (Throwable $e) {
         error_log("Tenant task sync error: " . $e->getMessage());
     }

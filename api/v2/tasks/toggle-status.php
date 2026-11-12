@@ -71,6 +71,18 @@ $update->execute([
     ':id' => $taskId
 ]);
 
+// Sync with legacy task_manager table
+$syncHelper = dirname(__DIR__, 3) . '/include/task_sync_helper.php';
+if (file_exists($syncHelper)) {
+    require_once $syncHelper;
+    if (function_exists('aitf_sync_app_task_to_web')) {
+        aitf_sync_app_task_to_web($db, $taskId);
+        if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instanceof PDO && $GLOBALS['aitf_identity_db'] !== $db) {
+            aitf_sync_app_task_to_web($GLOBALS['aitf_identity_db'], $taskId);
+        }
+    }
+}
+
 // If completed, notify assigner (e.g. Vaibhav Ajabe) if someone else completes it
 $assignerId = (int)($task['assigned_by_user_id'] ?? 0);
 if ($newStatus === 'completed' && $assignerId > 0 && $assignerId !== $currentUserId) {

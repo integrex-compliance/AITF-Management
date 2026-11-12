@@ -71,14 +71,16 @@ $update->execute([
     ':id' => $taskId
 ]);
 
-// Sync with tenant database if present
-if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instanceof PDO && ($user['system_code'] ?? '') !== 'AITF_MAIN') {
-    try {
-        $tenantDb = $GLOBALS['aitf_identity_db'];
-        $tenantDb->prepare("UPDATE aitf_tasks SET status = :st, completed_at = :cat, completed_by_user_id = :cby, updated_at = NOW() WHERE title = :title AND assigned_to_user_id = :uid")->execute([':st' => $newStatus, ':cat' => $completedAt, ':cby' => $completedBy, ':title' => $task['title'], ':uid' => $task['assigned_to_user_id']]);
-        $qmsStatus = ($newStatus === 'completed') ? 'Completed' : 'Pending';
-        $tenantDb->prepare("UPDATE task_manager SET status = :st, complete_date = CURDATE(), completed_at = :cat, update_date = CURDATE() WHERE task = :title AND userid = :uid")->execute([':st' => $qmsStatus, ':cat' => $completedAt, ':title' => $task['title'], ':uid' => $task['assigned_to_user_id']]);
-    } catch (Throwable $e) {}
+// Sync with legacy task_manager table
+$syncHelper = dirname(__DIR__, 3) . '/include/task_sync_helper.php';
+if (file_exists($syncHelper)) {
+    require_once $syncHelper;
+    if (function_exists('aitf_sync_app_task_to_web')) {
+        aitf_sync_app_task_to_web($db, $taskId);
+        if (isset($GLOBALS['aitf_identity_db']) && $GLOBALS['aitf_identity_db'] instanceof PDO && $GLOBALS['aitf_identity_db'] !== $db) {
+            aitf_sync_app_task_to_web($GLOBALS['aitf_identity_db'], $taskId);
+        }
+    }
 }
 
 

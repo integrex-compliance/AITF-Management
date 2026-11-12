@@ -90,6 +90,15 @@ $insert->execute([
 
 $taskId = (int)$db->lastInsertId();
 
+// Sync task to legacy task_manager table
+$syncHelper = dirname(__DIR__, 3) . '/include/task_sync_helper.php';
+if (file_exists($syncHelper)) {
+    require_once $syncHelper;
+    if (function_exists('aitf_sync_app_task_to_web')) {
+        aitf_sync_app_task_to_web($db, $taskId);
+    }
+}
+
 // Trigger push notification to assignee if not self
 if (!$isSelfAssign && $assignedToUserId > 0) {
     $dueText = $dueDate ? "  Due: " . date('d M Y', strtotime($dueDate)) : "";
