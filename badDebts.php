@@ -295,7 +295,7 @@ $approvedCount = count($approvedDebts);
             <div class="panel-section-header">
                 <h3 class="panel-section-title">
                     <i class="fa fa-clock-o" style="color: #d97706;"></i>
-                    <span>Bad Debts Marked by Staff</span>
+                    <span>Bad Debts Marked by Recovery Team Members</span>
                     <span class="badge" id="pendingBadge" style="background: #f59e0b; font-size: 11px; margin-left: 4px;">
                         <?php echo $pendingCount; ?>
                     </span>
@@ -439,7 +439,7 @@ $approvedCount = count($approvedDebts);
             <div class="panel-section-header">
                 <h3 class="panel-section-title">
                     <i class="fa fa-check-circle" style="color: #16a34a;"></i>
-                    <span>Accepted Bad Debts (Finance Person Approval)</span>
+                    <span>Accepted Bad Debts (Management Approval)</span>
                     <span class="badge" id="approvedBadge" style="background: #10b981; font-size: 11px; margin-left: 4px;">
                         <?php echo $approvedCount; ?>
                     </span>
