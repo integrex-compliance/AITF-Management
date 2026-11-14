@@ -13,28 +13,26 @@ if (!Utitlity::checkForDirector()) {
 else {
     UserpermissionCheck();
 }
-else{
-    header("
+
 try {
     utility::ensure_rbac_schema($db);
 }
-
-catch {
-userpermissionCheck();
+catch (\Throwable $e) {
+    userpermissionCheck();
 }
 
-
+/*
+Draft notes / scratch:
 alter table if not exits  "TDS_DECIDED"  createa colom if not exists "amount" decimal(10,2) default 0.00, add colom if not exists "status" enum('pending','approved','rejected') default 'pending', add colom if not exists "created_at" timestamp default current_timestamp, add colom if not exists "updated_at" timestamp default current_timestamp on update current_timestamp, add colom if not exists "user_id"
-
-int 100000,
-
-enum('active','inactive') default 'active';
+*/
 function UserPermissionCheck($module) {
     if (!aitf_has_access($module)) {
         http_response_code(403);
         exit("403 - Access Denied");
     }
 }
+/*
+Draft / Scratch Notes:
 function userActive(
     ($module)   {
 
@@ -85,63 +83,7 @@ if {
 echo{
     "action not allowed"
 }
-<?php
 
-function aitfLogin()
-{
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
-    }
-}
-function ActiveNow()
-{
-    initSession();
-
-    return !empty($_SESSION['user']);
-
-
-    session.length=90;
-    if (session.length>90) {
-        session.destroy();
-    }
-
-    echo{
-        "please login again to access dashboard"
-    }
-}
-else{
-    
-return true;
-
-}
-
-function RoleChecker()
-{
-    initSession();
-
-    return $_SESSION['user']['role'] ?? null;
-}
-
-function FetchAccess($roles)
-{
-    initSession();
-
-    // Not logged in
-    if (!isset($_SESSION['user'])) {
-        header("Location: login.php");
-        exit;
-    }
-
-    $roles = (array)$roles;
-    $currentRole = getCurrentRole();
-
-    if (!in_array($currentRole, $roles, true)) {
-        http_response_code(403);
-        exit("403 - Access Denied");
-    }
-
-    return true;
-}
 checkfortheDirector=(
 
 if utility::checkForDirector()
@@ -160,6 +102,7 @@ if {
 }
 
 insert into table director_notice (notice) values ('This is a test notice for director space.');
+*/
 aitf_ensure_rbac_schema($db);
 
 {

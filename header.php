@@ -1,5 +1,5 @@
 <?php
-error_reporting(E_WARNING | E_PARSE);
+error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
 ob_start();
 require_once __DIR__ . '/include/session_helper.php';
 aitf_start_session();
@@ -1127,7 +1127,10 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
         $canAccessRecycle = aitf_has_access("Recycle Cust");
         $canAccessMasterCreator = aitf_has_access("Master Creator") || Utitlity::checkForDirector();
         $canAccessTopMgmt = $canAccessControlMgmt || $canAccessMgmtDashboard || $canAccessAddUser || $canAccessRecycle || $canAccessMasterCreator;
-        $canAccessTaskManager = $canAccessTopMgmt || (function_exists('aitf_is_top_mgmt_task_user') && aitf_is_top_mgmt_task_user()) || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role());
+        $canAccessTaskManager = $canAccessTopMgmt 
+            || (function_exists('aitf_is_top_mgmt_task_user') && aitf_is_top_mgmt_task_user()) 
+            || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role())
+            || (isset($_SESSION['role']) && strtolower(trim((string)$_SESSION['role'])) === 'finance');
         ?>
         <li class="sidebar-section-divider"><span class="section-title">DASHBOARDS</span></li>
         <li><a href="myDashboard.php" class="animate <?php echo $isMyDashboardActive ? 'active' : ''; ?>"><span>MY DASHBOARD</span><i class="sub_icon fa fa-tachometer"></i></a></li>
@@ -1670,7 +1673,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <?php } else { ?>
             <ul class="nav navbar-nav visible-xs">
                 <li><a href="myDashboard.php">MY DASHBOARD</a></li>
-                <?php if ($canAccessTopMgmt || (function_exists('aitf_is_top_mgmt_task_user') && aitf_is_top_mgmt_task_user())) { ?>
+                <?php if ($canAccessTopMgmt || (function_exists('aitf_is_top_mgmt_task_user') && aitf_is_top_mgmt_task_user()) || (isset($_SESSION['role']) && strtolower(trim((string)$_SESSION['role'])) === 'finance')) { ?>
                 <li><a href="taskManager.php">TASK DASHBOARD</a></li>
                 <?php } ?>
                 <?php if ($canAccessTopMgmt) { ?>

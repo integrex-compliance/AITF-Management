@@ -15,6 +15,12 @@ if (!isset($targetAttendanceName)) {
 if (!isset($targetAttendanceRole)) {
     $targetAttendanceRole = $userRole ?? ($_SESSION['role'] ?? 'Staff');
 }
+
+require_once __DIR__ . '/attendance_deviation_lib.php';
+$dbDeviationsMap = [];
+if (isset($db) && $db instanceof PDO && !empty($targetAttendanceUid)) {
+    $dbDeviationsMap = aitf_get_user_deviations_map($db, $targetAttendanceUid);
+}
 ?>
  
 <!-- Clean White Theme - Attendance Calendar Styles -->
@@ -366,6 +372,81 @@ if (!isset($targetAttendanceRole)) {
     border: 1px solid #e9d5ff;
 }
 
+/* Deviation Badges on Calendar */
+.att-dev-pill {
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+    width: 100%;
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.2px;
+}
+.att-dev-pill.dev-pending {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+.att-dev-pill.dev-approved {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+.att-dev-pill.dev-rejected {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+.att-dev-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.att-dev-dot.dot-pending { background: #d97706; box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2); }
+.att-dev-dot.dot-approved { background: #10b981; }
+.att-dev-dot.dot-rejected { background: #ef4444; }
+
+/* Small Deviation Used subtext in Day Cell */
+.att-dev-used-text {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-top: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    line-height: 1.25;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.att-dev-used-text.is-pending {
+    color: #b45309;
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+.att-dev-used-text.is-rejected {
+    color: #b91c1c;
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
 /* 4. Text-Based Attendance Summary (Refined, Highly Readable & Elegant) */
 .att-text-summary-section {
     margin-top: 26px;
@@ -446,6 +527,9 @@ if (!isset($targetAttendanceRole)) {
 .att-summary-item-line.line-working {
     border-left-color: #2563eb;
 }
+.att-summary-item-line.line-deviation {
+    border-left-color: #6366f1;
+}
 
 .att-card-header {
     display: flex;
@@ -490,6 +574,7 @@ if (!isset($targetAttendanceRole)) {
 .icon-leave { background: #f3e8ff; color: #7c3aed; }
 .icon-present { background: #dcfce7; color: #15803d; }
 .icon-working { background: #eff6ff; color: #2563eb; }
+.icon-deviation { background: #eef2ff; color: #4f46e5; }
 
 .att-line-label {
     color: #0f172a;
@@ -510,6 +595,7 @@ if (!isset($targetAttendanceRole)) {
 .badge-leave { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
 .badge-present { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
 .badge-working { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.badge-deviation { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
 
 .att-card-action {
     display: inline-flex;
@@ -1087,6 +1173,24 @@ if (!isset($targetAttendanceRole)) {
                     <!-- Expanded breakdown rendered by JS -->
                 </div>
             </div>
+
+            <!-- 6. Deviations Used Line / Card -->
+            <div class="att-summary-item-line line-deviation" id="attCardDeviation">
+                <div class="att-card-header" role="button" tabindex="0" title="Click to view/hide Deviations Used breakdown">
+                    <div class="att-line-head">
+                        <span class="att-row-icon-wrap icon-deviation"><i class="fa fa-pencil-square-o"></i></span>
+                        <span class="att-line-label">Deviation Used</span>
+                        <span class="att-count-badge badge-deviation" id="sumDeviationCount">0</span>
+                    </div>
+                    <div class="att-card-action">
+                        <span class="att-action-hint" id="sumDeviationActionHint">0 used</span>
+                        <i class="fa fa-chevron-down att-chevron"></i>
+                    </div>
+                </div>
+                <div class="att-card-body" id="sumDeviationDetails" style="display: none;">
+                    <!-- Expanded breakdown rendered by JS -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1183,6 +1287,59 @@ if (!isset($targetAttendanceRole)) {
                         <span id="modalNoPunchText">No sign-in activity recorded for this date.</span>
                     </div>
                 </div>
+
+                <!-- Attendance Deviation Section -->
+                <div id="modalDeviationSection" style="margin-top: 14px; border-top: 1px dashed #cbd5e1; padding-top: 14px;">
+                    <!-- Deviation Active Card (If deviation exists) -->
+                    <div id="modalDeviationCard" style="display: none; border-radius: 8px; margin-bottom: 10px; font-size: 12.5px;">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- Button to toggle deviation form -->
+                    <div id="modalDeviationBtnWrap" style="text-align: right;">
+                        <button type="button" id="btnToggleDeviationForm" class="btn btn-sm btn-outline-primary" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <i class="fa fa-pencil-square-o"></i> Apply for Attendance Deviation
+                        </button>
+                    </div>
+
+                    <!-- Deviation Submission Form (Inline in modal) -->
+                    <div id="modalDeviationFormWrap" style="display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 10px;">
+                        <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="display: flex; align-items: center; gap: 6px;">
+                                <i class="fa fa-clock-o" style="color: #2563eb;"></i> Explain Issue & Submit Proof
+                            </span>
+                            <button type="button" id="btnCancelDeviationForm" class="btn btn-xs btn-default" style="font-size: 11px;">Cancel</button>
+                        </div>
+                        
+                        <form id="formAttendanceDeviation" enctype="multipart/form-data">
+                            <input type="hidden" name="attendance_date" id="devFormDate" value="">
+                            <input type="hidden" name="user_id" id="devFormUserId" value="<?php echo (int)$targetAttendanceUid; ?>">
+
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 11.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+                                    Explain Your Issue: <span style="color: #dc2626;">*</span>
+                                </label>
+                                <textarea name="issue_reason" id="devFormIssue" class="form-control" rows="3" placeholder="e.g. Forgot to punch / Mobile application issue / Network glitch / Client site visit..." required style="font-size: 12.5px; border-radius: 6px;"></textarea>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="font-size: 11.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+                                    Submit a Proof (Attachment / Screenshot):
+                                </label>
+                                <input type="file" name="proof_file" id="devFormProof" class="form-control" accept="image/*,.pdf,.doc,.docx" style="height: auto; padding: 5px; font-size: 12px; border-radius: 6px; background: #ffffff;">
+                                <span style="font-size: 11px; color: #64748b; margin-top: 3px; display: block;">
+                                    Attach screenshot of error, travel proof, or client approval (JPG, PNG, PDF max 10MB)
+                                </span>
+                            </div>
+
+                            <div style="text-align: right;">
+                                <button type="submit" id="btnSubmitDeviation" class="btn btn-primary btn-sm" style="background: #2563eb; border-color: #2563eb; font-weight: 600; padding: 6px 18px; border-radius: 6px; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="fa fa-paper-plane"></i> Submit Deviation
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
                 <button type="button" class="btn btn-default" data-dismiss="modal" style="border-radius: 6px; font-size: 13px; font-weight: 600; padding: 6px 16px;">Close</button>
@@ -1264,6 +1421,8 @@ if (!isset($targetAttendanceRole)) {
     }
 ?>
     window.AITF_ATTENDANCE_CACHE = <?php echo json_encode($dbAttendanceMap, JSON_UNESCAPED_SLASHES); ?> || {};
+    window.AITF_DEVIATIONS_CACHE = <?php echo json_encode($dbDeviationsMap, JSON_UNESCAPED_SLASHES); ?> || {};
+    var targetAttendanceUid = <?php echo (int)$targetAttendanceUid; ?>;
 
     // Render Calendar Grid
     function renderCalendar(year, month) {
@@ -1334,13 +1493,34 @@ if (!isset($targetAttendanceRole)) {
                 statusHtml = '<span class="att-pill-status att-pill-empty"><i class="fa fa-circle-o"></i> Not Marked</span>';
             }
 
+            // Attendance Deviation badge (Subtext in cell)
+            var dev = window.AITF_DEVIATIONS_CACHE[dateStr] || null;
+            var devBadgeHtml = '';
+            var devIndicator = '';
+            if (dev) {
+                if (dev.status === 'pending') {
+                    devBadgeHtml = '<div class="att-dev-used-text is-pending" title="Deviation Pending Review"><i class="fa fa-clock-o"></i> Deviation Pending</div>';
+                    devIndicator = '<span class="att-dev-dot dot-pending" title="Attendance Deviation Pending"></span>';
+                } else if (dev.status === 'approved') {
+                    devBadgeHtml = '<div class="att-dev-used-text" title="Approved Attendance Deviation Used"><i class="fa fa-check"></i> Deviation Used</div>';
+                    devIndicator = '<span class="att-dev-dot dot-approved" title="Attendance Deviation Approved (Used)"></span>';
+                } else if (dev.status === 'rejected') {
+                    devBadgeHtml = '<div class="att-dev-used-text is-rejected" title="Deviation Rejected: ' + escapeHtml(dev.rejection_reason || '') + '"><i class="fa fa-times"></i> Dev. Rejected</div>';
+                    devIndicator = '<span class="att-dev-dot dot-rejected" title="Attendance Deviation Rejected"></span>';
+                }
+            }
+
             gridHtml += '<div class="' + cellClasses + '" data-date="' + dateStr + '" data-day="' + day + '" data-day-name="' + dayNames[dayOfWeek] + '" data-is-sun="' + (isSunday ? '1' : '0') + '">' +
                 '<div class="att-day-top">' +
                     '<span class="att-day-number">' + day + '</span>' +
-                    badgeTag +
+                    '<div style="display: inline-flex; align-items: center; gap: 4px;">' +
+                        devIndicator +
+                        badgeTag +
+                    '</div>' +
                 '</div>' +
                 '<div class="att-day-body">' +
                     statusHtml +
+                    devBadgeHtml +
                 '</div>' +
             '</div>';
         }
@@ -1427,7 +1607,90 @@ if (!isset($targetAttendanceRole)) {
             updateModalStatusBadge(dateStr);
         }
 
+        // Update deviation section for this date
+        updateModalDeviationSection(dateStr);
+
         $('#attDayDetailModal').modal('show');
+    }
+
+    // Update the Deviation Section inside Day Details Modal
+    function updateModalDeviationSection(dateStr) {
+        var dev = window.AITF_DEVIATIONS_CACHE[dateStr] || null;
+        $('#devFormDate').val(dateStr);
+        $('#devFormIssue').val('');
+        $('#devFormProof').val('');
+        $('#modalDeviationFormWrap').hide();
+
+        var dParts = dateStr.split('-');
+        var selDateObj = new Date(parseInt(dParts[0], 10), parseInt(dParts[1], 10) - 1, parseInt(dParts[2], 10));
+        var todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        var isFuture = selDateObj > todayMidnight;
+
+        if (dev) {
+            var cardHtml = '';
+            var proofLink = dev.attachment_path ? '<div style="margin-top: 6px;"><a href="' + escapeHtml(dev.attachment_path) + '" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="fa fa-paperclip"></i> View Attached Proof</a></div>' : '';
+
+            if (dev.status === 'pending') {
+                cardHtml = '<div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 6px; padding: 10px 12px;">' +
+                    '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 4px;">' +
+                        '<span style="font-weight: 700; color: #b45309; text-transform: uppercase; font-size: 11px; display: inline-flex; align-items: center; gap: 5px;">' +
+                            '<i class="fa fa-clock-o"></i> Deviation Pending Review' +
+                        '</span>' +
+                        '<span style="font-size: 11px; color: #92400e; background: #fef3c7; padding: 2px 7px; border-radius: 4px;">Submitted ' + (dev.created_at ? dev.created_at.substring(0, 10) : '') + '</span>' +
+                    '</div>' +
+                    '<div style="color: #334155; font-size: 12.5px; line-height: 1.45;"><strong>Explained Issue:</strong> ' + escapeHtml(dev.issue_reason) + '</div>' +
+                    proofLink +
+                    '<div style="margin-top: 7px; font-size: 11.5px; color: #78350f; font-style: italic;"><i class="fa fa-info-circle"></i> Top management will review your deviation and help you soon.</div>' +
+                '</div>';
+                $('#modalDeviationCard').html(cardHtml).show();
+                $('#modalDeviationBtnWrap').hide();
+            } else if (dev.status === 'approved') {
+                cardHtml = '<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 6px; padding: 10px 12px;">' +
+                    '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 4px;">' +
+                        '<span style="font-weight: 700; color: #15803d; text-transform: uppercase; font-size: 11px; display: inline-flex; align-items: center; gap: 5px;">' +
+                            '<i class="fa fa-check-circle"></i> Deviation Approved' +
+                        '</span>' +
+                        '<span style="font-size: 11.5px; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 4px;">Marked as: ' + escapeHtml(dev.marked_label || dev.approval_status_marked || 'Present') + '</span>' +
+                    '</div>' +
+                    '<div style="color: #334155; font-size: 12.5px; line-height: 1.45;"><strong>Explained Issue:</strong> ' + escapeHtml(dev.issue_reason) + '</div>' +
+                    proofLink +
+                    '<div style="margin-top: 7px; font-size: 11.5px; color: #166534;">' +
+                        '<i class="fa fa-check"></i> Approved by <strong>' + escapeHtml(dev.action_by_name || 'Management') + '</strong>' + (dev.action_at ? ' on ' + dev.action_at.substring(0, 16) : '') +
+                    '</div>' +
+                '</div>';
+                $('#modalDeviationCard').html(cardHtml).show();
+                $('#modalDeviationBtnWrap').hide();
+            } else if (dev.status === 'rejected') {
+                cardHtml = '<div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; border-radius: 6px; padding: 10px 12px;">' +
+                    '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 4px;">' +
+                        '<span style="font-weight: 700; color: #b91c1c; text-transform: uppercase; font-size: 11px; display: inline-flex; align-items: center; gap: 5px;">' +
+                            '<i class="fa fa-times-circle"></i> Deviation Request Rejected' +
+                        '</span>' +
+                        '<span style="font-size: 11px; color: #991b1b; background: #fee2e2; padding: 2px 7px; border-radius: 4px;">Rejected</span>' +
+                    '</div>' +
+                    '<div style="color: #334155; font-size: 12.5px; line-height: 1.45;"><strong>Explained Issue:</strong> ' + escapeHtml(dev.issue_reason) + '</div>' +
+                    proofLink +
+                    '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #fca5a5; font-size: 12px; color: #991b1b;">' +
+                        '<strong>Reason of Rejection:</strong> ' + escapeHtml(dev.rejection_reason || 'Request rejected by management.') +
+                    '</div>' +
+                '</div>';
+                $('#modalDeviationCard').html(cardHtml).show();
+                if (!isFuture) {
+                    $('#modalDeviationBtnWrap').show();
+                    $('#btnToggleDeviationForm').html('<i class="fa fa-repeat"></i> Re-apply Attendance Deviation');
+                } else {
+                    $('#modalDeviationBtnWrap').hide();
+                }
+            }
+        } else {
+            $('#modalDeviationCard').hide().html('');
+            if (isFuture) {
+                $('#modalDeviationBtnWrap').hide();
+            } else {
+                $('#modalDeviationBtnWrap').show();
+                $('#btnToggleDeviationForm').html('<i class="fa fa-pencil-square-o"></i> Apply for Attendance Deviation');
+            }
+        }
     }
 
     // Update the Collapsible Monthly Summary Section below Calendar
@@ -1437,6 +1700,7 @@ if (!isset($targetAttendanceRole)) {
         var halfDayList = [];
         var leaveList = [];
         var presentList = [];
+        var deviationUsedList = [];
         var totalSundays = 0;
         var sundayList = [];
 
@@ -1451,6 +1715,23 @@ if (!isset($targetAttendanceRole)) {
                     dateStr: dateStr,
                     dayNum: d,
                     dayLabel: 'Sun, ' + d + ' ' + monthNames[month].substring(0, 3)
+                });
+            }
+
+            // Check approved deviations used this month
+            var dev = window.AITF_DEVIATIONS_CACHE[dateStr];
+            if (dev && dev.status === 'approved') {
+                var devDayLabel = dayNames[dateObj.getDay()].substring(0, 3) + ', ' + d + ' ' + monthNames[month].substring(0, 3) + ' ' + year;
+                var devShortLabel = dayNames[dateObj.getDay()].substring(0, 3) + ', ' + d + ' ' + monthNames[month].substring(0, 3);
+                var devMarked = dev.marked_label || (dev.approval_status_marked ? (dev.approval_status_marked.charAt(0).toUpperCase() + dev.approval_status_marked.slice(1)) : 'Present');
+                deviationUsedList.push({
+                    dateStr: dateStr,
+                    dayLabel: devDayLabel,
+                    shortLabel: devShortLabel,
+                    markedLabel: devMarked,
+                    issue: dev.issue_reason || 'Deviation approved',
+                    approvedBy: dev.action_by_name || 'Management',
+                    actionAt: dev.action_at || ''
                 });
             }
 
@@ -1685,6 +1966,42 @@ if (!isset($targetAttendanceRole)) {
         workingHtml += '</div>';
         $('#sumWorkingDetails').html(workingHtml);
 
+        // 6. Deviations Used Line / Card
+        $('#sumDeviationCount').text(deviationUsedList.length);
+        if (deviationUsedList.length === 0) {
+            $('#sumDeviationActionHint').html('<span class="hint-muted">0 used</span>');
+            $('#sumDeviationDetails').html(
+                '<div class="att-empty-state-box">' +
+                    '<i class="fa fa-info-circle" style="color: #64748b; font-size: 16px;"></i> ' +
+                    '<span>No attendance deviations used in <strong>' + monthNames[month] + ' ' + year + '</strong>.</span>' +
+                '</div>'
+            );
+        } else {
+            $('#sumDeviationActionHint').html('<span class="hint-active"><i class="fa fa-pencil-square-o" style="color: #6366f1;"></i> ' + deviationUsedList.length + ' ' + (deviationUsedList.length === 1 ? 'deviation used' : 'deviations used') + ' &bull; Click to view</span>');
+            var devHtml = '<div class="att-details-list">';
+            for (var i = 0; i < deviationUsedList.length; i++) {
+                var item = deviationUsedList[i];
+                devHtml += '<div class="att-detail-item item-deviation" style="border-left: 3px solid #6366f1;">' +
+                    '<div class="att-detail-item-left">' +
+                        '<span class="att-detail-date-badge">' +
+                            '<i class="fa fa-calendar-check-o" style="color: #6366f1;"></i> ' + item.dayLabel +
+                        '</span>' +
+                        (item.issue ? '<span class="att-detail-note" title="' + escapeHtml(item.issue) + '"><i class="fa fa-info-circle"></i> ' + escapeHtml(item.issue) + '</span>' : '') +
+                    '</div>' +
+                    '<div class="att-detail-item-right">' +
+                        '<span class="att-time-pill" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; font-weight: 700;">' +
+                            '<i class="fa fa-check-circle"></i> Marked as ' + escapeHtml(item.markedLabel) +
+                        '</span>' +
+                        '<button type="button" class="btn att-btn-view-day" data-date="' + item.dateStr + '" title="View on calendar">' +
+                            '<i class="fa fa-calendar"></i> View Day' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
+            }
+            devHtml += '</div>';
+            $('#sumDeviationDetails').html(devHtml);
+        }
+
         updateExpandAllBtnState();
     }
 
@@ -1871,6 +2188,95 @@ if (!isset($targetAttendanceRole)) {
                 $('.att-card-body').slideDown(180);
                 $(this).html('<i class="fa fa-angle-double-up"></i> Collapse All');
             }
+        });
+
+        // Toggle deviation form in modal
+        $(document).on('click', '#btnToggleDeviationForm', function(e) {
+            e.preventDefault();
+            $('#modalDeviationFormWrap').stop(true, true).slideToggle(180, function() {
+                if ($(this).is(':visible')) {
+                    $('#devFormIssue').focus();
+                }
+            });
+        });
+
+        // Cancel deviation form in modal
+        $(document).on('click', '#btnCancelDeviationForm', function(e) {
+            e.preventDefault();
+            $('#modalDeviationFormWrap').stop(true, true).slideUp(180);
+        });
+
+        // Submit deviation form via AJAX
+        $(document).on('submit', '#formAttendanceDeviation', function(e) {
+            e.preventDefault();
+            var issue = $.trim($('#devFormIssue').val());
+            if (!issue) {
+                alert('Please explain your issue for this attendance day.');
+                $('#devFormIssue').focus();
+                return;
+            }
+
+            var formData = new FormData(this);
+            formData.append('action', 'submit_deviation');
+
+            var $btn = $('#btnSubmitDeviation');
+            var origHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Submitting...');
+
+            $.ajax({
+                url: 'attendance_deviation_action.php',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                dataType: 'json',
+                success: function(resp) {
+                    $btn.prop('disabled', false).html(origHtml);
+                    if (resp && resp.success) {
+                        var dStr = $('#devFormDate').val();
+                        window.AITF_DEVIATIONS_CACHE[dStr] = {
+                            id: resp.deviation_id,
+                            date: dStr,
+                            status: 'pending',
+                            issue_reason: issue,
+                            attachment_path: resp.attachment_path || '',
+                            created_at: new Date().toISOString()
+                        };
+                        renderCalendar(viewedYear, viewedMonth);
+                        updateModalDeviationSection(dStr);
+
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Deviation Request Submitted',
+                                text: resp.message || 'We have received your deviation. Top management will review your deviation and help you soon.',
+                                confirmButtonColor: '#2563eb'
+                            });
+                        } else {
+                            alert(resp.message || 'We have received your deviation. Top management will review your deviation and help you soon.');
+                        }
+                    } else {
+                        var err = (resp && resp.error) ? resp.error : 'Failed to submit deviation.';
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({ icon: 'error', title: 'Submission Error', text: err });
+                        } else {
+                            alert(err);
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    $btn.prop('disabled', false).html(origHtml);
+                    var err = 'Failed to communicate with server.';
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.error) {
+                        err = xhr.responseJSON.error;
+                    }
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Error', text: err });
+                    } else {
+                        alert(err);
+                    }
+                }
+            });
         });
     });
 })();

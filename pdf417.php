@@ -1,5 +1,5 @@
 <?php
-
+/**
  * @package com.tecnick.tcpdf
  * @author Nicola Asuni
  * @version 1.0.005
@@ -769,7 +769,7 @@ class PDF417 {
 		$sequence_array = array(); // array to be returned
 		$numseq = array();
 		// get numeric sequences
-		preg_match_all('/([0-9]{13,44})/', $code, $numseq, PREG_OFFSET_CAPTURE);
+		preg_match_all('/([0-9][13,44])/', $code, $numseq, PREG_OFFSET_CAPTURE);
 		$numseq[1][] = array('', strlen($code));
 		$offset = 0;
 		foreach($numseq[1] as $seq) {
@@ -779,7 +779,7 @@ class PDF417 {
 				$prevseq = substr($code, $offset, ($seq[1] - $offset));
 				$textseq = array();
 				// get text sequences
-				preg_match_all('/([\x09\x0a\x0d\x20-\x7e]{5,})/', $prevseq, $textseq, PREG_OFFSET_CAPTURE);
+				preg_match_all('/([\x09\x0a\x0d\x20-\x7e][5,])/', $prevseq, $textseq, PREG_OFFSET_CAPTURE);
 				$textseq[1][] = array('', strlen($prevseq));
 				$txtoffset = 0;
 				foreach($textseq[1] as $txtseq) {
@@ -830,7 +830,7 @@ class PDF417 {
 				$txtarr = array(); // array of characters and sub-mode switching characters
 				$codelen = strlen($code);
 				for ($i = 0; $i < $codelen; ++$i) {
-					$chval = ord($code{$i});
+					$chval = ord($code[$i]);
 					if (($k = array_search($chval, $this->textsubmodes[$submode])) !== false) {
 						// we are on the same sub-mode
 						$txtarr[] = $k;
@@ -840,7 +840,7 @@ class PDF417 {
 							// search new sub-mode
 							if (($s != $submode) AND (($k = array_search($chval, $this->textsubmodes[$s])) !== false)) {
 								// $s is the new submode
-								if (((($i + 1) == $codelen) OR ((($i + 1) < $codelen) AND (array_search(ord($code{($i + 1)}), $this->textsubmodes[$submode]) !== false))) AND (($s == 3) OR (($s == 0) AND ($submode == 1)))) {
+								if (((($i + 1) == $codelen) OR ((($i + 1) < $codelen) AND (array_search(ord($code[($i + 1)]), $this->textsubmodes[$submode]) !== false))) AND (($s == 3) OR (($s == 0) AND ($submode == 1)))) {
 									// shift (temporary change only for this char)
 									if ($s == 3) {
 										// shift to puntuaction
@@ -904,7 +904,7 @@ class PDF417 {
 						$cw = array_merge($cw, $cw6);
 					} else {
 						for ($i = 0; $i < $sublen; ++$i) {
-							$cw[] = ord($code{$i});
+							$cw[] = ord($code[$i]);
 						}
 					}
 					$code = $rest;

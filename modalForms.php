@@ -530,7 +530,7 @@ $indianGstStates = array(
                 <h4 class="modal-title" id="myModalLabel">Invoice</h4>
             </div>
             <form id="invoice-form" action="invoicePdf.php" method="post" target="_blank" enctype="multipart/form-data" onkeypress="return event.keyCode != 13;">
-                <input type="hidden"  name="invoiceCustomerId" class="invoiceCustomerId" id="invoiceCustomerId" value="<?php echo $_GET['customerid'] ?>"> <!--<input type="hidden" name="invoiceFirmId" class="invoiceFirmId" id="invoiceFirmId" value="" />-->
+                <input type="hidden"  name="invoiceCustomerId" class="invoiceCustomerId" id="invoiceCustomerId" value="<?php echo htmlspecialchars($_GET['customerid'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"> <!--<input type="hidden" name="invoiceFirmId" class="invoiceFirmId" id="invoiceFirmId" value="" />-->
                 <input type="hidden" name="invoiceId" class="invoiceId" id="invoiceId"  value="">                
                 <div class="modal-body">
                     <div class="row">
@@ -687,7 +687,7 @@ $indianGstStates = array(
                 <h4 class="modal-title" id="myModalLabel">Final Invoice</h4>
             </div>
             <form id="final-invoice-id" action="finalInvoicePDF.php" method="post" target="_blank" enctype="multipart/form-data" onkeypress="return event.keyCode != 13;">
-                <input type="hidden"  name="invoiceCustomerId" class="invoiceCustomerId" id="invoiceCustomerId" value="<?php echo $_GET['customerid'] ?>" /> <!--<input type="hidden" name="invoiceFirmId" class="invoiceFirmId" id="invoiceFirmId" value="" />-->
+                <input type="hidden"  name="invoiceCustomerId" class="invoiceCustomerId" id="invoiceCustomerId" value="<?php echo htmlspecialchars($_GET['customerid'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" /> <!--<input type="hidden" name="invoiceFirmId" class="invoiceFirmId" id="invoiceFirmId" value="" />-->
                 <input type="hidden" name="invoiceId" class="invoiceId" id="invoiceId"  value="" />                
                 <div class="modal-body">
                     <div class="row">
@@ -868,7 +868,7 @@ $indianGstStates = array(
                 <h4 class="modal-title" id="myModalLabel">Quotation</h4>
             </div>
             <form action="quotationPdf.php" method="post" target="_blank" enctype="multipart/form-data">
-                <input type="hidden" name="quoteCustomerId" id="quoteCustomerId" value="<?php echo $_GET['customerid'] ?>" /> <!--<input type="hidden" name="consultingFirmId" id="consultingFirmId" value="" />-->
+                <input type="hidden" name="quoteCustomerId" id="quoteCustomerId" value="<?php echo htmlspecialchars($_GET['customerid'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" /> <!--<input type="hidden" name="consultingFirmId" id="consultingFirmId" value="" />-->
                 <input type="hidden" name="quotationId" class="quotationId" id="quotationId" value="" />
                 <div class="modal-body">
                     <div class="row"><!--<div class="col-sm-6 form-group float-label-control">

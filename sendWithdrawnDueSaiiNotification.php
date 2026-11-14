@@ -198,7 +198,7 @@ $html = '<span style="text-align:justify;">'
 
 // output the HTML content
 $pdf->writeHTML($html, true, false, true, false, '');
-$contactEmail = split(',',$customer['email_id']);
+$contactEmail = explode(',', $customer['email_id'] ?? '');
 $otp = rand(100000, 999999);
 $pdf->Output(__DIR__ . '/notification/'.$otp.'withdrawn.pdf', 'F');
 //Close and output PDF document

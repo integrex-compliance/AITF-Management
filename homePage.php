@@ -967,15 +967,12 @@ if ($isFullAccess) {
                                                               echo ' (' . htmlspecialchars($serviceInfo["service_type"]) . ')'; ?></span></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
-                                            <small><span><?php if (isset($dueInfo["due_date"]) && !empty($dueInfo["due_date"])) {
-                                                echo simpleDateConversion($dueInfo["due_date"]);
-                                            } else {
-                                                echo simpleDateConversion($dueInfoex["due_date"]);
-                                            } ?>~</span><?php if (isset($dueInfo["due_date"]) && !empty($dueInfo["due_date"])) {
-                                                 echo simpleDateConversion($dueInfo["due_date"]);
-                                             } else {
-                                                 echo simpleDateConversion($dueInfoex["due_date"]);
-                                             } ?></small>
+                                            <small><span><?php 
+                                                $dDate = $dueInfo["due_date"] ?? $dueInfoex["due_date"] ?? null;
+                                                echo !empty($dDate) ? simpleDateConversion($dDate) : '';
+                                            ?>~</span><?php 
+                                                echo !empty($dDate) ? simpleDateConversion($dDate) : '';
+                                            ?></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
                                             <small><?php echo $customer['next_service']; ?></small>

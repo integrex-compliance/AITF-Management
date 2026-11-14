@@ -20,8 +20,11 @@ $isTopMgmt = aitf_is_top_mgmt_task_user($actualLoggedInRole)
     || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role($actualLoggedInRole))
     || (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()));
 
-// Strictly restrict access to Top Management
-if (!$isTopMgmt) {
+$isFinance = strtolower(trim($actualLoggedInRole)) === 'finance';
+$canAccessTaskManager = $isTopMgmt || $isFinance;
+
+// Strictly restrict access to Top Management, Admin, & Finance
+if (!$canAccessTaskManager) {
     header('Location: myDashboard.php#pane-task-mgmt');
     exit;
 }
@@ -92,6 +95,16 @@ $existingPermissions = [];
 if ($isTopMgmt && isset($db) && $db) {
     $existingPermissions = aitf_get_all_dashboard_permissions_grouped($db);
 }
+
+require_once __DIR__ . '/include/attendance_deviation_lib.php';
+$pendingDeviationsCount = 0;
+if (isset($db) && $db) {
+    try {
+        $devCntStmt = $db->query("SELECT COUNT(*) FROM aitf_attendance_deviations WHERE status = 'pending'");
+        $pendingDeviationsCount = (int)$devCntStmt->fetchColumn();
+    } catch (Exception $e) {}
+}
+$activeMainTab = (isset($_GET['tab']) && $_GET['tab'] === 'deviations') ? 'deviations' : 'tasks';
 ?>
 
     <div id="page-content-wrapper">
@@ -339,177 +352,203 @@ if ($isTopMgmt && isset($db) && $db) {
                 </div>
                 <?php endif; ?>
 
-                <!-- Task Dashboard Component Integration -->
-                <?php include __DIR__ . '/include/task_manager_component.php'; ?>
+                <!-- Navigation Tabs (Tasks vs Deviations) -->
+                <ul class="nav nav-tabs task-main-nav-tabs" style="margin-bottom: 22px; border-bottom: 2px solid #e2e8f0;">
+                    <li class="<?php echo ($activeMainTab !== 'deviations') ? 'active' : ''; ?>">
+                        <a href="#tab-tasks" data-toggle="tab" style="font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 8px 8px 0 0;">
+                            <i class="fa fa-tasks" style="color: #2563eb; margin-right: 6px;"></i> Tasks
+                        </a>
+                    </li>
+                    <li class="<?php echo ($activeMainTab === 'deviations') ? 'active' : ''; ?>">
+                        <a href="#tab-deviations" data-toggle="tab" style="font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 8px 8px 0 0;">
+                            <i class="fa fa-calendar-check-o" style="color: #6366f1; margin-right: 6px;"></i> Deviations
+                            <span class="badge" id="mainTabDevBadge" style="<?php echo ($pendingDeviationsCount > 0) ? 'background: #ef4444; color: #ffffff;' : 'background: #e2e8f0; color: #475569;'; ?> margin-left: 6px; font-size: 11px;">
+                                <?php echo $pendingDeviationsCount; ?>
+                            </span>
+                        </a>
+                    </li>
+                </ul>
 
-                <?php if ($isTopMgmt): ?>
-                <!-- Setting Section: Dashboard Access Control Patch -->
-                <div id="setting-section" class="task-setting-card">
-                    
-                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
-                        <div class="task-setting-header">
-                            <i class="fa fa-cog"></i>
-                            <span>Setting</span>
-                        </div>
-                        <span style="background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 600; padding: 4px 11px; border-radius: 12px; border: 1px solid #dbeafe; display: inline-flex; align-items: center; gap: 6px;">
-                            <i class="fa fa-shield"></i> Dashboard Access Control
-                        </span>
-                    </div>
+                <div class="tab-content">
+                    <div class="tab-pane fade <?php echo ($activeMainTab !== 'deviations') ? 'in active' : ''; ?>" id="tab-tasks">
+                        <!-- Task Dashboard Component Integration -->
+                        <?php include __DIR__ . '/include/task_manager_component.php'; ?>
 
-                    <!-- Policy Info Box -->
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 22px; font-size: 13px; color: #334155; line-height: 1.5;">
-                        <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                            <i class="fa fa-info-circle" style="color: #2563eb;"></i> Dashboard Access Policy:
-                        </div>
-                        <div>• <strong>Top Management Role:</strong> Top Management and Admin accounts have full access to view and manage all staff task dashboards by default.</div>
-                        <div>• <strong>Custom View Permissions:</strong> Grant specific staff members permission to view selected colleagues' task dashboards in their dashboard switcher.</div>
-                    </div>
-
-                    <!-- Permission Configuration Form -->
-                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 20px; margin-bottom: 24px;">
-                        <h4 style="margin: 0 0 16px 0; font-size: 15px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa fa-user-plus" style="color: #2563eb;"></i> Grant Dashboard Access Permissions
-                        </h4>
-
-                        <div class="row">
-                            <!-- Step 1: Select Viewer User -->
-                            <div class="col-md-4 col-sm-12" style="margin-bottom: 14px;">
-                                <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
-                                    1. Select Staff Member:
-                                </label>
-                                <select id="permViewerUser" class="form-control" style="height: 38px; font-size: 13px; font-weight: 600; border-radius: 8px;">
-                                    <option value="" disabled selected>-- Select Staff Member --</option>
-                                    <?php foreach ($allSystemUsers as $u): 
-                                        $uId = (int)$u['user_id'];
-                                        $uName = $u['name'];
-                                        $uRole = $u['role'];
-                                    ?>
-                                    <option value="<?php echo $uId; ?>">
-                                        <?php echo htmlspecialchars($uName); ?> (<?php echo htmlspecialchars($uRole); ?>)
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <span style="font-size: 11.5px; color: #64748b; margin-top: 4px; display: block;">
-                                    Select the user who will be granted view access to other staff dashboards.
+                        <?php if ($isTopMgmt): ?>
+                        <!-- Setting Section: Dashboard Access Control Patch -->
+                        <div id="setting-section" class="task-setting-card">
+                            
+                            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+                                <div class="task-setting-header">
+                                    <i class="fa fa-cog"></i>
+                                    <span>Setting</span>
+                                </div>
+                                <span style="background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 600; padding: 4px 11px; border-radius: 12px; border: 1px solid #dbeafe; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="fa fa-shield"></i> Dashboard Access Control
                                 </span>
                             </div>
 
-                            <!-- Step 2: Target Dashboards Selection -->
-                            <div class="col-md-8 col-sm-12" style="margin-bottom: 14px;">
-                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
-                                    <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">
-                                        2. Assign Accessible Dashboards:
-                                        <span id="selectedCountBadge" class="badge" style="background: #2563eb; margin-left: 6px; font-weight: 600;">0 selected</span>
-                                    </label>
-                                    <div style="display: flex; gap: 6px;">
-                                        <button type="button" id="btnSelectAllTargets" class="btn btn-xs btn-default" style="font-size: 11.5px; font-weight: 600;">Select All</button>
-                                        <button type="button" id="btnDeselectAllTargets" class="btn btn-xs btn-default" style="font-size: 11.5px; font-weight: 600;">Clear All</button>
+                            <!-- Policy Info Box -->
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 22px; font-size: 13px; color: #334155; line-height: 1.5;">
+                                <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa fa-info-circle" style="color: #2563eb;"></i> Dashboard Access Policy:
+                                </div>
+                                <div>• <strong>Top Management Role:</strong> Top Management and Admin accounts have full access to view and manage all staff task dashboards by default.</div>
+                                <div>• <strong>Custom View Permissions:</strong> Grant specific staff members permission to view selected colleagues' task dashboards in their dashboard switcher.</div>
+                            </div>
+
+                            <!-- Permission Configuration Form -->
+                            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 20px; margin-bottom: 24px;">
+                                <h4 style="margin: 0 0 16px 0; font-size: 15px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa fa-user-plus" style="color: #2563eb;"></i> Grant Dashboard Access Permissions
+                                </h4>
+
+                                <div class="row">
+                                    <!-- Step 1: Select Viewer User -->
+                                    <div class="col-md-4 col-sm-12" style="margin-bottom: 14px;">
+                                        <label style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                                            1. Select Staff Member:
+                                        </label>
+                                        <select id="permViewerUser" class="form-control" style="height: 38px; font-size: 13px; font-weight: 600; border-radius: 8px;">
+                                            <option value="" disabled selected>-- Select Staff Member --</option>
+                                            <?php foreach ($allSystemUsers as $u): 
+                                                $uId = (int)$u['user_id'];
+                                                $uName = $u['name'];
+                                                $uRole = $u['role'];
+                                            ?>
+                                            <option value="<?php echo $uId; ?>">
+                                                <?php echo htmlspecialchars($uName); ?> (<?php echo htmlspecialchars($uRole); ?>)
+                                            </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <span style="font-size: 11.5px; color: #64748b; margin-top: 4px; display: block;">
+                                            Select the user who will be granted view access to other staff dashboards.
+                                        </span>
+                                    </div>
+
+                                    <!-- Step 2: Target Dashboards Selection -->
+                                    <div class="col-md-8 col-sm-12" style="margin-bottom: 14px;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                                            <label style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">
+                                                2. Assign Accessible Dashboards:
+                                                <span id="selectedCountBadge" class="badge" style="background: #2563eb; margin-left: 6px; font-weight: 600;">0 selected</span>
+                                            </label>
+                                            <div style="display: flex; gap: 6px;">
+                                                <button type="button" id="btnSelectAllTargets" class="btn btn-xs btn-default" style="font-size: 11.5px; font-weight: 600;">Select All</button>
+                                                <button type="button" id="btnDeselectAllTargets" class="btn btn-xs btn-default" style="font-size: 11.5px; font-weight: 600;">Clear All</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Search filter for target users -->
+                                        <div style="position: relative; margin-bottom: 8px;">
+                                            <input type="text" id="targetSearchFilter" class="form-control input-sm" placeholder="Search staff by name or role..." style="border-radius: 6px; padding-left: 28px; font-size: 12.5px;">
+                                            <i class="fa fa-search" style="position: absolute; left: 9px; top: 8px; color: #94a3b8; font-size: 12px;"></i>
+                                        </div>
+
+                                        <!-- Checkbox Grid -->
+                                        <div class="perm-users-grid" id="permTargetUsersGrid">
+                                            <?php foreach ($allSystemUsers as $targetU): 
+                                                $tId = (int)$targetU['user_id'];
+                                                $tName = $targetU['name'];
+                                                $tRole = $targetU['role'];
+                                            ?>
+                                            <label class="perm-user-item target-user-card" data-uid="<?php echo $tId; ?>" data-search="<?php echo htmlspecialchars(strtolower($tName . ' ' . $tRole)); ?>">
+                                                <input type="checkbox" name="target_user_ids[]" value="<?php echo $tId; ?>" class="perm-target-checkbox">
+                                                <div style="flex: 1; min-width: 0;">
+                                                    <div style="font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                        <?php echo htmlspecialchars($tName); ?>
+                                                    </div>
+                                                    <div style="font-size: 11px; color: #64748b;">
+                                                        <?php echo htmlspecialchars($tRole); ?>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Search filter for target users -->
-                                <div style="position: relative; margin-bottom: 8px;">
-                                    <input type="text" id="targetSearchFilter" class="form-control input-sm" placeholder="Search staff by name or role..." style="border-radius: 6px; padding-left: 28px; font-size: 12.5px;">
-                                    <i class="fa fa-search" style="position: absolute; left: 9px; top: 8px; color: #94a3b8; font-size: 12px;"></i>
-                                </div>
-
-                                <!-- Checkbox Grid -->
-                                <div class="perm-users-grid" id="permTargetUsersGrid">
-                                    <?php foreach ($allSystemUsers as $targetU): 
-                                        $tId = (int)$targetU['user_id'];
-                                        $tName = $targetU['name'];
-                                        $tRole = $targetU['role'];
-                                    ?>
-                                    <label class="perm-user-item target-user-card" data-uid="<?php echo $tId; ?>" data-search="<?php echo htmlspecialchars(strtolower($tName . ' ' . $tRole)); ?>">
-                                        <input type="checkbox" name="target_user_ids[]" value="<?php echo $tId; ?>" class="perm-target-checkbox">
-                                        <div style="flex: 1; min-width: 0;">
-                                            <div style="font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                                <?php echo htmlspecialchars($tName); ?>
-                                            </div>
-                                            <div style="font-size: 11px; color: #64748b;">
-                                                <?php echo htmlspecialchars($tRole); ?>
-                                            </div>
-                                        </div>
-                                    </label>
-                                    <?php endforeach; ?>
+                                <!-- Action Button -->
+                                <div style="text-align: right; margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+                                    <button type="button" id="btnSavePermissions" class="btn btn-primary" style="background: #2563eb; border-color: #2563eb; font-weight: 600; padding: 7px 20px; border-radius: 8px; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px;">
+                                        <i class="fa fa-save"></i> Save Permissions
+                                    </button>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Action Button -->
-                        <div style="text-align: right; margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
-                            <button type="button" id="btnSavePermissions" class="btn btn-primary" style="background: #2563eb; border-color: #2563eb; font-weight: 600; padding: 7px 20px; border-radius: 8px; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px;">
-                                <i class="fa fa-save"></i> Save Permissions
-                            </button>
-                        </div>
-                    </div>
+                            <!-- Step 3: Existing Granted Permissions Table -->
+                            <div>
+                                <h4 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa fa-list-alt" style="color: #2563eb;"></i> Active Access Permissions
+                                </h4>
 
-                    <!-- Step 3: Existing Granted Permissions Table -->
-                    <div>
-                        <h4 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa fa-list-alt" style="color: #2563eb;"></i> Active Access Permissions
-                        </h4>
-
-                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
-                            <table class="perm-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 25%;">Staff Member</th>
-                                        <th style="width: 15%;">Role</th>
-                                        <th style="width: 45%;">Accessible Staff Dashboards</th>
-                                        <th style="width: 15%; text-align: center;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="permSummaryTableBody">
-                                    <?php if (!empty($existingPermissions)): ?>
-                                        <?php foreach ($existingPermissions as $ep): 
-                                            $vId = $ep['viewer_user_id'];
-                                            $vName = $ep['viewer_name'];
-                                            $vRole = $ep['viewer_role'];
-                                            $targets = $ep['targets'];
-                                            $targetIdsJson = htmlspecialchars(json_encode(array_column($targets, 'target_user_id')));
-                                        ?>
-                                        <tr data-viewer-id="<?php echo $vId; ?>">
-                                            <td>
-                                                <strong style="color: #0f172a;"><?php echo htmlspecialchars($vName); ?></strong>
-                                            </td>
-                                            <td>
-                                                <span class="label label-default" style="font-size: 11px;"><?php echo htmlspecialchars($vRole); ?></span>
-                                            </td>
-                                            <td>
-                                                <?php foreach ($targets as $tg): ?>
-                                                    <span class="perm-badge" title="Can view <?php echo htmlspecialchars($tg['target_role']); ?>">
-                                                        <i class="fa fa-user"></i> <?php echo htmlspecialchars($tg['target_name']); ?>
-                                                    </span>
+                                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+                                    <table class="perm-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 25%;">Staff Member</th>
+                                                <th style="width: 15%;">Role</th>
+                                                <th style="width: 45%;">Accessible Staff Dashboards</th>
+                                                <th style="width: 15%; text-align: center;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="permSummaryTableBody">
+                                            <?php if (!empty($existingPermissions)): ?>
+                                                <?php foreach ($existingPermissions as $ep): 
+                                                    $vId = $ep['viewer_user_id'];
+                                                    $vName = $ep['viewer_name'];
+                                                    $vRole = $ep['viewer_role'];
+                                                    $targets = $ep['targets'];
+                                                    $targetIdsJson = htmlspecialchars(json_encode(array_column($targets, 'target_user_id')));
+                                                ?>
+                                                <tr data-viewer-id="<?php echo $vId; ?>">
+                                                    <td>
+                                                        <strong style="color: #0f172a;"><?php echo htmlspecialchars($vName); ?></strong>
+                                                    </td>
+                                                    <td>
+                                                        <span class="label label-default" style="font-size: 11px;"><?php echo htmlspecialchars($vRole); ?></span>
+                                                    </td>
+                                                    <td>
+                                                        <?php foreach ($targets as $tg): ?>
+                                                            <span class="perm-badge" title="Can view <?php echo htmlspecialchars($tg['target_role']); ?>">
+                                                                <i class="fa fa-user"></i> <?php echo htmlspecialchars($tg['target_name']); ?>
+                                                            </span>
+                                                        <?php endforeach; ?>
+                                                        <span style="font-size: 11px; color: #64748b; margin-left: 4px;">(<?php echo count($targets); ?> total)</span>
+                                                    </td>
+                                                    <td style="text-align: center;">
+                                                        <button type="button" class="btn btn-xs btn-primary btn-edit-perm" data-viewer-id="<?php echo $vId; ?>" data-targets="<?php echo $targetIdsJson; ?>" style="border-radius: 6px; padding: 4px 8px; font-weight: 600;" title="Edit this user's permissions">
+                                                            <i class="fa fa-pencil"></i> Edit
+                                                        </button>
+                                                        <button type="button" class="btn btn-xs btn-danger btn-revoke-perm" data-viewer-id="<?php echo $vId; ?>" data-viewer-name="<?php echo htmlspecialchars($vName); ?>" style="border-radius: 6px; padding: 4px 8px; font-weight: 600; margin-left: 4px;" title="Revoke all access for this user">
+                                                            <i class="fa fa-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
                                                 <?php endforeach; ?>
-                                                <span style="font-size: 11px; color: #64748b; margin-left: 4px;">(<?php echo count($targets); ?> total)</span>
-                                            </td>
-                                            <td style="text-align: center;">
-                                                <button type="button" class="btn btn-xs btn-primary btn-edit-perm" data-viewer-id="<?php echo $vId; ?>" data-targets="<?php echo $targetIdsJson; ?>" style="border-radius: 6px; padding: 4px 8px; font-weight: 600;" title="Edit this user's permissions">
-                                                    <i class="fa fa-pencil"></i> Edit
-                                                </button>
-                                                <button type="button" class="btn btn-xs btn-danger btn-revoke-perm" data-viewer-id="<?php echo $vId; ?>" data-viewer-name="<?php echo htmlspecialchars($vName); ?>" style="border-radius: 6px; padding: 4px 8px; font-weight: 600; margin-left: 4px;" title="Revoke all access for this user">
-                                                    <i class="fa fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <tr id="noPermsRow">
-                                            <td colspan="4" style="text-align: center; color: #64748b; padding: 24px;">
-                                                <i class="fa fa-info-circle" style="font-size: 16px; margin-bottom: 4px; display: block; color: #94a3b8;"></i>
-                                                No custom dashboard view permissions have been configured yet.
-                                                <br>By default, Top Management can view everyone's dashboard, while individual staff only see their own tasks.
-                                            </td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
+                                            <?php else: ?>
+                                                <tr id="noPermsRow">
+                                                    <td colspan="4" style="text-align: center; color: #64748b; padding: 24px;">
+                                                        <i class="fa fa-info-circle" style="font-size: 16px; margin-bottom: 4px; display: block; color: #94a3b8;"></i>
+                                                        No custom dashboard view permissions have been configured yet.
+                                                        <br>By default, Top Management can view everyone's dashboard, while individual staff only see their own tasks.
+                                                    </td>
+                                                </tr>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
                         </div>
+                        <?php endif; ?>
                     </div>
 
+                    <div class="tab-pane fade <?php echo ($activeMainTab === 'deviations') ? 'in active' : ''; ?>" id="tab-deviations">
+                        <!-- Attendance Deviations Management Component -->
+                        <?php include __DIR__ . '/include/attendance_deviations_manager_component.php'; ?>
+                    </div>
                 </div>
-                <?php endif; ?>
 
             </div>
         </div>
@@ -735,6 +774,40 @@ $(document).ready(function() {
         }
     });
 
+    // 7. Tab Persistence & Switching Handler
+    $('.task-main-nav-tabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+        var target = $(e.target).attr('href');
+        if (target === '#tab-deviations') {
+            if (history.replaceState) {
+                history.replaceState(null, null, '#tab-deviations');
+            }
+            if (typeof window.refreshDeviationsList === 'function') {
+                window.refreshDeviationsList();
+            }
+        } else {
+            if (history.replaceState) {
+                history.replaceState(null, null, '#tab-tasks');
+            }
+        }
+    });
+
+    // Check location hash on page load
+    if (window.location.hash === '#tab-deviations') {
+        $('.task-main-nav-tabs a[href="#tab-deviations"]').tab('show');
+    }
+
 });
+
+// Global helper for updating deviation badge
+function updateParentDevBadge(count) {
+    var $b = $('#mainTabDevBadge');
+    $b.text(count);
+    if (count > 0) {
+        $b.css({ 'background': '#ef4444', 'color': '#ffffff' });
+    } else {
+        $b.css({ 'background': '#e2e8f0', 'color': '#475569' });
+    }
+}
+window.updateParentDevBadge = updateParentDevBadge;
 </script>
 

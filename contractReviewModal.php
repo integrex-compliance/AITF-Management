@@ -838,7 +838,7 @@
                 url: "checkCustomer.php",
                 data: {
                     reviewDate: $('.dateOfReview').val(),
-                    customerid: '<?php echo $_GET["customerid"]; ?>', },
+                    customerid: '<?php echo addslashes($_GET["customerid"] ?? ""); ?>', },
                 async: false,
                 success: function (data) {
 //    	                alert(data);	                    

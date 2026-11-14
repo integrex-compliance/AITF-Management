@@ -141,13 +141,14 @@ class Utitlity {
      */
     static function isLimitedAccessUser() {
         if (!isset($_SESSION['role'])) return false;
+        if (self::checkForDirector()) return false;
         $role = $_SESSION['role'];
         // These roles have inherent full/partial menu access — NOT limited
-        $fullAccessRoles = array('Top Mgmt', 'Admin', 'Office Staff', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing', 'Marketing Head', 'Marketing Executive', 'Application Reviewer', 'Report Reviewer', 'Auditor', 'BDM');
+        $fullAccessRoles = array('Director', 'Managing Director', 'Top Mgmt', 'Admin', 'Main Admin', 'Office Staff', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing', 'Marketing Head', 'Marketing Executive', 'Application Reviewer', 'Report Reviewer', 'Auditor', 'BDM');
         if (in_array($role, $fullAccessRoles, true)) {
             return false;
         }
-        // Auditor, STO, and other roles accessing via Director-granted permissions are limited
+        // STO and other external/sub-roles accessing via Director-granted permissions are limited
         return true;
     }
 

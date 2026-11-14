@@ -267,7 +267,7 @@ $html = '<span style="text-align:justify;">'
     <br>(AITF Management Certification Ltd.)
     
 </font></p></span>';
-$contactEmail = split(',',$customer['email_id']);
+$contactEmail = explode(',', $customer['email_id'] ?? '');
 $otp = rand(100000, 999999);
 
 // output the HTML content
