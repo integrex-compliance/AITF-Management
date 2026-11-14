@@ -1,6 +1,10 @@
 <?php
 
-require_once __DIR__ . '/PHPMailer/PHPMailerAutoload.php';
+if (file_exists(__DIR__ . '/PHPMailerAutoload.php')) {
+    require_once __DIR__ . '/PHPMailerAutoload.php';
+} elseif (file_exists(__DIR__ . '/PHPMailer/PHPMailerAutoload.php')) {
+    require_once __DIR__ . '/PHPMailer/PHPMailerAutoload.php';
+}
 require_once __DIR__ . '/include/env_helper.php';
 
 $mailConfig = aitf_get_mail_config([

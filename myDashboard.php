@@ -1849,7 +1849,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') {
             display: none;
         }
         .dash-tab-pane.active {
-            display: block;
+            display: block !important;
         }
 
         .dash-placeholder-box {
@@ -4562,9 +4562,11 @@ $(document).ready(function() {
         $('.dash-tab-btn[data-target="#pane-task-mgmt"]').click();
     } else {
         // Always land on Task Management by default
-        if (!$('.dash-tab-btn[data-target="#pane-task-mgmt"]').hasClass('active')) {
-            $('.dash-tab-btn[data-target="#pane-task-mgmt"]').click();
-        }
+        $('.dash-tab-btn').removeClass('active');
+        $('.dash-tab-btn[data-target="#pane-task-mgmt"]').addClass('active');
+        $('.dash-tab-pane').removeClass('active').hide();
+        $('#pane-task-mgmt').addClass('active').show();
+        $('.dash-tabs-bar').addClass('tabs-attached-bottom');
     }
 
     // Set initial tabs attached state

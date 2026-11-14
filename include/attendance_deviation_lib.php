@@ -7,7 +7,45 @@
 
 require_once __DIR__ . '/session_helper.php';
 require_once __DIR__ . '/rbac_helper.php';
-require_once dirname(__DIR__) . '/testemail.php';
+
+if (!function_exists('aitf_ensure_deviations_schema')) {
+    /**
+     * Auto-create aitf_attendance_deviations table if it doesn't exist yet.
+     */
+    function aitf_ensure_deviations_schema(PDO $db) {
+        static $ensured = false;
+        if ($ensured) {
+            return;
+        }
+        try {
+            $db->exec("
+                CREATE TABLE IF NOT EXISTS `aitf_attendance_deviations` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `user_id` INT NOT NULL,
+                    `user_name` VARCHAR(191) NOT NULL DEFAULT '',
+                    `user_role` VARCHAR(100) NOT NULL DEFAULT '',
+                    `user_email` VARCHAR(191) NOT NULL DEFAULT '',
+                    `attendance_date` DATE NOT NULL,
+                    `issue_reason` TEXT NOT NULL,
+                    `attachment_path` VARCHAR(255) DEFAULT NULL,
+                    `status` ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+                    `approval_status_marked` VARCHAR(50) DEFAULT NULL,
+                    `action_by_user_id` INT DEFAULT NULL,
+                    `action_by_name` VARCHAR(191) DEFAULT NULL,
+                    `action_by_role` VARCHAR(100) DEFAULT NULL,
+                    `rejection_reason` TEXT DEFAULT NULL,
+                    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `action_at` DATETIME DEFAULT NULL,
+                    INDEX `idx_user_date` (`user_id`, `attendance_date`),
+                    INDEX `idx_status` (`status`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+            $ensured = true;
+        } catch (Throwable $e) {
+            error_log('aitf_ensure_deviations_schema error: ' . $e->getMessage());
+        }
+    }
+}
 
 if (!function_exists('aitf_can_manage_deviations')) {
     /**
@@ -129,8 +167,18 @@ if (!function_exists('aitf_send_deviation_email')) {
 </html>';
 
         try {
-            $sender = new AITFServiceEmailSender();
-            return $sender->sendEmail($toEmail, $toName, $emailTemplate, $subject);
+            if (!class_exists('AITFServiceEmailSender')) {
+                $testEmailFile = dirname(__DIR__) . '/testemail.php';
+                if (file_exists($testEmailFile)) {
+                    require_once $testEmailFile;
+                }
+            }
+            if (class_exists('AITFServiceEmailSender')) {
+                $sender = new AITFServiceEmailSender();
+                return $sender->sendEmail($toEmail, $toName, $emailTemplate, $subject);
+            }
+            error_log("aitf_send_deviation_email: AITFServiceEmailSender class unavailable.");
+            return false;
         } catch (Exception $e) {
             error_log("aitf_send_deviation_email failed for {$toEmail}: " . $e->getMessage());
             return false;
@@ -143,6 +191,7 @@ if (!function_exists('aitf_create_deviation')) {
      * Submit an attendance deviation request.
      */
     function aitf_create_deviation(PDO $db, array $data, $file = null) {
+        aitf_ensure_deviations_schema($db);
         $userId = (int)($data['user_id'] ?? 0);
         $date = trim((string)($data['attendance_date'] ?? ''));
         $issue = trim((string)($data['issue_reason'] ?? ''));
@@ -267,6 +316,7 @@ if (!function_exists('aitf_get_user_deviations_map')) {
      * Get user deviations keyed by attendance_date for quick calendar rendering.
      */
     function aitf_get_user_deviations_map(PDO $db, $userId) {
+        aitf_ensure_deviations_schema($db);
         $userId = (int)$userId;
         $map = [];
         if ($userId <= 0) {
@@ -329,6 +379,7 @@ if (!function_exists('aitf_get_all_deviations')) {
      * Fetch all deviations for Management / Task Manager page with filters.
      */
     function aitf_get_all_deviations(PDO $db, array $filters = []) {
+        aitf_ensure_deviations_schema($db);
         $where = [];
         $params = [];
 

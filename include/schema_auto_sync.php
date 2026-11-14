@@ -77,6 +77,12 @@ if (!function_exists('aitf_auto_sync_schema')) {
             aitf_ensure_tasks_schema($db);
         }
 
+        // Also ensure attendance deviations schema
+        require_once __DIR__ . '/attendance_deviation_lib.php';
+        if (function_exists('aitf_ensure_deviations_schema')) {
+            aitf_ensure_deviations_schema($db);
+        }
+
         // Also ensure payment reminder logs schema
         try {
             $db->exec("CREATE TABLE IF NOT EXISTS `payment_reminder_mail_logs` (

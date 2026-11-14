@@ -21,13 +21,15 @@
  * PHPMailer SPL autoloader.
  * @param string $classname The name of the class to load
  */
-function PHPMailerAutoload($classname)
-{
-    //Can't use __DIR__ as it's only in PHP 5.3+
-    $filename = dirname(__FILE__).DIRECTORY_SEPARATOR.'class.'.strtolower($classname).'.php';
-    if (is_readable($filename)) {
-        require $filename;
+if (!function_exists('PHPMailerAutoload')) {
+    function PHPMailerAutoload($classname)
+    {
+        $filename = dirname(__FILE__).DIRECTORY_SEPARATOR.'class.'.strtolower($classname).'.php';
+        if (is_readable($filename)) {
+            require_once $filename;
+        } elseif (is_readable(dirname(__FILE__).DIRECTORY_SEPARATOR.'PHPMailer'.DIRECTORY_SEPARATOR.'class.'.strtolower($classname).'.php')) {
+            require_once dirname(__FILE__).DIRECTORY_SEPARATOR.'PHPMailer'.DIRECTORY_SEPARATOR.'class.'.strtolower($classname).'.php';
+        }
     }
+    spl_autoload_register('PHPMailerAutoload', true, true);
 }
-
-spl_autoload_register('PHPMailerAutoload', true, true);
