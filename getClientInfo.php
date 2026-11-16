@@ -109,6 +109,21 @@ function aitfResolveCustomerAgreementUniqueId($db, &$customerDetails) {
     } catch (Throwable $e) {}
 }
 
+if (!function_exists('aitfParseAuditMandays')) {
+    function aitfParseAuditMandays($val) {
+        if ($val === null || $val === '') {
+            return 0.0;
+        }
+        if (is_numeric($val)) {
+            return (float)$val;
+        }
+        if (preg_match('/([0-9]+(?:\.[0-9]+)?)/', (string)$val, $matches)) {
+            return (float)$matches[1];
+        }
+        return 0.0;
+    }
+}
+
 function getRequestHeadersSafe() {
     if (function_exists('getallheaders')) {
         $headers = getallheaders();
@@ -330,7 +345,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
                         }
                     }
                 }
-            } catch (Exception $allotmentEx) {
+            } catch (Throwable $allotmentEx) {
                 error_log("CONTRACT REVIEW - Exception: " . $allotmentEx->getMessage());
                 // Silent fail - but still apply RC suffix if needed
                 if ($isRCService || ($isCRService && $hasPreviousServices)) {
@@ -349,7 +364,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         error_log("CONTRACT REVIEW - Final unique_id being returned: " . ($customerDetails['unique_id'] ?? 'NULL'));
 
         outputJSON($customerDetails);
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -360,6 +375,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->bindParam(':id', $_GET['customer_id']);
         $statement->execute();
         $customerDetails = $statement->fetch();
+        aitfResolveCustomerAgreementUniqueId($db, $customerDetails);
 
 //        $service = "SELECT * FROM service_type_ca WHERE ca_id = :id";
 //        $statement = $db->prepare($service);
@@ -402,6 +418,17 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         if ($rcCheckResult && $rcCheckResult['service_type'] == 'RC') {
             $rcId = $_GET['service_id'];
             $mainServiceId = $rcCheckResult['main_service_id'];
+
+            $rcAgSql = "SELECT aggrement_no FROM certification_aggrement WHERE customer_id = :cid AND (service = :rc_id OR service = :main_id) AND aggrement_no IS NOT NULL AND aggrement_no != '' ORDER BY id DESC LIMIT 1";
+            $rcAgStmt = $db->prepare($rcAgSql);
+            $rcAgStmt->bindParam(':cid', $_GET['customer_id']);
+            $rcAgStmt->bindParam(':rc_id', $rcId);
+            $rcAgStmt->bindParam(':main_id', $mainServiceId);
+            $rcAgStmt->execute();
+            $rcAgRow = $rcAgStmt->fetch();
+            if ($rcAgRow && !empty($rcAgRow['aggrement_no'])) {
+                $customerDetails['unique_id'] = trim($rcAgRow['aggrement_no']);
+            }
             
             // For RC: Fetch audit date from service_type_rc table if audit_dates is missing
             if (empty($auditDetails['audit_dates'])) {
@@ -506,7 +533,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
 
         $totalDays = 0;
         foreach ($mandaysCount as $days) {
-            $totalDays = $totalDays + $days['audit_wokrdays'];
+            $totalDays = $totalDays + aitfParseAuditMandays($days['audit_wokrdays'] ?? 0);
         }
 
         $leadAuditorList = "SELECT * FROM stage_audit_one WHERE ca_service_id = :service";
@@ -528,7 +555,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
 
 
         outputJSON(array($customerDetails, $auditDetails, $lead_Auditor, $auditInfo, $auditAppInfo, $totalDays, $lead_Auditors, $iafinfo, $customerDetailsx, $customerDetailsy));
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -641,7 +668,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
                     }
                 }
             }
-        } catch (Exception $agreementEx) {
+        } catch (Throwable $agreementEx) {
             error_log("AUDIT NOTIFICATION - Exception: " . $agreementEx->getMessage());
             // Silent fail - but still apply RC suffix if needed
             if (isset($isAuditNotiRCService) && $isAuditNotiRCService) {
@@ -677,7 +704,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         error_log("STAGE II NOTIFICATION - Final unique_id being returned: " . ($customerDetails['unique_id'] ?? 'NULL'));
 
         outputJSON(array($customerDetails, $auditDetails, $lead_Auditor, $stage_audit));
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -938,11 +965,11 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $totalDays = 0;
         $totalDays1 = 0;
         foreach ($mandaysCount1 as $days) {
-            $totalDays1 = $totalDays1 + $days['audit_wokrdays'];
+            $totalDays1 = $totalDays1 + aitfParseAuditMandays($days['audit_wokrdays'] ?? 0);
         }
         $totalDays2 = 0;
         foreach ($mandaysCount2 as $days) {
-            $totalDays2 = $totalDays2 + $days['audit_wokrdays'];
+            $totalDays2 = $totalDays2 + aitfParseAuditMandays($days['audit_wokrdays'] ?? 0);
         }
 
         $sql1 = "SELECT max(id) as id FROM `certification_aggrement` WHERE `customer_id` = :cid order by id desc limit 1";
@@ -1053,7 +1080,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         http_response_code(500);
         error_log("PDO Error in getClientInfo.php (customer_ID/service_ID): " . $pdoEx->getMessage() . " | Line: " . $pdoEx->getLine());
         outputJSON(array('error' => true, 'message' => 'Database error: ' . $pdoEx->getMessage(), 'line' => $pdoEx->getLine(), 'file' => basename($pdoEx->getFile())));
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         ob_clean();
         http_response_code(500);
         error_log("Error in getClientInfo.php (customer_ID/service_ID): " . $ex->getMessage() . " | Line: " . $ex->getLine());
@@ -1497,7 +1524,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
 //        print_r($auditdatelist);
 //        print_r($notiSchedul); echo "</br>";
         outputJSON(array($customerDetails, $auditInfo, $auditDetails, $lead_Auditor, $notiSchedul, $auditDate, $certDate, $no, $ca_cdcreport, $notificationInfo, $notiSchedulii, $auditdatelist, $maxcid, $rev1date, $rev2date, $rcSvcCount,$customerDetailsx, $customerDetailsy));
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -1536,7 +1563,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $cfRegDate = $statement->fetch();
 
         outputJSON(array($customerDetails, $auditDetails, $cdcDetail, $auditNoti2Info, $cfRegDate));
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -1591,7 +1618,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
             $customerDetailsy = $statement->fetchAll(PDO::FETCH_ASSOC);
 //        echo json_encode($lead_Auditor);
         outputJSON(array($customerDetails, $auditDetails, $lead_Auditor, $stage_audit, $maxcid, $customerDetailsx ,$customerDetailsy));
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -1635,7 +1662,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->execute();
         $ca_cdcreport = $statement->fetch();
         outputJSON(array($customerDetails, $auditInfo, $auditDetails, $lead_Auditor, $ca_cdcreport, $auditor_list));
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -1684,7 +1711,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
 
         outputJSON($counter);
 //        echo json_encode($counter);
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -1743,7 +1770,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
             outputJSON($_GET["idval1"]);
         }
 //        echo json_encode($counter);
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -1944,7 +1971,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         }
 
         outputJSON(array($customerDetails, $auditInfo, $iafinfo, $maxcid));
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         error_log("ASSESSMENT PLANNING ISO ERROR: " . $ex->getMessage());
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
@@ -1989,7 +2016,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $stage2info = $statement->fetch();
 
         outputJSON(array($customerDetails, $cdcInfo, $stage2info));
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         http_response_code(500);
         outputJSON(array('error' => true, 'message' => $ex->getMessage()));
     }
@@ -2000,7 +2027,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->execute();
         $taxationDetails = $statement->fetchAll();
         outputJSON($taxationDetails);
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         
     }
 } else if (
@@ -2083,7 +2110,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
                 'rev_no' => $revNo
             ]
         ]);
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         echo json_encode([]);
     }
 } else if (isset($_GET['customer']) && !empty($_GET['customer']) && isset($_GET["consultingfirm"]) && !empty($_GET["consultingfirm"])) {
@@ -2193,7 +2220,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
                 ]);
             }
         }
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         
     }
 }

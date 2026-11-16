@@ -46,7 +46,8 @@ if (isset($_POST['scheduleii-id']) && !empty($_POST['scheduleii-id'])) {
         $statement->bindParam(':stageIItimeFrom', $_POST['stageIItimeFrom']);
         $statement->bindParam(':stageIItimeTo', $_POST['stageIItimeTo']);
         $statement->bindParam(':preparedby', $_POST['preparedByStageII']);
-        $statement->bindParam(':preparedDate', date('Y-m-d', strtotime($_POST['dateStageII'])));
+        $preparedDate = !empty($_POST['dateStageII']) ? date('Y-m-d', strtotime($_POST['dateStageII'])) : date('Y-m-d');
+        $statement->bindValue(':preparedDate', $preparedDate);
         $statement->bindParam(':id', $scheduleid);
         $statement->execute();
 
@@ -74,7 +75,7 @@ if (isset($_POST['scheduleii-id']) && !empty($_POST['scheduleii-id'])) {
         }
 
         header("Location: customerAccount.php?customerid=" . $customer);
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         echo $ex;
     }
 } else {
@@ -115,7 +116,8 @@ if (isset($_POST['scheduleii-id']) && !empty($_POST['scheduleii-id'])) {
                 $statement->bindParam(':stageIItimeFrom', $_POST['stageIItimeFrom']);
                 $statement->bindParam(':stageIItimeTo', $_POST['stageIItimeTo']);
                 $statement->bindParam(':preparedby', $_POST['preparedByStageII']);
-                $statement->bindParam(':preparedDate', date('Y-m-d', strtotime($_POST['dateStageII'])));
+                $preparedDate = !empty($_POST['dateStageII']) ? date('Y-m-d', strtotime($_POST['dateStageII'])) : date('Y-m-d');
+        $statement->bindValue(':preparedDate', $preparedDate);
                 $statement->execute();
 
                 $sql = "SELECT max(LAST_INSERT_ID(audit_scheduleii_id)) as id From audit_scheduleii_id";
@@ -143,7 +145,7 @@ if (isset($_POST['scheduleii-id']) && !empty($_POST['scheduleii-id'])) {
                 }
                 header("Location: customerAccount.php?customerid=" . $customer);
             }
-        } catch (Exception $ex) {
+        } catch (Throwable $ex) {
             echo $ex;
         }
     }

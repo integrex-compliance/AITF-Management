@@ -879,7 +879,16 @@ for (var key in data[6]) {
                 },
                 error: function (data, status, err)
                 {
-                    alert(status);
+                    console.error("Stage II getClientInfo Error:", data, status, err);
+                    var errorMsg = 'Error loading Stage II audit plan data';
+                    if (data.responseJSON && data.responseJSON.message) {
+                        errorMsg += ':\n' + data.responseJSON.message;
+                    } else if (data.responseText && data.responseText.trim() !== '') {
+                        errorMsg += ':\n' + data.responseText.substring(0, 200);
+                    } else {
+                        errorMsg += ':\n' + status;
+                    }
+                    alert(errorMsg);
                 }
             });
         });
