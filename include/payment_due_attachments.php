@@ -7,7 +7,6 @@
  */
 
 require_once __DIR__ . '/payment_due_helper.php';
-require_once __DIR__ . '/../tcpdf_include.php';
 
 if (!function_exists('aitf_format_file_size')) {
     function aitf_format_file_size($bytes) {
@@ -77,10 +76,10 @@ if (!function_exists('aitf_get_service_attachments')) {
 }
 
 /**
- * Generate official Final Invoice PDF file to a designated path on disk.
+ * Generate an official invoice. With no output path, return PDF bytes for email.
  */
 if (!function_exists('aitf_generate_final_invoice_pdf')) {
-    function aitf_generate_final_invoice_pdf(PDO $db, $invoiceId, $outputPath) {
+    function aitf_generate_final_invoice_pdf(PDO $db, $invoiceId, $outputPath = null) {
         $invoiceId = (int)$invoiceId;
         if ($invoiceId <= 0) {
             return false;
@@ -196,9 +195,18 @@ if (!function_exists('aitf_generate_final_invoice_pdf')) {
 
         $displayInvNo = $finalprefix !== '' ? $finalprefix . '-' . $invno : $invno;
 
+        // Load the legacy PDF library only when generating an attachment.
+        require_once __DIR__ . '/../tcpdf_include.php';
+
         // Custom PDF class with specific header
         if (!class_exists('AITF_Invoice_Attachment_PDF')) {
             class AITF_Invoice_Attachment_PDF extends TCPDF {
+                // The global TCPDF config uses die(); an email endpoint must be
+                // able to catch PDF failures and return JSON instead of HTML.
+                public function Error($msg) {
+                    throw new RuntimeException('Invoice PDF: ' . $msg);
+                }
+
                 public function Header() {
                     $image_file = K_PATH_IMAGES . 'aitf.jpg';
                     if (file_exists($image_file)) {
@@ -285,6 +293,10 @@ if (!function_exists('aitf_generate_final_invoice_pdf')) {
             </table>';
 
             $pdf->writeHTML($html, true, false, true, false, '');
+
+            if ($outputPath === null) {
+                return $pdf->Output('', 'S');
+            }
 
             $dir = dirname($outputPath);
             if (!is_dir($dir)) {

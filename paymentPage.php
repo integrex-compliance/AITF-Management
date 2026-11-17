@@ -2666,7 +2666,7 @@ if (!aitf_has_access("Payment Due")) {
                 success: function (res) {
                     if (res && res.success) {
                         $msg.removeClass('status-info status-error').addClass('status-success')
-                            .html('<i class="fa fa-check-circle"></i> ' + (res.message || 'Email sent successfully!')).show();
+                            .html('<i class="fa fa-check-circle"></i> ' + $('<span>').text(res.message || 'Email sent successfully!').html()).show();
                         $btn.html('<i class="fa fa-check"></i> Sent');
 
                         // Update reminder email count under Mail button
@@ -2682,13 +2682,27 @@ if (!aitf_has_access("Payment Due")) {
                         }, 1800);
                     } else {
                         $msg.removeClass('status-info status-success').addClass('status-error')
-                            .html('<i class="fa fa-exclamation-triangle"></i> ' + (res.message || 'Failed to send email.')).show();
+                            .html('<i class="fa fa-exclamation-triangle"></i> ' + $('<span>').text((res && res.message) || 'Failed to send email.').html()).show();
                         $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send Email');
                     }
                 },
                 error: function (xhr, status, error) {
+                    var errorMessage = xhr.responseJSON && xhr.responseJSON.message;
+                    if (!errorMessage) {
+                        if (xhr.status === 413) {
+                            errorMessage = 'Attachments exceed the hosting upload limit. Reduce their size and try again.';
+                        } else if (xhr.status === 401) {
+                            errorMessage = 'Your session has expired. Sign in again before sending.';
+                        } else if (xhr.status === 403) {
+                            errorMessage = 'The server denied this request. Check your account permissions or ask the administrator to check the hosting firewall.';
+                        } else if (status === 'parsererror' || xhr.status === 0 || xhr.status === 502 || xhr.status === 504) {
+                            errorMessage = 'The server did not return a valid delivery confirmation. Check reminder history and the mail account before retrying.';
+                        } else {
+                            errorMessage = 'Unable to confirm email delivery (HTTP ' + xhr.status + '). Ask the administrator to check the server error log before retrying.';
+                        }
+                    }
                     $msg.removeClass('status-info status-success').addClass('status-error')
-                        .html('<i class="fa fa-exclamation-triangle"></i> Server error while sending email. Please try again.').show();
+                        .html('<i class="fa fa-exclamation-triangle"></i> ' + $('<span>').text(errorMessage).html()).show();
                     $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send Email');
                 }
             });

@@ -9,6 +9,10 @@
  * and sends via PHPMailer.
  */
 
+require_once __DIR__ . '/include/payment_reminder_response.php';
+$response = new AITFPaymentReminderResponse();
+
+try {
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -16,6 +20,9 @@ if (session_status() === PHP_SESSION_NONE) {
 header('Content-Type: application/json; charset=UTF-8');
 
 include_once __DIR__ . '/dbConnect.php';
+if (!isset($db) || !($db instanceof PDO)) {
+    throw new RuntimeException('Database connection unavailable.');
+}
 require_once __DIR__ . '/include/invoice_mail_helper.php';
 require_once __DIR__ . '/include/payment_due_helper.php';
 require_once __DIR__ . '/include/payment_due_attachments.php';
@@ -52,18 +59,18 @@ try {
 $firmFormattedPhone = '+91 ' . preg_replace('/^(\d{5})(\d{5})$/', '$1 $2', $firmContactNo);
 
 if (empty($_SESSION['username']) || in_array(strtolower($_SESSION['role'] ?? ''), ['client', 'external'], true)) {
-    echo json_encode(['success' => false, 'message' => 'Please sign in with an authorized staff account.']);
+    $response->send(['success' => false, 'message' => 'Please sign in with an authorized staff account.'], 401);
     exit;
 }
 
 require_once __DIR__ . '/include/rbac_matrix.php';
 if (!aitf_has_access("Payment Due")) {
-    echo json_encode(['success' => false, 'message' => 'Access Denied. You do not have permission to send reminders.']);
+    $response->send(['success' => false, 'message' => 'Access Denied. You do not have permission to send reminders.'], 403);
     exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+    $response->send(['success' => false, 'message' => 'Invalid request method.'], 405);
     exit;
 }
 
@@ -71,7 +78,7 @@ $customerId = isset($_POST['customerId']) ? (int)$_POST['customerId'] : 0;
 $recipientEmail = trim((string)($_POST['recipientEmail'] ?? ''));
 
 if ($customerId <= 0) {
-    echo json_encode(['success' => false, 'message' => 'Invalid Customer ID.']);
+    $response->send(['success' => false, 'message' => 'Invalid Customer ID.']);
     exit;
 }
 
@@ -85,32 +92,33 @@ foreach ($rawEmails as $em) {
 }
 
 if (empty($validEmails)) {
-    echo json_encode(['success' => false, 'message' => 'Please provide at least one valid recipient email address.']);
+    $response->send(['success' => false, 'message' => 'Please provide at least one valid recipient email address.']);
     exit;
 }
 
 // Fetch customer and live due details
+$response->stage = 'payment details';
 $stmtCust = $db->prepare("SELECT id, customer_name, contact_person, contact, email_id, address, gstin_no FROM customer_info WHERE id = :id AND is_deleted = 'NO'");
 $stmtCust->bindParam(':id', $customerId, PDO::PARAM_INT);
 $stmtCust->execute();
 $customer = $stmtCust->fetch(PDO::FETCH_ASSOC);
 
 if (!$customer) {
-    echo json_encode(['success' => false, 'message' => 'Customer not found or record is deleted.']);
+    $response->send(['success' => false, 'message' => 'Customer not found or record is deleted.']);
     exit;
 }
 
 // The internal header key distinguishes repeated headers with the same display name.
 $headerKey = trim((string)($_POST['headerKey'] ?? ''));
 if ($headerKey === '') {
-    echo json_encode(['success' => false, 'message' => 'Select a service and reopen the reminder.']);
+    $response->send(['success' => false, 'message' => 'Select a service and reopen the reminder.']);
     exit;
 }
 $allDues = aitf_get_due_payments($db, ['customerId' => $customerId, 'headerKey' => $headerKey]);
 $clientDue = $allDues[0] ?? null;
 
 if (!$clientDue || (float)$clientDue['balance'] <= 0.01) {
-    echo json_encode(['success' => false, 'message' => 'This service has no pending outstanding dues. Refresh the page.']);
+    $response->send(['success' => false, 'message' => 'This service has no pending outstanding dues. Refresh the page.']);
     exit;
 }
 
@@ -257,12 +265,10 @@ if ($isCustom && ($bodyIntro !== '' || $bodyClosing !== '' || $rawBody !== '')) 
 // -------------------------------------------------------------------------
 // ATTACHMENT PROCESSING
 // -------------------------------------------------------------------------
-$tempFilesToCleanup = [];
 $attachedFileNames = [];
 
-try {
+    $response->stage = 'attachments';
     aitfLoadPHPMailer();
-    $mailConfig = aitfGetInvoiceMailConfig();
     $mailer = new PHPMailer();
     $mailer->isHTML(true);
     $mailer->Subject = $subject;
@@ -272,15 +278,6 @@ try {
     aitfAddEmailRecipients($mailer, $recipientEmail);
     $mailer->addCC('aitfmcl@gmail.com');
     $mailer->addCC('aitfacct@gmail.com');
-
-    $notifDir = __DIR__ . '/notification';
-    if (!is_dir($notifDir)) {
-        @mkdir($notifDir, 0777, true);
-    }
-    $uploadTempDir = $notifDir . '/uploads';
-    if (!is_dir($uploadTempDir)) {
-        @mkdir($uploadTempDir, 0777, true);
-    }
 
     // 1. Process Kept Service Invoices
     $serviceInvoicesParam = $_POST['service_invoices'] ?? null;
@@ -303,31 +300,36 @@ try {
         }
     }
 
-    // Generate PDF for each kept invoice and attach
-    foreach ($invoicesToAttach as $invId) {
-        if ($invId <= 0) continue;
+    // Only invoices from the selected customer's service may be attached.
+    $allowedInvoiceIds = array_map(function ($invoice) { return (int)$invoice['id']; }, $clientDue['invoices'] ?? []);
+    foreach (array_unique($invoicesToAttach) as $invId) {
+        if ($invId <= 0 || !in_array($invId, $allowedInvoiceIds, true)) {
+            throw new RuntimeException('Selected invoice does not belong to this service.');
+        }
 
         // Fetch invoice number for clean attachment filename
         $stmtInv = $db->prepare("SELECT invoice_id, customer_id, final_prefix, final_invoice_no, invoice_no FROM invoice_details WHERE invoice_id = :id AND customer_id = :cid");
         $stmtInv->execute([':id' => $invId, ':cid' => $customerId]);
         $invRow = $stmtInv->fetch(PDO::FETCH_ASSOC);
 
-        if (!$invRow) continue;
+        if (!$invRow) {
+            throw new RuntimeException('Selected invoice is no longer available.');
+        }
 
         $rawNo = trim((string)($invRow['final_prefix'] !== '' ? $invRow['final_prefix'] . '-' . $invRow['final_invoice_no'] : $invRow['final_invoice_no']));
         if ($rawNo === '') $rawNo = trim((string)$invRow['invoice_no']);
         if ($rawNo === '') $rawNo = 'Invoice_' . $invId;
 
         $cleanNo = aitf_sanitize_attachment_filename($rawNo);
-        $tempPdfPath = $notifDir . '/inv_' . $invId . '_' . time() . '_' . mt_rand(1000, 9999) . '.pdf';
-
-        if (aitf_generate_final_invoice_pdf($db, $invId, $tempPdfPath)) {
-            $attDisplayName = 'Invoice-' . $cleanNo . '.pdf';
-            if ($mailer->addAttachment($tempPdfPath, $attDisplayName)) {
-                $attachedFileNames[] = $attDisplayName;
-                $tempFilesToCleanup[] = $tempPdfPath;
-            }
+        $pdfBytes = aitf_generate_final_invoice_pdf($db, $invId);
+        $attDisplayName = 'Invoice-' . $cleanNo . '.pdf';
+        // PHPMailer 5 returns null on success; newer releases return true.
+        if (!is_string($pdfBytes) || substr($pdfBytes, 0, 5) !== '%PDF-'
+            || $mailer->addStringAttachment($pdfBytes, $attDisplayName, 'base64', 'application/pdf') === false) {
+            throw new RuntimeException('Unable to generate or attach invoice ' . $invId);
         }
+        $attachedFileNames[] = $attDisplayName;
+        unset($pdfBytes);
     }
 
     // 2. Process Kept Service Documents
@@ -350,12 +352,11 @@ try {
         if (strpos($cleanRel, '..') !== false) continue;
 
         $fullDocPath = $baseWebDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $cleanRel);
-        if (file_exists($fullDocPath) && is_file($fullDocPath)) {
-            $docName = basename($fullDocPath);
-            if ($mailer->addAttachment($fullDocPath, $docName)) {
-                $attachedFileNames[] = $docName;
-            }
+        $docName = basename($fullDocPath);
+        if (!is_file($fullDocPath) || !is_readable($fullDocPath) || !$mailer->addAttachment($fullDocPath, $docName)) {
+            throw new RuntimeException('Selected service document could not be attached.');
         }
+        $attachedFileNames[] = $docName;
     }
 
     // 3. Process Manually Added Uploads from PC / Phone
@@ -363,37 +364,32 @@ try {
         $fileCount = count($_FILES['manual_attachments']['name']);
         for ($i = 0; $i < $fileCount; $i++) {
             $err = $_FILES['manual_attachments']['error'][$i] ?? UPLOAD_ERR_NO_FILE;
-            if ($err !== UPLOAD_ERR_OK) continue;
+            if ($err !== UPLOAD_ERR_OK) {
+                $response->send(['success' => false, 'message' => 'An attachment upload failed (code ' . (int)$err . '). Check the hosting upload limit and try again. Email was not sent.']);
+                exit;
+            }
 
             $origName = $_FILES['manual_attachments']['name'][$i];
             $tmpUploadedPath = $_FILES['manual_attachments']['tmp_name'][$i];
             $fileSize = $_FILES['manual_attachments']['size'][$i] ?? 0;
 
             if ($fileSize > 26214400) { // 25 MB max
-                continue;
+                $response->send(['success' => false, 'message' => 'Each attachment must be 25 MB or smaller. Email was not sent.']);
+                exit;
             }
 
-            $cleanName = aitf_sanitize_attachment_filename($origName);
-            $targetUploadPath = $uploadTempDir . '/' . time() . '_' . mt_rand(1000, 9999) . '_' . $cleanName;
-
-            if (move_uploaded_file($tmpUploadedPath, $targetUploadPath)) {
-                if ($mailer->addAttachment($targetUploadPath, $origName)) {
-                    $attachedFileNames[] = $origName;
-                    $tempFilesToCleanup[] = $targetUploadPath;
-                }
+            // PHP keeps the upload available until this request finishes.
+            if (!is_uploaded_file($tmpUploadedPath) || !$mailer->addAttachment($tmpUploadedPath, basename($origName))) {
+                throw new RuntimeException('Uploaded attachment could not be read.');
             }
+            $attachedFileNames[] = basename($origName);
         }
     }
 
     // Send Mail
+    $response->stage = 'mail delivery';
     list($mailSent, $mailError) = aitfSendInvoiceMailer($mailer);
-
-    // Clean up temporary generated files
-    foreach ($tempFilesToCleanup as $tFile) {
-        if (file_exists($tFile)) {
-            @unlink($tFile);
-        }
-    }
+    $response->mailSent = (bool)$mailSent;
 
     if ($mailSent) {
         $sentByUsername = trim($_SESSION['username'] ?? 'Staff');
@@ -431,9 +427,9 @@ try {
             ? ' with ' . count($attachedFileNames) . ' attachment(s)' 
             : ' without attachments';
 
-        echo json_encode([
+        $response->send([
             'success' => true,
-            'message' => 'Payment reminder email successfully sent to ' . htmlspecialchars($recipientEmail) . $attMsgPart . '!',
+            'message' => 'Payment reminder email successfully sent to ' . $recipientEmail . $attMsgPart . '!',
             'sent_by' => $sentByUsername,
             'sent_at' => date('d M Y, h:i A'),
             'attachments_count' => count($attachedFileNames),
@@ -441,23 +437,10 @@ try {
         ]);
         exit;
     } else {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Failed to send email: ' . ($mailError ?: 'SMTP connection error. Please try again.')
-        ]);
+        $response->fail($mailError ?: 'SMTP connection failed.');
         exit;
     }
 } catch (Throwable $e) {
-    // Clean up temporary generated files on exception
-    foreach ($tempFilesToCleanup as $tFile) {
-        if (file_exists($tFile)) {
-            @unlink($tFile);
-        }
-    }
-
-    echo json_encode([
-        'success' => false,
-        'message' => 'Error sending email: ' . $e->getMessage()
-    ]);
+    $response->fail($e);
     exit;
 }

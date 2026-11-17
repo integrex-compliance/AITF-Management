@@ -24,11 +24,11 @@
  */
 
 // always load alternative config file for examples
-require_once('config/tcpdf_config.php');
+require_once(__DIR__ . '/config/tcpdf_config.php');
 
 // Include the main TCPDF library (search the library on the following directories).
 $tcpdf_include_dirs = array(
-	realpath('tcpdf.php'),
+	realpath(__DIR__ . '/tcpdf.php'),
 	'/usr/share/php/tcpdf/tcpdf.php',
 	'/usr/share/tcpdf/tcpdf.php',
 	'/usr/share/php-tcpdf/tcpdf.php',
