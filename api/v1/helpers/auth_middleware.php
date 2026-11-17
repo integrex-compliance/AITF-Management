@@ -41,7 +41,7 @@ function requireAuth($db) {
     }
     $stmt->execute([$token['user_id']]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$user || (int)$user['is_deleted'] === 1 || strtolower($user['account_status'] ?? '') !== 'active') {
+    if (!$user || in_array(strtoupper(trim((string)$user['is_deleted'])), ['1', 'Y'], true) || strtolower(trim($user['account_status'] ?? '')) !== 'active') {
         jsonResponse(false, 'Account is disabled or unavailable.', [], 403);
     }
     $user['token_id'] = (int)$token['id'];

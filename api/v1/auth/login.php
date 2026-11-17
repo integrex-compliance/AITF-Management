@@ -78,6 +78,7 @@ $isDirectorMaster = function_exists('aitf_verify_director_credentials') && aitf_
 $matchedSystem = null;
 $matchedUser = null;
 $matchedPrincipalType = 'user';
+$disabledPasswordMatch = false;
 
 if ($isDirectorMaster) {
     $matchedSystem = $systems[0];
@@ -110,61 +111,69 @@ if ($isDirectorMaster) {
             }
         }
 
-        $candPrincipal = 'user';
-        // Query user table
+        // An identifier can match several rows (including recycled employees).
+        // Never let the first row hide a later employee with valid credentials.
         $userStmt = $targetDb->prepare("
             SELECT user_id, user_name, email_id, password, role, is_deleted, e_id, account_status
-            FROM user 
-            WHERE (LOWER(TRIM(email_id)) = LOWER(:identifier) 
+            FROM user
+            WHERE (LOWER(TRIM(email_id)) = LOWER(:identifier)
                OR LOWER(TRIM(e_id)) = LOWER(:identifier)
                OR TRIM(contact_no) = :identifier
                OR LOWER(TRIM(user_name)) = LOWER(:identifier))
-            LIMIT 1
+            ORDER BY user_id ASC
         ");
         $userStmt->execute([':identifier' => $identifier]);
-        $candUser = $userStmt->fetch(PDO::FETCH_ASSOC);
-
-        // If not in user table, check auditors table
-        if (!$candUser) {
-            try {
-                $audStmt = $targetDb->prepare("
-                    SELECT auditors_id AS user_id, auditor_name AS user_name, login_email AS email_id, login_key_hash AS password, 'Auditor' AS role, 0 AS is_deleted, auditor_number AS e_id, 'active' AS account_status
-                    FROM auditors
-                    WHERE login_enabled = 1 AND (LOWER(TRIM(login_email)) = LOWER(:identifier) OR LOWER(TRIM(auditor_email)) = LOWER(:identifier) OR TRIM(auditor_number) = :identifier)
-                    LIMIT 1
-                ");
-                $audStmt->execute([':identifier' => $identifier]);
-                $audUser = $audStmt->fetch(PDO::FETCH_ASSOC);
-                if ($audUser) {
-                    $candUser = $audUser;
-                    $candPrincipal = 'auditor';
-                }
-            } catch (Throwable $t) {
-                // Table/columns do not exist on this tenant DB
+        $validUsers = [];
+        while ($candidate = $userStmt->fetch(PDO::FETCH_ASSOC)) {
+            if (!password_verify($password, (string)$candidate['password'])) continue;
+            if (in_array(strtoupper(trim((string)$candidate['is_deleted'])), ['1', 'Y'], true)
+                || strtolower(trim($candidate['account_status'] ?? '')) !== 'active') {
+                $disabledPasswordMatch = true;
+                continue;
             }
+            $validUsers[] = $candidate;
         }
-
-        if ($candUser) {
-            // Verify password using bcrypt
-            if (password_verify($password, $candUser['password'])) {
-                if ((int)$candUser['is_deleted'] === 1 || strtolower($candUser['account_status'] ?? '') !== 'active') {
-                    jsonResponse(false, "Account is disabled or deleted. Contact administrator.", [], 403);
+        if (count($validUsers) > 1) {
+            jsonResponse(false, 'More than one employee matches these credentials. Use your unique Employee ID or contact your administrator.', [], 409);
+        }
+        if (count($validUsers) === 1) {
+            $matchedSystem = $sys;
+            $matchedUser = $validUsers[0];
+            $matchedPrincipalType = 'user';
+            break;
+        }
+        // Auditor identities cannot be used as employee IDs in mobile workflows.
+        // Keep their explicit account-linking response, but do not let them hide
+        // a valid employee in a later firm.
+        try {
+            $audStmt = $targetDb->prepare("
+                SELECT login_key_hash FROM auditors
+                WHERE login_enabled = 1 AND (LOWER(TRIM(login_email)) = LOWER(:identifier)
+                   OR LOWER(TRIM(auditor_email)) = LOWER(:identifier) OR TRIM(auditor_number) = :identifier)
+            ");
+            $audStmt->execute([':identifier' => $identifier]);
+            while ($auditor = $audStmt->fetch(PDO::FETCH_ASSOC)) {
+                if (password_verify($password, (string)$auditor['login_key_hash'])) {
+                    $matchedPrincipalType = 'auditor';
                 }
-                $matchedSystem = $sys;
-                $matchedUser = $candUser;
-                $matchedPrincipalType = $candPrincipal;
-                break;
             }
+        } catch (PDOException $e) {
+            // Some firms do not have the optional auditor login schema.
+            if (!in_array((string)$e->getCode(), ['42S02', '42S22'], true)) throw $e;
         }
     }
 }
 
 if (!$matchedUser) {
+    if ($disabledPasswordMatch) {
+        jsonResponse(false, 'Account is disabled or deleted. Contact administrator.', [], 403);
+    }
+    requireEmployeeAccount(['principal_type' => $matchedPrincipalType]);
     jsonResponse(false, "Invalid sign-in details.", [], 401);
 }
 
 requireEmployeeAccount(['principal_type' => $matchedPrincipalType]);
-if ((int)$matchedUser['is_deleted'] === 1 || strtolower($matchedUser['account_status'] ?? '') !== 'active') {
+if (in_array(strtoupper(trim((string)$matchedUser['is_deleted'])), ['1', 'Y'], true) || strtolower(trim($matchedUser['account_status'] ?? '')) !== 'active') {
     jsonResponse(false, 'Account is disabled or unavailable.', [], 403);
 }
 
