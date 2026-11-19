@@ -10,6 +10,8 @@
 <script>
   gtag('config', 'G-ZH2QWSFTB0');
 </script>
+<!-- Google Tag Manager -->
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-W9R2Q4F4"></script>
 <?php
 // Smart Title Resolver if not explicitly provided
 if (!isset($pageTitle) || trim($pageTitle) === '') {
