@@ -54,12 +54,38 @@ does not resend the client email. If status synchronization fails after SMTP
 acceptance, a retry uses the saved receipt and repairs the status without sending
 again. SMTP acceptance does not establish inbox delivery.
 
-If a process is killed during SMTP, its dispatch row remains `sending`: the
-outcome is uncertain. Check the provider's logs for that action, recipient and
-attempt time before changing the receipt. If accepted, set `accepted_at` to the
-provider acceptance timestamp and `state` to `accepted`; retry to synchronize.
-If confirmed not accepted, set `state` to `failed` and retry. Never clear an
-uncertain attempt solely to force another send.
+Connection attempts now use `connecting`; interrupted attempts in that phase can
+retry under the service lock because no message body has been transmitted.
+Immediately before DATA, the state becomes `transmitting`. The SMTP acceptance
+receipt is saved as soon as DATA is acknowledged, before waiting for QUIT. A
+connection-close failure therefore cannot hide a confirmed acceptance. SMTP
+command time limits and a 90-second limit on starting further connection
+attempts prevent repeatedly starting slow fallbacks without a bound.
+
+Older `sending` rows and interrupted `transmitting` rows have an unknown outcome.
+Generate now offers a **Retry Letter** confirmation explaining that a duplicate
+may result if the earlier attempt actually arrived. Confirming retries through
+the normal mailer and status-update flow; no database edit is required. The
+automatic scheduler does not silently retry unknown delivery outcomes. It can
+still retry known connection failures. A saved receipt or sent record always
+takes precedence over the manual retry option.
+
+A stable Message-ID is retained across retries for correlation with provider
+logs. It is not a guarantee that a recipient server will deduplicate messages.
+If a provider rejects any recipient, the client message body is not transmitted
+to the remaining recipients; this avoids partial delivery followed by duplicate
+fallback sends to the accepted addresses.
+
+For the interrupted-delivery patch, deploy these files together:
+
+- `include/intimation_dispatch_helper.php`
+- `include/intimation_mailer_factory.php` (new)
+- `include/intimation_smtp.php` (new)
+- `sendIntimationLetter.php`
+- `intimationLetter.php`
+
+There is no schema migration or blanket reset of pending/sent rows. Refresh the
+page after deploying so the recovery dialog uses the updated JavaScript.
 
 Inspect `intimation_mail_dispatch.last_error`,
 `test_logs/cron_intimation_due_mail_log.txt`, the PHP error log and

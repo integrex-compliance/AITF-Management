@@ -31,154 +31,170 @@ $mailConfig = aitf_get_mail_config([
 $mailFromEmailHtml = htmlspecialchars($mailConfig['from_email'], ENT_QUOTES, 'UTF-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $formData['name'] = trim($_POST['name'] ?? '');
-    $formData['email'] = trim($_POST['email'] ?? '');
-    $formData['mobile'] = trim($_POST['mobile'] ?? '');
-    $companyPost = isset($_POST['company']) ? $_POST['company'] : '';
-    $formData['company'] = is_string($companyPost) ? trim($companyPost) : '';
-    $formData['about'] = trim($_POST['about'] ?? '');
-    $formData['services'] = isset($_POST['services']) && is_array($_POST['services'])
-        ? array_values(array_intersect($serviceOptions, $_POST['services']))
-        : [];
-    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
-
-    if (
-        $formData['name'] === '' ||
-        $formData['email'] === '' ||
-        $formData['mobile'] === '' ||
-        $formData['company'] === '' ||
-        $formData['about'] === '' ||
-        empty($formData['services'])
-    ) {
-        $errorMsg = 'Please fill in all required fields (name, email, mobile, company, about, services).';
-    } elseif (!filter_var($formData['email'], FILTER_VALIDATE_EMAIL)) {
-        $errorMsg = 'Please enter a valid email address.';
-    } elseif (!preg_match('/^[0-9]{10,15}$/', preg_replace('/\D/', '', $formData['mobile']))) {
-        $errorMsg = 'Please enter a valid mobile number (10-15 digits).';
-    } elseif (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $errorMsg)) {
-        if ($errorMsg === '') {
-            $errorMsg = 'Captcha verification failed. Please try again.';
+    $primaryOk = false;
+    $contactStage = 'validation';
+    try {
+        foreach (['name', 'email', 'mobile', 'company', 'about'] as $field) {
+            $formData[$field] = isset($_POST[$field]) && is_string($_POST[$field]) ? trim($_POST[$field]) : '';
         }
-    } else {
-        require __DIR__ . '/PHPMailer/PHPMailerAutoload.php';
+        $formData['services'] = isset($_POST['services']) && is_array($_POST['services'])
+            ? array_values(array_intersect($serviceOptions, array_filter($_POST['services'], 'is_string')))
+            : [];
+        $turnstileToken = isset($_POST['cf-turnstile-response']) && is_string($_POST['cf-turnstile-response'])
+            ? trim($_POST['cf-turnstile-response']) : '';
 
-        $fromEmail = $mailConfig['from_email'] ?: 'no-reply@localhost';
-
-        // GoDaddy shared hosting relay: localhost:25, no auth, no SSL
-        $attempts = [
-            ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
-            ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
-            [
-                'host' => $mailConfig['host'],
-                'port' => $mailConfig['port'],
-                'secure' => $mailConfig['secure'],
-                'autotls' => $mailConfig['secure'] === 'tls',
-                'auth' => ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''
-            ],
-        ];
-
-        $applySmtpConfig = function (PHPMailer $mailer, array $cfg) use ($mailConfig) {
-            $mailer->isSMTP();
-            $mailer->SMTPDebug = 0; // keep logs clean on production
-            $mailer->Debugoutput = 'error_log';
-            $mailer->Host = $cfg['host'];
-            $mailer->Hostname = $cfg['host'];
-            $mailer->Port = $cfg['port'];
-            $mailer->SMTPAuth = $cfg['auth'];
-            $mailer->SMTPSecure = $cfg['secure'] ?: false;
-            $mailer->SMTPAutoTLS = $cfg['autotls'];
-            if ($cfg['auth']) {
-                $mailer->Username = $mailConfig['username'];
-                $mailer->Password = $mailConfig['password'];
+        if (
+            $formData['name'] === '' ||
+            $formData['email'] === '' ||
+            $formData['mobile'] === '' ||
+            $formData['company'] === '' ||
+            $formData['about'] === '' ||
+            empty($formData['services'])
+        ) {
+            $errorMsg = 'Please fill in all required fields (name, email, mobile, company, about, services).';
+        } elseif (!filter_var($formData['email'], FILTER_VALIDATE_EMAIL)) {
+            $errorMsg = 'Please enter a valid email address.';
+        } elseif (!preg_match('/^[0-9]{10,15}$/', preg_replace('/\D/', '', $formData['mobile']))) {
+            $errorMsg = 'Please enter a valid mobile number (10-15 digits).';
+        } elseif (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $errorMsg)) {
+            if ($errorMsg === '') {
+                $errorMsg = 'Captcha verification failed. Please try again.';
             }
-            $mailer->CharSet = 'UTF-8';
-            $mailer->Timeout = 8;
-            $mailer->SMTPKeepAlive = false;
-            $mailer->SMTPOptions = [
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true
-                ]
+        } else {
+            $contactStage = 'mailer loading';
+            // Use the tracked PHP-compatible classes, not a stale hosting autoloader.
+            require_once __DIR__ . '/include/invoice_mail_helper.php';
+            aitfLoadPHPMailer();
+            $contactStage = 'enquiry delivery';
+
+            $fromEmail = $mailConfig['from_email'] ?: 'no-reply@localhost';
+
+            // GoDaddy shared hosting relay: localhost:25, no auth, no SSL
+            $attempts = [
+                ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
+                ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
+                [
+                    'host' => $mailConfig['host'],
+                    'port' => $mailConfig['port'],
+                    'secure' => $mailConfig['secure'],
+                    'autotls' => $mailConfig['secure'] === 'tls',
+                    'auth' => ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''
+                ],
             ];
-        };
 
-        $mail = new PHPMailer;
-        $mail->setFrom($fromEmail, $mailConfig['from_name']);
-        $mail->Sender = $fromEmail;
-        $mail->addCustomHeader('Return-Path', $fromEmail);
-        $mail->addReplyTo($formData['email'], $formData['name']);
-        $mail->addAddress($mailConfig['admin_email'], 'AITF Certification');
-        $mail->Subject = 'New Contact Enquiry from Website';
-        $servicesText = implode(', ', $formData['services']);
-        $mobileClean = preg_replace('/\D+/', '', $formData['mobile']);
-        $body = "
-            <h3>New enquiry received from website contact form</h3>
-            <p><strong>Name:</strong> {$formData['name']}<br>
-            <strong>Email:</strong> {$formData['email']}<br>
-            <strong>Mobile:</strong> {$mobileClean}<br>
-            <strong>Company:</strong> {$formData['company']}<br>
-            <strong>Services Interested:</strong> {$servicesText}</p>
-            <p><strong>About the client / requirement:</strong><br>" . nl2br(htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8')) . "</p>
-        ";
-        $mail->isHTML(true);
-        $mail->Body = $body;
-        $mail->AltBody = "Name: {$formData['name']}\nEmail: {$formData['email']}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nServices: {$servicesText}\nAbout:\n{$formData['about']}";
+            $applySmtpConfig = function (PHPMailer $mailer, array $cfg) use ($mailConfig) {
+                $mailer->isSMTP();
+                $mailer->SMTPDebug = 0; // keep logs clean on production
+                $mailer->Debugoutput = 'error_log';
+                $mailer->Host = $cfg['host'];
+                $mailer->Hostname = $cfg['host'];
+                $mailer->Port = $cfg['port'];
+                $mailer->SMTPAuth = $cfg['auth'];
+                $mailer->SMTPSecure = $cfg['secure'] ?: false;
+                $mailer->SMTPAutoTLS = $cfg['autotls'];
+                if ($cfg['auth']) {
+                    $mailer->Username = $mailConfig['username'];
+                    $mailer->Password = $mailConfig['password'];
+                }
+                $mailer->CharSet = 'UTF-8';
+                $mailer->Timeout = 8;
+                $mailer->SMTPKeepAlive = false;
+                $mailer->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    ]
+                ];
+            };
 
-        $primaryOk = false;
-        $primaryErrs = [];
-        $successfulAttempt = null;
-        foreach ($attempts as $attempt) {
-            $applySmtpConfig($mail, $attempt);
-            $primaryOk = $mail->send();
-            if ($primaryOk) {
-                $successfulAttempt = $attempt;
-                break;
-            }
-            $errLine = '[' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $mail->ErrorInfo;
-            $primaryErrs[] = $errLine;
-            error_log('CONTACT MAIL SEND FAIL: ' . $errLine);
-            $mail->smtpClose();
-        }
-        if (!$primaryOk) {
-            $errorMsg = 'Mail error: ' . implode(' | ', array_filter($primaryErrs));
-        }
-
-        if ($primaryOk) {
-            // Send thank-you to sender
-            $confirm = new PHPMailer;
-            $applySmtpConfig($confirm, $successfulAttempt ?: $attempts[0]);
-            $confirm->setFrom($fromEmail, 'AITF Team');
-            $confirm->Sender = $fromEmail;
-            $confirm->addCustomHeader('Return-Path', $fromEmail);
-            $confirm->addAddress($formData['email'], $formData['name']);
-            $confirm->Subject = 'Thank you for contacting AITF';
-            $confirmBody = "
-                <p>Dear {$formData['name']},</p>
-                <p>Thank you for contacting AITF.</p>
-                <p>We acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.</p>
-                <p>If you have any additional details to provide or require urgent assistance, please feel free to reply to this email.</p>
-                <p>Thank you for considering AITF as your assessment and certification agency.</p>
-                <p>Warm regards,<br>
-                AITF Team<br>
-                certification desk<br>
-                AITF – Assessment &amp; Institute for Technical Forum<br>
-                Email: <a href=\"mailto:{$mailFromEmailHtml}\">{$mailFromEmailHtml}</a><br>
-                Website: <a href=\"http://www.aitf.co.in\" target=\"_blank\" rel=\"noopener\">www.aitf.co.in</a></p>
+            $mail = new PHPMailer;
+            $mail->setFrom($fromEmail, $mailConfig['from_name']);
+            $mail->Sender = $fromEmail;
+            $mail->addCustomHeader('Return-Path', $fromEmail);
+            $mail->addReplyTo($formData['email'], $formData['name']);
+            $mail->addAddress($mailConfig['admin_email'], 'AITF Certification');
+            $mail->Subject = 'New Contact Enquiry from Website';
+            $servicesText = implode(', ', $formData['services']);
+            $mobileClean = preg_replace('/\D+/', '', $formData['mobile']);
+            $nameHtml = htmlspecialchars($formData['name'], ENT_QUOTES, 'UTF-8');
+            $emailHtml = htmlspecialchars($formData['email'], ENT_QUOTES, 'UTF-8');
+            $companyHtml = htmlspecialchars($formData['company'], ENT_QUOTES, 'UTF-8');
+            $body = "
+                <h3>New enquiry received from website contact form</h3>
+                <p><strong>Name:</strong> {$nameHtml}<br>
+                <strong>Email:</strong> {$emailHtml}<br>
+                <strong>Mobile:</strong> {$mobileClean}<br>
+                <strong>Company:</strong> {$companyHtml}<br>
+                <strong>Services Interested:</strong> {$servicesText}</p>
+                <p><strong>About the client / requirement:</strong><br>" . nl2br(htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8')) . "</p>
             ";
-            $confirm->isHTML(true);
-            $confirm->Body = $confirmBody;
-            $confirm->AltBody = "Dear {$formData['name']},\n\nThank you for contacting AITF.\n\nWe acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.\n\nIf you have any additional details to provide or require urgent assistance, please feel free to reply to this email.\n\nThank you for considering AITF as your assessment and certification partner.\n\nWarm regards,\nAITF Team\nClient Support Desk\nAITF - Assessment & Institute for Technical Forum\nEmail: {$mailConfig['from_email']}\nWebsite: www.aitf.co.in";
-            $confirmOk = $confirm->send();
+            $mail->isHTML(true);
+            $mail->Body = $body;
+            $mail->AltBody = "Name: {$formData['name']}\nEmail: {$formData['email']}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nServices: {$servicesText}\nAbout:\n{$formData['about']}";
 
-            $successMsg = $confirmOk 
-        
+            $primaryOk = false;
+            $successfulAttempt = null;
+            foreach ($attempts as $attempt) {
+                $applySmtpConfig($mail, $attempt);
+                $primaryOk = $mail->send();
+                if ($primaryOk) {
+                    $successfulAttempt = $attempt;
+                    break;
+                }
+                $errLine = '[' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $mail->ErrorInfo;
+                error_log('CONTACT MAIL SEND FAIL: ' . $errLine);
+                $mail->smtpClose();
+            }
+            if ($primaryOk) {
+                $contactStage = 'confirmation delivery';
+                // Send thank-you to sender
+                $confirm = new PHPMailer;
+                $applySmtpConfig($confirm, $successfulAttempt ?: $attempts[0]);
+                $confirm->setFrom($fromEmail, 'AITF Team');
+                $confirm->Sender = $fromEmail;
+                $confirm->addCustomHeader('Return-Path', $fromEmail);
+                $confirm->addAddress($formData['email'], $formData['name']);
+                $confirm->Subject = 'Thank you for contacting AITF';
+                $confirmBody = "
+                    <p>Dear {$nameHtml},</p>
+                    <p>Thank you for contacting AITF.</p>
+                    <p>We acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.</p>
+                    <p>If you have any additional details to provide or require urgent assistance, please feel free to reply to this email.</p>
+                    <p>Thank you for considering AITF as your assessment and certification agency.</p>
+                    <p>Warm regards,<br>
+                    AITF Team<br>
+                    certification desk<br>
+                    AITF – Assessment &amp; Institute for Technical Forum<br>
+                    Email: <a href=\"mailto:{$mailFromEmailHtml}\">{$mailFromEmailHtml}</a><br>
+                    Website: <a href=\"http://www.aitf.co.in\" target=\"_blank\" rel=\"noopener\">www.aitf.co.in</a></p>
+                ";
+                $confirm->isHTML(true);
+                $confirm->Body = $confirmBody;
+                $confirm->AltBody = "Dear {$formData['name']},\n\nThank you for contacting AITF.\n\nWe acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.\n\nIf you have any additional details to provide or require urgent assistance, please feel free to reply to this email.\n\nThank you for considering AITF as your assessment and certification partner.\n\nWarm regards,\nAITF Team\nClient Support Desk\nAITF - Assessment & Institute for Technical Forum\nEmail: {$mailConfig['from_email']}\nWebsite: www.aitf.co.in";
+                $confirmOk = $confirm->send();
+                if (!$confirmOk) {
+                    error_log('CONTACT CONFIRMATION SEND FAIL: ' . $confirm->ErrorInfo);
+                }
 
-                ? 'Thank you! We will get back to you shortly.'
-                : 'Thank you! We received your enquiry, but could not send confirmation to your email.';
+                $successMsg = $confirmOk
+                    ? 'Thank you! We will get back to you shortly.'
+                    : 'Thank you! We received your enquiry, but could not send confirmation to your email.';
+                $formData = ['name' => '', 'email' => '', 'mobile' => '', 'company' => '', 'about' => '', 'services' => []];
+            } else {
+                $errorMsg = 'We could not send your enquiry right now. Please try again shortly or contact us by phone or email.';
+            }
+        }
+    } catch (Throwable $error) {
+        error_log('CONTACT FORM FAIL [' . $contactStage . ']: ' . get_class($error) . ': ' . $error->getMessage()
+            . ' in ' . $error->getFile() . ':' . $error->getLine());
+        if ($primaryOk) {
+            // The enquiry was accepted; a confirmation failure must not invite duplicates.
+            $successMsg = 'Thank you! We received your enquiry, but could not send confirmation to your email.';
+            $errorMsg = '';
             $formData = ['name' => '', 'email' => '', 'mobile' => '', 'company' => '', 'about' => '', 'services' => []];
         } else {
-            $errorMsg = 'Mail error: ' . $mail->ErrorInfo;
+            $errorMsg = 'We could not send your enquiry right now. Please try again shortly or contact us by phone or email.';
         }
     }
 }

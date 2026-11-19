@@ -1,5 +1,13 @@
 <?php
 require_once __DIR__ . '/intimation_queue_helper.php';
+require_once __DIR__ . '/intimation_mailer_factory.php';
+
+function aitfIntimationInterruptedResult($actionId)
+{
+    return array('success' => false, 'retry_interrupted_available' => true,
+        'action_id' => (int) $actionId,
+        'message' => 'The previous attempt ended without a delivery confirmation. You can retry this letter. If the client already received it, retrying may send another copy.');
+}
 
 function aitfIsClientStatusLetterApplicableForAutoSend($db, $serviceId, $customerId, $dueDate)
 {
@@ -19,7 +27,8 @@ function aitfFetchAutoIntimationCandidates($db, $limit = 100, $backlogDays = nul
     usort($rows, function ($a, $b) use ($receipts) {
         $aReceipt = $receipts[aitfIntimationDeliveryKey($a)] ?? array();
         $bReceipt = $receipts[aitfIntimationDeliveryKey($b)] ?? array();
-        $reviewOrder = (($aReceipt['state'] ?? '') === 'sending') <=> (($bReceipt['state'] ?? '') === 'sending');
+        $reviewOrder = in_array($aReceipt['state'] ?? '', array('sending', 'transmitting'), true)
+            <=> in_array($bReceipt['state'] ?? '', array('sending', 'transmitting'), true);
         return $reviewOrder ?: strcmp((string) ($aReceipt['attempted_at'] ?? ''), (string) ($bReceipt['attempted_at'] ?? ''))
             ?: strcmp($a['due_date'], $b['due_date']) ?: ($a['action_id'] <=> $b['action_id']);
     });
@@ -45,6 +54,8 @@ function aitfSendIntimationLetterByActionId($db, $actionId, array $options = arr
     $path = '';
     $clientAccepted = false;
     $receiptSaved = false;
+    $deliveryPhase = 'preparing';
+    $acceptedAt = null;
     try {
         // Re-read under the same lock used by manual, cron and browser dispatch.
         $stmt->execute(array($actionId));
@@ -78,10 +89,14 @@ function aitfSendIntimationLetterByActionId($db, $actionId, array $options = arr
             aitfRecordIntimationSent($db, $row, $delivery['accepted_at']);
             return array('success' => true, 'skipped' => true, 'message' => 'Mail was already sent; client status has been synchronized.');
         }
-        // A killed process during SMTP has an unknown outcome. Do not silently
-        // resend it: an operator must check the provider log before clearing it.
-        if ($delivery && $delivery['state'] === 'sending') {
-            return array('success' => false, 'message' => 'Previous delivery was interrupted. Check the SMTP log for action ' . (int) $actionId . ' before retrying.');
+        // The service lock proves no competing sender is still working. New
+        // 'connecting' attempts can retry safely; legacy 'sending' and DATA-stage
+        // interruptions need a deliberate manual retry because delivery is unknown.
+        if ($delivery && in_array($delivery['state'], array('sending', 'transmitting'), true)) {
+            if (empty($options['retry_interrupted'])) {
+                return aitfIntimationInterruptedResult($actionId);
+            }
+            error_log('INTIMATION manual recovery authorized for action ' . (int) $actionId);
         }
         $db->prepare("INSERT INTO intimation_mail_dispatch (delivery_key, action_id, state, attempts, attempted_at)
             VALUES (?, ?, 'preparing', 1, NOW()) ON DUPLICATE KEY UPDATE
@@ -91,7 +106,19 @@ function aitfSendIntimationLetterByActionId($db, $actionId, array $options = arr
         $cust->execute(array($row['customer_id']));
         $customer = $cust->fetch(PDO::FETCH_ASSOC);
         aitfLoadPHPMailer();
-        $mail = new PHPMailer;
+        $mail = aitfCreateIntimationMailer(function ($phase) use ($db, $key, &$deliveryPhase, &$clientAccepted, &$receiptSaved, &$acceptedAt) {
+            $deliveryPhase = $phase;
+            if ($phase === 'accepted') {
+                $clientAccepted = true;
+                $acceptedAt = date('Y-m-d H:i:s');
+                $db->prepare("UPDATE intimation_mail_dispatch SET state = 'accepted', accepted_at = ?, last_error = NULL WHERE delivery_key = ?")
+                    ->execute(array($acceptedAt, $key));
+                $receiptSaved = true;
+            } else {
+                $db->prepare('UPDATE intimation_mail_dispatch SET state = ? WHERE delivery_key = ?')->execute(array($phase, $key));
+            }
+        });
+        $mail->MessageID = '<intimation-' . $key . '@aitf.co.in>';
         $addresses = array_unique(array_filter(array_map('trim', preg_split('/[,;]+/', (string) $customer['email_id']))));
         if (!$addresses) { throw new RuntimeException('Client email address is missing. Update the client email and retry.'); }
         foreach ($addresses as $address) {
@@ -115,11 +142,20 @@ function aitfSendIntimationLetterByActionId($db, $actionId, array $options = arr
         $mail->isHTML(true);
         $mail->Subject = $context['service_desc'] . ' - ' . $customer['customer_name'];
         $mail->Body = aitfIntimationMailBody($customer, $context, $fileName);
-        $db->prepare("UPDATE intimation_mail_dispatch SET state = 'sending' WHERE delivery_key = ?")->execute(array($key));
-        list($sent, $error) = aitfSendInvoiceMailer($mail);
+        $deliveryPhase = 'connecting';
+        $db->prepare("UPDATE intimation_mail_dispatch SET state = 'connecting' WHERE delivery_key = ?")->execute(array($key));
+        try {
+            list($sent, $error) = aitfSendInvoiceMailer($mail);
+        } catch (Throwable $e) {
+            if (!$clientAccepted || !$receiptSaved) { throw $e; }
+            // SMTP acknowledged DATA; a later QUIT/cleanup error isn't a failed delivery.
+            $sent = true;
+            $error = '';
+            error_log('INTIMATION post-acceptance cleanup: ' . $e->getMessage());
+        }
         if (!$sent) { throw new RuntimeException('Mail transport failed: ' . $error); }
         $clientAccepted = true;
-        $acceptedAt = date('Y-m-d H:i:s');
+        $acceptedAt = $acceptedAt ?: date('Y-m-d H:i:s');
         $db->prepare("UPDATE intimation_mail_dispatch SET state = 'accepted', accepted_at = ?, last_error = NULL WHERE delivery_key = ?")
             ->execute(array($acceptedAt, $key));
         $receiptSaved = true;
@@ -141,9 +177,13 @@ function aitfSendIntimationLetterByActionId($db, $actionId, array $options = arr
         return array('success' => true, 'message' => 'Letter sent successfully. Client status updated.', 'office_copy_sent' => $officeSent);
     } catch (Throwable $e) {
         error_log('INTIMATION action ' . (int) $actionId . ': ' . $e->getMessage());
-        if (!$clientAccepted) {
+        if (!$clientAccepted && $deliveryPhase !== 'transmitting') {
             $db->prepare("UPDATE intimation_mail_dispatch SET state = 'failed', last_error = ? WHERE delivery_key = ?")
                 ->execute(array($e->getMessage(), $key));
+        }
+        if (!$clientAccepted && $deliveryPhase === 'transmitting') {
+            $db->prepare('UPDATE intimation_mail_dispatch SET last_error = ? WHERE delivery_key = ?')->execute(array($e->getMessage(), $key));
+            return aitfIntimationInterruptedResult($actionId);
         }
         return array('success' => false, 'message' => $clientAccepted
             ? ($receiptSaved ? 'Mail was accepted, but status synchronization failed. Refresh and retry to synchronize; the saved receipt prevents resending.'

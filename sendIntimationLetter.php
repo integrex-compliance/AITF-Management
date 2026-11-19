@@ -25,7 +25,9 @@ try {
     if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
     if (!$db) { throw new RuntimeException('Database connection unavailable.'); }
     require_once __DIR__ . '/include/intimation_letter_auto_helper.php';
-    $result = aitfSendIntimationLetterByActionId($db, $actionId);
+    $result = aitfSendIntimationLetterByActionId($db, $actionId, array(
+        'retry_interrupted' => ($_POST['retry_interrupted'] ?? '') === '1',
+    ));
 } catch (Throwable $e) {
     error_log('INTIMATION MANUAL: ' . $e->getMessage());
     $result['message'] = $e->getMessage();

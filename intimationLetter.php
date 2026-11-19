@@ -893,7 +893,7 @@
                         <h4 class="modal-title" id="sendConfirmTitle">Send Intimation Letter</h4>
                     </div>
                     <div class="modal-body">
-                        <p style="font-size:15px; color:#333; margin-bottom: 0;">Are you sure you want to send this letter to the client?</p>
+                        <p id="sendConfirmMessage" style="font-size:15px; color:#333; margin-bottom: 0;">Are you sure you want to send this letter to the client?</p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
@@ -1419,6 +1419,8 @@
 	});
 	
 	$('.SendMailToCust').click(function () {
+        $('#sendConfirmMessage').text('Are you sure you want to send this letter to the client?');
+        $('#confirmSendBtn').text('Yes, Send');
 		pendingSendPayload = {
 			customer: $(this).attr('data-customer'),
 			service: $(this).attr('data-service'),
@@ -1450,7 +1452,14 @@
 				setTimeout(function(){ location.reload(); }, 800);
 			} else {
 				var msg = (res && res.message) ? res.message : 'Unable to send mail. Please try again.';
-				showToast(msg, false);
+                if (res && res.retry_interrupted_available) {
+                    pendingSendPayload = $.extend({}, payload, {retry_interrupted: '1'});
+                    $('#sendConfirmMessage').text(msg);
+                    $('#confirmSendBtn').text('Retry Letter');
+                    $('#sendConfirmModal').modal('show');
+                } else {
+                    showToast(msg, false);
+                }
 			}
 		}).fail(function(xhr){
 			HideProgressAnimation();
