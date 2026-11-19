@@ -3,31 +3,36 @@ require_once __DIR__ . '/env_helper.php';
 
 if (!function_exists('aitfLoadPHPMailer')) {
     function aitfLoadPHPMailer() {
-        static $loaded = false;
-
-        if ($loaded || class_exists('PHPMailer')) {
-            $loaded = true;
+        // Load the tracked PHP-8-compatible classes directly. Some live hosts
+        // retain an ignored PHPMailer/ directory with the old __autoload file,
+        // which PHP 8 rejects before any try/catch in that file can run.
+        if (class_exists('PHPMailer', false) && class_exists('SMTP', false)) {
             return;
         }
 
-        
-
-        $candidates = array(
-            __DIR__ . '/../PHPMailer/PHPMailerAutoload.php',
-            __DIR__ . '/../phpmailer/PHPMailerAutoload.php',
-            __DIR__ . '/../PHPMailerAutoload.php'
+        $directories = array(
+            dirname(__DIR__),
+            __DIR__ . '/../PHPMailer',
+            __DIR__ . '/../phpmailer'
         );
+        if (class_exists('PHPMailer', false)) {
+            $reflection = new ReflectionClass('PHPMailer');
+            array_unshift($directories, dirname($reflection->getFileName()));
+        }
 
-        foreach ($candidates as $path) {
-            if (file_exists($path)) {
-                require_once $path;
-                $loaded = true;
+        foreach (array_unique($directories) as $directory) {
+            if (is_readable($directory . '/class.phpmailer.php') && is_readable($directory . '/class.smtp.php')) {
+                if (!class_exists('PHPMailer', false)) {
+                    require_once $directory . '/class.phpmailer.php';
+                }
+                if (!class_exists('SMTP', false)) {
+                    require_once $directory . '/class.smtp.php';
+                }
                 return;
             }
         }
-          
 
-        throw new Exception('PHPMailer autoload not found');
+        throw new RuntimeException('PHPMailer and SMTP class files are missing or unreadable.');
     }
 
     function aitfGetInvoiceMailConfig() {

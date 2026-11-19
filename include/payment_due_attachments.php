@@ -8,6 +8,42 @@
 
 require_once __DIR__ . '/payment_due_helper.php';
 
+/**
+ * The invoice explicitly permits computer-generated copies without a signature.
+ * Optional artwork must not prevent sending the invoice when a hosting PHP
+ * upgrade removes GD/Imagick or changes the PDF cache permissions.
+ */
+function aitf_invoice_optional_image_path($path) {
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+        return '';
+    }
+    $info = @getimagesize($path);
+    if (!$info) {
+        error_log('PAYMENT INVOICE: skipped unreadable optional image ' . basename($path));
+        return '';
+    }
+    // TCPDF handles JPEG and non-alpha/non-interlaced PNG without extensions
+    // or temporary image files. Preserve those images even on restricted hosts.
+    if ($info[2] === IMAGETYPE_JPEG) {
+        return is_array(TCPDF_IMAGES::_parsejpeg($path)) ? $path : '';
+    }
+    if ($info[2] === IMAGETYPE_PNG && is_array(TCPDF_IMAGES::_parsepng($path))) {
+        return $path;
+    }
+    $gdFunctions = array('imagecreatefrompng', 'imagecreate', 'imagecreatetruecolor',
+        'imagecolorallocate', 'imagecolorat', 'imagesetpixel', 'imagecopy', 'imagepng');
+    $hasGd = $info[2] === IMAGETYPE_PNG;
+    foreach ($gdFunctions as $function) {
+        $hasGd = $hasGd && function_exists($function);
+    }
+    if (($hasGd || class_exists('Imagick', false)) && is_dir(K_PATH_CACHE) && is_writable(K_PATH_CACHE)) {
+        return $path;
+    }
+    error_log('PAYMENT INVOICE: optional image ' . basename($path)
+        . ' omitted; image extension or writable TCPDF cache unavailable. Using computer-generated invoice.');
+    return '';
+}
+
 if (!function_exists('aitf_format_file_size')) {
     function aitf_format_file_size($bytes) {
         if ($bytes >= 1048576) {
@@ -82,14 +118,14 @@ if (!function_exists('aitf_generate_final_invoice_pdf')) {
     function aitf_generate_final_invoice_pdf(PDO $db, $invoiceId, $outputPath = null) {
         $invoiceId = (int)$invoiceId;
         if ($invoiceId <= 0) {
-            return false;
+            throw new InvalidArgumentException('Invalid invoice ID for PDF generation.');
         }
 
         $stmt = $db->prepare("SELECT * FROM invoice_details WHERE invoice_id = :id AND (is_deleted = 'No' OR is_deleted IS NULL)");
         $stmt->execute([':id' => $invoiceId]);
         $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$invoice) {
-            return false;
+            throw new RuntimeException('Invoice ' . $invoiceId . ' is missing or deleted.');
         }
 
         $customerId = (int)$invoice['customer_id'];
@@ -197,6 +233,7 @@ if (!function_exists('aitf_generate_final_invoice_pdf')) {
 
         // Load the legacy PDF library only when generating an attachment.
         require_once __DIR__ . '/../tcpdf_include.php';
+        $signaturePath = aitf_invoice_optional_image_path($signaturePath);
 
         // Custom PDF class with specific header
         if (!class_exists('AITF_Invoice_Attachment_PDF')) {
@@ -208,9 +245,9 @@ if (!function_exists('aitf_generate_final_invoice_pdf')) {
                 }
 
                 public function Header() {
-                    $image_file = K_PATH_IMAGES . 'aitf.jpg';
-                    if (file_exists($image_file)) {
-                        $this->Image($image_file, 17, 5, 40, '', 'JPEG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+                    $image_file = aitf_invoice_optional_image_path(K_PATH_IMAGES . 'aitf.jpg');
+                    if ($image_file !== '') {
+                        $this->Image($image_file, 17, 5, 40, '', '', '', 'T', false, 300, '', false, false, 0, false, false, false);
                     }
                     $this->SetFont('helvetica', 'B', 17.5);
                     $this->SetXY(60, 10);
@@ -305,8 +342,8 @@ if (!function_exists('aitf_generate_final_invoice_pdf')) {
             $pdf->Output($outputPath, 'F');
             return file_exists($outputPath) && filesize($outputPath) > 0;
         } catch (Throwable $e) {
-            error_log("Error generating invoice PDF {$invoiceId}: " . $e->getMessage());
-            return false;
+            // Preserve the actual cause in the request's reference-tagged log.
+            throw new RuntimeException('Unable to generate invoice PDF ' . $invoiceId, 0, $e);
         }
     }
 }

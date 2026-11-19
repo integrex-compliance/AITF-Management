@@ -267,7 +267,7 @@ if ($isCustom && ($bodyIntro !== '' || $bodyClosing !== '' || $rawBody !== '')) 
 // -------------------------------------------------------------------------
 $attachedFileNames = [];
 
-    $response->stage = 'attachments';
+    $response->stage = 'mailer loading';
     aitfLoadPHPMailer();
     $mailer = new PHPMailer();
     $mailer->isHTML(true);
@@ -280,6 +280,7 @@ $attachedFileNames = [];
     $mailer->addCC('aitfacct@gmail.com');
 
     // 1. Process Kept Service Invoices
+    $response->stage = 'invoice selection';
     $serviceInvoicesParam = $_POST['service_invoices'] ?? null;
     $invoicesToAttach = [];
 
@@ -303,6 +304,7 @@ $attachedFileNames = [];
     // Only invoices from the selected customer's service may be attached.
     $allowedInvoiceIds = array_map(function ($invoice) { return (int)$invoice['id']; }, $clientDue['invoices'] ?? []);
     foreach (array_unique($invoicesToAttach) as $invId) {
+        $response->stage = 'invoice selection';
         if ($invId <= 0 || !in_array($invId, $allowedInvoiceIds, true)) {
             throw new RuntimeException('Selected invoice does not belong to this service.');
         }
@@ -321,8 +323,11 @@ $attachedFileNames = [];
         if ($rawNo === '') $rawNo = 'Invoice_' . $invId;
 
         $cleanNo = aitf_sanitize_attachment_filename($rawNo);
+        $response->stage = 'invoice PDF';
+        $response->invoiceId = $invId;
         $pdfBytes = aitf_generate_final_invoice_pdf($db, $invId);
         $attDisplayName = 'Invoice-' . $cleanNo . '.pdf';
+        $response->stage = 'invoice attachment';
         // PHPMailer 5 returns null on success; newer releases return true.
         if (!is_string($pdfBytes) || substr($pdfBytes, 0, 5) !== '%PDF-'
             || $mailer->addStringAttachment($pdfBytes, $attDisplayName, 'base64', 'application/pdf') === false) {
@@ -333,6 +338,8 @@ $attachedFileNames = [];
     }
 
     // 2. Process Kept Service Documents
+    $response->stage = 'attachments';
+    $response->invoiceId = null;
     $serviceFilesParam = $_POST['service_files'] ?? null;
     $serviceDocsToAttach = [];
 
