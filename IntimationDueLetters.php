@@ -1,4 +1,10 @@
 <?php
+// Keep old form/URL integrations on the same dispatcher as the Generate button.
+if (isset($_POST['pageAction']) && $_POST['pageAction'] !== 'PreviewPDF') {
+    require __DIR__ . '/sendIntimationLetter.php';
+    exit;
+}
+
 
 //============================================================+
 // File name   : example_003.php
@@ -193,7 +199,7 @@ else if($lettertype == "Withdrawal Reminder"){
 	$LetterParamJSON->NextDueDate = $NextDueDate;
 	$LetterParamJSON->PrevDueDate = $PrevDueDate;
 }
-else if($lettertype == "Withdraw Letter"){
+else if($lettertype == "Withdraw Letter" || $lettertype == "Withdrawal Letter"){
 	$servicedesc = "Withdrawn Of ISO 9001 Certificate";
 	$htmlFormatFilePath = "./Initimation_PDF_Formats/WithdrawalLetter.txt";
 	$pdfTitle = "Sureillance Withdrawal Letter";
@@ -351,195 +357,5 @@ $mailBodyPart = aitfBuildIntimationMailBodyPart(
     $db
 );
 
-if($PageAction == "PreviewPDF"){
-	if (ob_get_length()) {
-		ob_end_clean();
-	}
-	$pdf->Output($fileName, 'I');
-}
-else if($PageAction == "SendMail"){
-	$phpMailerAutoloadCandidates = array(
-		__DIR__ . '/PHPMailer/PHPMailerAutoload.php',
-		__DIR__ . '/phpmailer/PHPMailerAutoload.php',
-		__DIR__ . '/PHPMailerAutoload.php',
-	);
-	$phpMailerAutoloadLoaded = false;
-	foreach ($phpMailerAutoloadCandidates as $phpMailerAutoloadPath) {
-		if (file_exists($phpMailerAutoloadPath)) {
-			require_once $phpMailerAutoloadPath;
-			$phpMailerAutoloadLoaded = true;
-			break;
-		}
-	}
-	if (!$phpMailerAutoloadLoaded) {
-		throw new Exception('PHPMailer autoload not found');
-	}
-	$isAjaxRequest = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
-
-		$mailBody = '<html><body>' . $mailBodyPart . '</body></html>';
-	$subject = $servicedesc .' - '. $customer['customer_name'];
-	$contactEmail = explode(',',$customer['email_id']);
-	$isMailSend = 0;
-	$response = array('success' => false, 'message' => '');
-
-	$fileSufix = date("YmdHis") . "_" . $customer_id;
-	$fullFilePath = __DIR__ . '/notification/' . $fileSufix . $fileName;	
-	if (ob_get_length()) {
-		ob_end_clean();
-	}
-	$pdf->Output($fullFilePath, 'F');
-
-	$smtpOptions = array(
-		'ssl' => array(
-			'verify_peer' => false,
-			'verify_peer_name' => false,
-			'allow_self_signed' => true
-		)
-	);
-
-	$attempts = array(
-		array('host' => $mailConfig['host'], 'port' => $mailConfig['port'], 'secure' => $mailConfig['secure'], 'autotls' => true, 'auth' => true),
-		array('host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false),
-		array('host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false),
-	);
-
-	$applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig, $smtpOptions) {
-		$mailer->isSMTP();
-		$mailer->SMTPDebug = 0;
-		$mailer->Debugoutput = 'error_log';
-		$mailer->Host = $cfg['host'];
-		$mailer->Hostname = $cfg['host'];
-		$mailer->Port = $cfg['port'];
-		$mailer->SMTPAuth = $cfg['auth'];
-		$mailer->SMTPSecure = $cfg['secure'] ?: false;
-		$mailer->SMTPAutoTLS = $cfg['autotls'];
-		if ($cfg['auth']) {
-			$mailer->Username = $mailConfig['username'];
-			$mailer->Password = $mailConfig['password'];
-		}
-		$mailer->SMTPOptions = $smtpOptions;
-		$mailer->CharSet = 'UTF-8';
-		$mailer->Timeout = 8;
-		$mailer->SMTPKeepAlive = false;
-	};
-
-	// Send email to client first
-	$clientMail = new PHPMailer;
-	$clientMail->setFrom($mailConfig['from_email'], $mailConfig['from_name']);
-	$clientMail->addReplyTo($mailConfig['from_email'], $mailConfig['from_name']);
-	$clientMail->addCustomHeader('Return-Path', $mailConfig['from_email']);
-	foreach($contactEmail as $e)
-	{
-		if($e != NULL) $clientMail->AddAddress($e);
-	}
-	$clientMail->isHTML(true);
-	$clientMail->Subject=$subject;
-	$clientMail->Body=$mailBody;
-	$clientMail->AddAttachment($fullFilePath , $fileName);
-
-	$clientSent = false;
-	$clientErrors = array();
-	$successfulAttempt = null;
-	foreach ($attempts as $attempt) {
-		$applySmtpConfig($clientMail, $attempt);
-		$clientSent = $clientMail->send();
-		if ($clientSent) {
-			$successfulAttempt = $attempt;
-			break;
-		}
-		$clientErrors[] = '[' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $clientMail->ErrorInfo;
-		error_log('INTIMATION CLIENT MAIL FAIL: ' . end($clientErrors));
-		$clientMail->smtpClose();
-	}
-
-	if(!$clientSent) {
-		$isMailSend = 0;
-		$response['message'] = 'Mailer Error: ' . implode(' | ', $clientErrors);
-	} else {
-		$isMailSend = 1;
-		
-		// Send simple email to office
-		$officeMail = new PHPMailer;
-		$officeMail->setFrom($mailConfig['from_email'], $mailConfig['from_name']);
-		$officeMail->addReplyTo($mailConfig['from_email'], $mailConfig['from_name']);
-		$officeMail->addCustomHeader('Return-Path', $mailConfig['from_email']);
-		$officeMail->addAddress('certification@aitf.co.in');
-		if (!empty($mailConfig['admin_email']) && strtolower($mailConfig['admin_email']) !== 'certification@aitf.co.in') {
-			$officeMail->addAddress($mailConfig['admin_email']);
-		}
-		$officeMail->isHTML(true);
-		$officeMail->Subject = 'Following letter has been sent to client for ' . $letterDisplayName;
-		$officeRecipients = implode(', ', array_filter($contactEmail));
-		$officeMail->addAttachment($fullFilePath, $fileName);
-		$officeMail->Body = '<html><body>'
-			. '<p>Following letter has been sent to client for <strong>' . htmlspecialchars($letterDisplayName, ENT_QUOTES, 'UTF-8') . '</strong>.</p>'
-			. '<p><strong>Customer:</strong> ' . htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8') . '<br>'
-			. '<strong>Recipients:</strong> ' . htmlspecialchars($officeRecipients, ENT_QUOTES, 'UTF-8') . '<br>'
-			. '<strong>Subject:</strong> ' . htmlspecialchars($subject, ENT_QUOTES, 'UTF-8') . '</p>'
-			. '<p><strong>Message sent to client:</strong></p>'
-			. $mailBody
-			. '<p>Attached: ' . htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8') . '</p>'
-			. '</body></html>';
-
-		$officeSent = false;
-		foreach ($attempts as $attempt) {
-			$applySmtpConfig($officeMail, $attempt);
-			$officeSent = $officeMail->send();
-			if ($officeSent) {
-				break;
-			}
-			error_log('INTIMATION OFFICE MAIL FAIL: [' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $officeMail->ErrorInfo);
-			$officeMail->smtpClose();
-		}
-	}
-
-	//check if mail send successfully
-	if($isMailSend == 0)
-	{
-		if ($isAjaxRequest) {
-			header('Content-Type: application/json');
-			echo json_encode($response);
-			exit;
-		} else {
-			echo '<script> localStorage.setItem("isMailSend", ' . json_encode('Failed: ' . ($response['message'] ?? 'Mailer Error')) . '); window.close(); </script>';
-		}
-	}
-	else if($isMailSend == 1)
-	{
-		$mailSend = "UPDATE ca_service_dates SET sent_date = :date, status = 'sent' WHERE  action_id  = :id";
-		$statement = $db->prepare($mailSend);
-		$sentDate = date("Y-m-d");
-		$statement->bindParam(":id", $actionId);
-		$statement->bindParam(":date", $sentDate);
-		$statement->execute();
-		
-		// ===== AUTO STATUS CHANGE: Update audit_status based on letter type =====
-		$newAuditStatus = null;
-		if ($lettertype == "Suspend Letter") {
-			$newAuditStatus = "Suspended";
-		} else if ($lettertype == "Withdraw Letter" || $lettertype == "Withdrawal Letter") {
-			$newAuditStatus = "Withdrawn";
-		} else if ($lettertype == "Expire Letter") {
-			$newAuditStatus = "Expired";
-		}
-		if ($newAuditStatus !== null) {
-			$updateStatusSql = "UPDATE customer_info SET audit_status = :status WHERE id = :id";
-			$stmtStatus = $db->prepare($updateStatusSql);
-			$stmtStatus->execute([':status' => $newAuditStatus, ':id' => $customer_id]);
-		}
-		// ===== END AUTO STATUS CHANGE =====
-
-		$response['success'] = true;
-		$response['message'] = 'Mail sent successfully.';
-		if ($isAjaxRequest) {
-			header('Content-Type: application/json');
-			echo json_encode($response);
-			exit;
-		} else {
-			echo '<script> localStorage.setItem("isMailSend", ' . json_encode($response['message']) . '); window.close(); </script>';
-		}
-	}
-		
-	
-	
-}
+if (ob_get_length()) { ob_end_clean(); }
+$pdf->Output($fileName, 'I');

@@ -34,18 +34,19 @@ if (isset($db) && $db) {
     aitf_auto_sync_schema($db);
 }
 
-// Automated Web-Cron URL Trigger for Daily 12:00 PM Due Letters Mailer
-if (!defined('WEB_CRON_TRIGGERED') && (int)date('H') >= 12) {
+// Browser fallback. The server owns locking, noon gating and retry throttling.
+// A real cron should also invoke cron_auto_send_intimation_due.php every 5 minutes.
+if (!defined('WEB_CRON_TRIGGERED') && !empty($_SESSION['username']) &&
+    !in_array(strtolower($_SESSION['role'] ?? ''), array('client', 'external', 'auditor', ''), true)) {
     define('WEB_CRON_TRIGGERED', true);
-    $cronFlagDir = __DIR__ . '/test_logs';
-    if (!is_dir($cronFlagDir)) { @mkdir($cronFlagDir, 0777, true); }
-    $cronFlagFile = $cronFlagDir . '/last_due_mail_cron_date.txt';
-    $todayStr = date('Y-m-d');
-    if (!file_exists($cronFlagFile) || trim(@file_get_contents($cronFlagFile)) !== $todayStr) {
-        @file_put_contents($cronFlagFile, $todayStr);
-        $autoCronUrl = 'cron_auto_send_intimation_due.php?webcron=' . time();
-        echo '<script>window.addEventListener("load", function() { setTimeout(function(){ fetch("' . $autoCronUrl . '", {method:"GET", keepalive:true}).catch(function(e){}); }, 2500); });</script>';
-    }
+    echo '<script>window.addEventListener("load", function () {
+        function dispatchDueLetters() {
+            fetch("cron_auto_send_intimation_due.php", {credentials: "same-origin", keepalive: true})
+                .catch(function () {});
+        }
+        setTimeout(dispatchDueLetters, 2500);
+        setInterval(dispatchDueLetters, 300000);
+    });</script>';
 }
 
 // Heartbeat JS to keep online status accurate and track screen time
